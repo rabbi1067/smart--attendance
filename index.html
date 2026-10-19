@@ -424,13 +424,6 @@ async function load(force){
   const syncBtn = $("syncBtn");
   if(syncBtn) syncBtn.classList.add("spinning");
 
-  if(!rows.length){
-    $("rows").innerHTML = `<tr class="empty"><td colspan="5" style="padding:28px 0;color:var(--muted)">
-      <span class="spin" style="border-color:var(--pri);border-top-color:transparent;width:15px;height:15px;display:inline-block;vertical-align:middle;margin-right:8px"></span>
-      ${lang==="bn"?"হাজিরা লোড হচ্ছে…":"Loading attendance…"}
-    </td></tr>`;
-  }
-
   const clsParam = timerState.cls ? ("&cls=" + encodeURIComponent(timerState.cls)) : "";
   try{
     const url = CONFIG.SCRIPT_URL + "?date=" + todayStr() + clsParam + (force ? "&force=1" : "") + "&_t=" + Date.now();
