@@ -6,6 +6,11 @@
 <title>Smart Attendance</title>
 <meta name="description" content="Daily attendance system">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<link rel="dns-prefetch" href="https://script.google.com">
+<link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f4f6fb;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e2e8f0;--pri:#4f46e5;--pri2:#7c3aed;--ok:#16a34a;--bad:#dc2626;--warn:#d97706;--shadow:0 10px 30px rgba(15,23,42,.08);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -110,6 +115,19 @@ try{ lang = localStorage.getItem("lang") || "en"; }catch(e){}
 const $ = id => document.getElementById(id);
 const p2 = n => String(n).padStart(2,"0");
 const todayStr = () => { const d=new Date(); return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); };
+const CACHE_KEY = "att_rows_" + todayStr();
+try{
+  const cached = localStorage.getItem(CACHE_KEY);
+  if(cached){
+    const parsed = JSON.parse(cached);
+    if(Array.isArray(parsed) && parsed.length) rows = parsed;
+  }
+}catch(e){}
+function saveRows(data){
+  rows = data;
+  try{ localStorage.setItem(CACHE_KEY, JSON.stringify(rows)); }catch(e){}
+  render();
+}
 const timeStr = () => {
   const d = new Date();
   let h = d.getHours();
@@ -168,29 +186,32 @@ function render(){
 }
 const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-let busy=false,lastSubmit=0,lastLoad=0,failCount=0,loading=false,firstLoad=true,pollTimer=null,barTimer=null,memIds=[];
+let busy=false,lastSubmit=0,lastLoad=0,failCount=0,loading=false,firstLoad=rows.length===0,pollTimer=null,barTimer=null,memIds=[];
 const bar=$("bar");
 function barStart(){clearTimeout(barTimer);bar.style.opacity=1;bar.style.width="70%";}
 function barDone(){bar.style.width="100%";barTimer=setTimeout(()=>{bar.style.opacity=0;bar.style.width="0";},300);}
 function localIds(){let a=[];try{a=JSON.parse(localStorage.getItem("done_"+todayStr())||"[]");}catch(e){}return a.concat(memIds);}
 function addLocalId(id){memIds.push(id);try{localStorage.setItem("done_"+todayStr(),JSON.stringify(localIds()));}catch(e){}}
-function fetchT(url,opt,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms||15000);return fetch(url,Object.assign({signal:c.signal},opt)).finally(()=>clearTimeout(t));}
+function fetchT(url,opt,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms||12000);return fetch(url,Object.assign({signal:c.signal},opt)).finally(()=>clearTimeout(t));}
 
 async function load(force){
   if(!CONFIG.SCRIPT_URL||loading) return;
-  if(!force && Date.now()-lastLoad<5000) return;
+  if(!force && Date.now()-lastLoad<4000) return;
   loading=true; lastLoad=Date.now();
-  if(firstLoad) $("rows").innerHTML="<tr class='sk'><td colspan='5'><span></span></td></tr>".repeat(4);
+  if(firstLoad && !rows.length) $("rows").innerHTML="<tr class='sk'><td colspan='5'><span></span></td></tr>".repeat(4);
   try{
     const r=await fetchT(CONFIG.SCRIPT_URL+"?date="+todayStr());
     const j=await r.json();
-    if(j.ok){rows=j.rows;failCount=0;}else failCount++;
+    if(j.ok && Array.isArray(j.rows)){
+      saveRows(j.rows);
+      failCount=0;
+    } else failCount++;
   }catch(e){failCount++;}
   firstLoad=false; loading=false; render(); schedule();
 }
 function schedule(){
   clearTimeout(pollTimer);
-  const wait=Math.min(30000*Math.pow(2,failCount),240000)+Math.random()*5000;
+  const wait=Math.min(25000*Math.pow(2,failCount),180000)+Math.random()*4000;
   pollTimer=setTimeout(()=>{document.hidden?schedule():load();},wait);
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden) load();});
@@ -207,26 +228,43 @@ $("go").addEventListener("click", async ()=>{
   if(!/^\d{13}$/.test(id)){ $("sid").classList.add("err"); return toast(t.badId,"err"); }
   if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("email").classList.add("err"); return toast(t.badEmail,"err"); }
   if(localIds().includes(id) || rows.some(r=>r.id===id)){ $("sid").classList.add("err"); return toast(t.dup,"warn"); }
-  if(Date.now()-lastSubmit<3000) return toast(t.rate,"warn");
+  if(Date.now()-lastSubmit<2000) return toast(t.rate,"warn");
   busy=true; lastSubmit=Date.now();
   const btn=$("go"); btn.disabled=true; btn.innerHTML="<span class='spin'></span>"+t.wait; barStart();
-  const payload={date:todayStr(),name,id,email,time:timeStr()};
+
+  const formattedNow = formatTime(timeStr());
+  const payload={date:todayStr(),name,id,email,time:formattedNow};
+  const optimRow = {name, id, idm:mask(id), time:formattedNow};
+
+  // Instant optimistic update: show in UI immediately!
+  rows.push(optimRow);
+  saveRows(rows);
+  addLocalId(id);
+  clearForm();
+  toast(t.ok,"ok");
+
   try{
-    if(!CONFIG.SCRIPT_URL){                       // demo mode
-      await new Promise(r=>setTimeout(r,700));
-      rows.push(Object.assign({idm:mask(id)},payload)); addLocalId(id); render(); toast(t.ok,"ok"); clearForm();
+    if(!CONFIG.SCRIPT_URL){
+      await new Promise(r=>setTimeout(r,300));
     } else {
-      const r=await fetchT(CONFIG.SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)},25000);
+      const r=await fetchT(CONFIG.SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)},20000);
       const j=await r.json();
-      if(j.ok){ addLocalId(id); toast(t.ok,"ok"); clearForm(); load(true); }
-      else if(j.error==="dup"){ addLocalId(id); toast(t.dup,"warn"); }
-      else if(j.error==="rate") toast(t.rate,"warn");
-      else if(j.error==="busy") toast(t.busy,"warn");
-      else if(j.error==="bad_id") toast(t.badId,"err");
-      else toast(t.srv,"err");
+      if(!j.ok){
+        // Rollback optimistic row if rejected
+        rows = rows.filter(r => r.id !== id);
+        saveRows(rows);
+        if(j.error==="dup") toast(t.dup,"warn");
+        else if(j.error==="rate") toast(t.rate,"warn");
+        else if(j.error==="busy") toast(t.busy,"warn");
+        else if(j.error==="bad_id") toast(t.badId,"err");
+        else toast(t.srv,"err");
+      }
     }
-  }catch(e){ toast(t.net,"err"); }
-  barDone(); btn.disabled=false; btn.textContent=T[lang].submit; busy=false;
+  }catch(e){
+    toast(t.net,"err");
+  } finally {
+    barDone(); btn.disabled=false; btn.textContent=T[lang].submit; busy=false;
+  }
 });
 function clearForm(){ ["name","sid","email"].forEach(k=>$(k).value=""); $("cnt").textContent="0/13"; }
 
