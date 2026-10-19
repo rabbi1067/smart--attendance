@@ -53,6 +53,10 @@ th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.
 .empty{text-align:center;color:var(--muted);padding:34px 0}
 .link{display:block;text-align:center;margin-top:14px;color:var(--pri);font-weight:600;text-decoration:none}
 .demo{background:rgba(217,119,6,.12);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:.8rem;margin-bottom:12px}
+.timer-banner{padding:10px 14px;border-radius:12px;font-size:.85rem;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;line-height:1.4}
+.timer-banner.open{background:rgba(79,70,229,.12);color:var(--pri);border:1px solid rgba(79,70,229,.25)}
+.timer-banner.closed{background:rgba(220,38,38,.12);color:var(--bad);border:1px solid rgba(220,38,38,.25)}
+.timer-banner.before{background:rgba(217,119,6,.12);color:var(--warn);border:1px solid rgba(217,119,6,.25)}
 #toasts{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;gap:8px;width:min(92vw,380px)}
 .toast{display:flex;gap:10px;align-items:center;padding:13px 16px;border-radius:14px;color:#fff;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,.25);animation:in .3s ease}
 .toast.ok{background:var(--ok)}.toast.err{background:var(--bad)}.toast.warn{background:var(--warn)}
@@ -79,6 +83,7 @@ th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.
 <main class="main">
   <section class="card">
     <h2 data-t="formTitle"></h2>
+    <div id="timerBanner" class="timer-banner" hidden></div>
     <label for="name" data-t="name"></label>
     <input id="name" autocomplete="name" data-p="namePh">
     <label for="sid" data-t="id"></label>
@@ -110,11 +115,37 @@ const CONFIG = {
   SHEET_URL: "https://docs.google.com/spreadsheets/d/1SWVflizfr5ro1tXGnDuXSb1_f0QWHs4-rLjKy4khgP4/edit?gid=0#gid=0"     // Public (view-only) Google Sheet link
 };
 
+/* ==========================================================================
+   ⏰ হাজিরা দেওয়ার সময়সীমা কন্ট্রোল (ATTENDANCE TIMER SETTINGS)
+   ==========================================================================
+   ১. ENABLED:
+      - false = ডিফল্ট মোড। সারাদিন (২৪ ঘণ্টা) যে কোনো সময় হাজিরা দেওয়া যাবে।
+      - true  = নির্দিষ্ট সময়সীমার মধ্যেই শুধু হাজিরা দেওয়া যাবে (টাইমার চালু)।
+      
+   ২. START_TIME & END_TIME:
+      - ১২ ঘণ্টার ঘড়ি অনুযায়ী লিখুন (যেমন: "09:00 AM", "10:30 AM", "09:00 PM")
+      - উদাহরণ ১: সকাল ৯টা থেকে সকাল ১০টা পর্যন্ত (১ ঘণ্টা সময়সীমা):
+          START_TIME: "09:00 AM", END_TIME: "10:00 AM"
+      - উদাহরণ ২: মাত্র ২০ মিনিট সময়সীমা রাখতে চাইলে:
+          START_TIME: "09:00 AM", END_TIME: "09:20 AM"
+      - উদাহরণ ৩: মাত্র ১০ মিনিট সময়সীমা রাখতে চাইলে:
+          START_TIME: "09:00 AM", END_TIME: "09:10 AM"
+      - উদাহরণ ৪: ২ ঘণ্টা সময়সীমা রাখতে চাইলে:
+          START_TIME: "02:00 PM", END_TIME: "04:00 PM"
+   ========================================================================== */
+const TIMER_CONFIG = {
+  ENABLED: false,             // ডিফল্ট: false (সারাদিন ২৪ ঘণ্টা খোলা)। সময়সীমা লাগলে true করুন।
+  START_TIME: "09:00 AM",     // শুরুর সময় (উদা: সকাল ৯টা)
+  END_TIME: "10:00 AM"        // শেষের সময় (উদা: সকাল ১০টা)
+};
+
 const T = {
  en:{title:"Smart Attendance",formTitle:"Mark your attendance",name:"Name",namePh:"Your full name",id:"Student ID",idHint:"13 digits, numbers only",email:"Email",opt:"(optional)",submit:"Submit Attendance ✓",today:"Today’s Attendance",time:"Time",view:"View all records →",demo:"Demo mode: data is not saved. Add your Apps Script URL to go live.",
-  ok:"Present recorded successfully!",badId:"Invalid ID: it must be exactly 13 digits.",badName:"Please enter your name.",badEmail:"Invalid email address.",dup:"This ID has already been marked today.",net:"Network error. Please try again.",rate:"Too many attempts. Please wait a few seconds.",busy:"Server is busy. Please try again in a moment.",wait:"Submitting…",srv:"Something went wrong. Please try again.",dark:"🌙",light:"☀️"},
+  ok:"Present recorded successfully!",badId:"Invalid ID: it must be exactly 13 digits.",badName:"Please enter your name.",badEmail:"Invalid email address.",dup:"This ID has already been marked today.",net:"Network error. Please try again.",rate:"Too many attempts. Please wait a few seconds.",busy:"Server is busy. Please try again in a moment.",wait:"Submitting…",srv:"Something went wrong. Please try again.",dark:"🌙",light:"☀️",
+  closed:"Attendance is closed for today.",timeRemaining:"Time remaining",startsIn:"Attendance starts in",closedBtn:"Closed"},
  bn:{title:"স্মার্ট এটেন্ডেন্স",formTitle:"আপনার হাজিরা দিন",name:"নাম",namePh:"আপনার পুরো নাম",id:"স্টুডেন্ট আইডি",idHint:"১৩ ডিজিট, শুধু সংখ্যা",email:"ইমেইল",opt:"(ঐচ্ছিক)",submit:"হাজিরা জমা দিন ✓",today:"আজকের হাজিরা",time:"সময়",view:"সব রেকর্ড দেখুন →",demo:"ডেমো মোড: ডেটা সেভ হচ্ছে না। লাইভ করতে Apps Script URL বসান।",
-  ok:"উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে!",badId:"ভুল আইডি: অবশ্যই ১৩ ডিজিট হতে হবে।",badName:"অনুগ্রহ করে আপনার নাম লিখুন।",badEmail:"ইমেইল ঠিকানা সঠিক নয়।",dup:"এই আইডি আজ ইতিমধ্যে হাজিরা দিয়েছে।",net:"নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।",rate:"অনেকবার চেষ্টা হয়েছে। কয়েক সেকেন্ড অপেক্ষা করুন।",busy:"সার্ভার ব্যস্ত। একটু পরে আবার চেষ্টা করুন।",wait:"জমা হচ্ছে…",srv:"কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",dark:"🌙",light:"☀️"}
+  ok:"উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে!",badId:"ভুল আইডি: অবশ্যই ১৩ ডিজিট হতে হবে।",badName:"অনুগ্রহ করে আপনার নাম লিখুন।",badEmail:"ইমেইল ঠিকানা সঠিক নয়।",dup:"এই আইডি আজ ইতিমধ্যে হাজিরা দিয়েছে।",net:"নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।",rate:"অনেকবার চেষ্টা হয়েছে। কয়েক সেকেন্ড অপেক্ষা করুন।",busy:"সার্ভার ব্যস্ত। একটু পরে আবার চেষ্টা করুন।",wait:"জমা হচ্ছে…",srv:"কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",dark:"🌙",light:"☀️",
+  closed:"আজকের মতো হাজিরা নেওয়ার সময় শেষ।",timeRemaining:"হাজিরা দেওয়ার সময় বাকি",startsIn:"হাজিরা শুরু হতে বাকি",closedBtn:"বন্ধ আছে"}
 };
 let lang = "en", rows = [];
 try{ lang = localStorage.getItem("lang") || "en"; }catch(e){}
@@ -162,17 +193,111 @@ function formatTime(val){
   return str;
 }
 
+function parseTimeToday(tStr) {
+  if (!tStr) return null;
+  const d = new Date();
+  const str = String(tStr).trim();
+  const m12 = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (!m12) return null;
+  let h = parseInt(m12[1], 10);
+  const m = parseInt(m12[2], 10);
+  const s = m12[3] ? parseInt(m12[3], 10) : 0;
+  const ampm = m12[4] ? m12[4].toUpperCase() : null;
+  if (ampm === "PM" && h < 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  d.setHours(h, m, s, 0);
+  return d;
+}
+
+function formatDiff(sec) {
+  if (sec < 0) sec = 0;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (lang === "bn") {
+    const toBn = num => String(num).replace(/\d/g, d => "০১২৩৪৫৬৭৮৯"[d]);
+    if (h > 0) return `${toBn(h)} ঘণ্টা ${toBn(m)} মিনিট ${toBn(s)} সেকেন্ড`;
+    return `${toBn(m)} মিনিট ${toBn(s)} সেকেন্ড`;
+  }
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  return `${m}m ${s}s`;
+}
+
+let timerState = { allowed: true };
+function updateTimer() {
+  const banner = $("timerBanner");
+  if (!TIMER_CONFIG || !TIMER_CONFIG.ENABLED) {
+    if (banner) banner.hidden = true;
+    timerState = { allowed: true };
+    if (!busy) {
+      $("name").disabled = $("sid").disabled = $("email").disabled = false;
+      $("go").disabled = false;
+      if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
+    }
+    return;
+  }
+
+  const now = new Date();
+  const start = parseTimeToday(TIMER_CONFIG.START_TIME);
+  const end = parseTimeToday(TIMER_CONFIG.END_TIME);
+  if (!start || !end) {
+    if (banner) banner.hidden = true;
+    timerState = { allowed: true };
+    return;
+  }
+
+  if (now < start) {
+    const diff = Math.floor((start - now) / 1000);
+    timerState = { allowed: false, state: "before" };
+    if (banner) {
+      banner.hidden = false;
+      banner.className = "timer-banner before";
+      banner.innerHTML = `<span>⏳</span><span>${T[lang].startsIn}: <strong>${formatDiff(diff)}</strong> (${TIMER_CONFIG.START_TIME})</span>`;
+    }
+    $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
+    $("go").textContent = "🔒 " + T[lang].closedBtn;
+    return;
+  }
+
+  if (now > end) {
+    timerState = { allowed: false, state: "after" };
+    if (banner) {
+      banner.hidden = false;
+      banner.className = "timer-banner closed";
+      banner.innerHTML = `<span>⛔</span><span>${T[lang].closed}</span>`;
+    }
+    $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
+    $("go").textContent = "⛔ " + T[lang].closedBtn;
+    return;
+  }
+
+  // Active time window
+  const diff = Math.floor((end - now) / 1000);
+  timerState = { allowed: true, state: "open" };
+  if (banner) {
+    banner.hidden = false;
+    banner.className = "timer-banner open";
+    banner.innerHTML = `<span>⏳</span><span>${T[lang].timeRemaining}: <strong>${formatDiff(diff)}</strong></span>`;
+  }
+  if (!busy) {
+    $("name").disabled = $("sid").disabled = $("email").disabled = false;
+    $("go").disabled = false;
+    if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
+  }
+}
+
 function applyLang(){
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-t]").forEach(e => e.textContent = T[lang][e.dataset.t]);
   document.querySelectorAll("[data-p]").forEach(e => e.placeholder = T[lang][e.dataset.p]);
   $("lang").textContent = lang==="en" ? "বাংলা" : "English";
-  document.title = T[lang].title; tick(); render();
+  document.title = T[lang].title; tick(); render(); updateTimer();
 }
 function tick(){
   const d = new Date();
   $("date").textContent = d.toLocaleDateString(loc(),{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   $("clock").textContent = d.toLocaleTimeString(loc(),{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true});
+  updateTimer();
 }
 setInterval(tick,1000);
 
@@ -227,6 +352,9 @@ $("sid").addEventListener("input",e=>{
 
 $("go").addEventListener("click", async ()=>{
   if(busy) return;
+  if(TIMER_CONFIG.ENABLED && !timerState.allowed){
+    return toast(T[lang].closed, "warn");
+  }
   const name=$("name").value.trim(), id=$("sid").value.trim(), email=$("email").value.trim(), t=T[lang];
   if(name.length<2){ $("name").classList.add("err"); return toast(t.badName,"err"); }
   if(!/^\d{13}$/.test(id)){ $("sid").classList.add("err"); return toast(t.badId,"err"); }
