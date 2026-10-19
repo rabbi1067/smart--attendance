@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smart Attendance</title>
+<meta name="description" content="Daily attendance system">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e2e8f0;--pri:#4f46e5;--pri2:#7c3aed;--ok:#16a34a;--bad:#dc2626;--warn:#d97706;--shadow:0 10px 30px rgba(15,23,42,.08);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1020;--card:#141a2e;--text:#e8ecf8;--muted:#8d97b5;--line:#252d4a;--shadow:0 10px 30px rgba(0,0,0,.4)}}
+:root[data-theme="dark"]{--bg:#0b1020;--card:#141a2e;--text:#e8ecf8;--muted:#8d97b5;--line:#252d4a;--shadow:0 10px 30px rgba(0,0,0,.4)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,"Hind Siliguri",system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh;transition:background .3s,color .3s}
+.hero{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;padding:22px 16px 80px}
+.wrap{max-width:980px;margin:0 auto}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:1.05rem;display:flex;align-items:center;gap:8px}
+.tools{display:flex;gap:8px}
+.btn-i{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);color:#fff;border-radius:10px;padding:8px 12px;font:inherit;font-weight:600;cursor:pointer;backdrop-filter:blur(6px)}
+.btn-i:hover{background:rgba(255,255,255,.28)}
+.dateblock{margin-top:26px;text-align:center}
+.date{font-size:clamp(1.3rem,4.5vw,2.1rem);font-weight:700}
+.clock{font-size:clamp(2rem,8vw,3.6rem);font-weight:700;letter-spacing:1px;font-variant-numeric:tabular-nums;opacity:.95}
+.main{max-width:980px;margin:-56px auto 40px;padding:0 16px;display:grid;grid-template-columns:1fr 1.2fr;gap:18px}
+@media (max-width:760px){.main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+h2{margin:0 0 14px;font-size:1.1rem}
+label{display:block;font-size:.85rem;font-weight:600;margin:14px 0 6px}
+.opt{color:var(--muted);font-weight:400}
+input{width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);background:transparent;color:var(--text);font:inherit;font-size:1rem;outline:none;transition:border .2s,box-shadow .2s}
+input:focus{border-color:var(--pri);box-shadow:0 0 0 4px rgba(79,70,229,.15)}
+input.err{border-color:var(--bad)}
+.hint{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:5px}
+.submit{width:100%;margin-top:20px;padding:14px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;font:inherit;font-weight:700;font-size:1rem;cursor:pointer;transition:transform .15s,opacity .2s}
+.submit:hover{transform:translateY(-1px)}.submit:disabled{opacity:.6;cursor:wait}
+.head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+.count{background:rgba(79,70,229,.12);color:var(--pri);padding:4px 12px;border-radius:99px;font-weight:700;font-size:.85rem}
+.tw{max-height:380px;overflow:auto;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0;background:var(--card)}
+.tick{color:var(--ok);font-weight:700}
+.empty{text-align:center;color:var(--muted);padding:34px 0}
+.link{display:block;text-align:center;margin-top:14px;color:var(--pri);font-weight:600;text-decoration:none}
+.demo{background:rgba(217,119,6,.12);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:.8rem;margin-bottom:12px}
+#toasts{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;gap:8px;width:min(92vw,380px)}
+.toast{display:flex;gap:10px;align-items:center;padding:13px 16px;border-radius:14px;color:#fff;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,.25);animation:in .3s ease}
+.toast.ok{background:var(--ok)}.toast.err{background:var(--bad)}.toast.warn{background:var(--warn)}
+.toast.out{opacity:0;transform:translateY(-10px);transition:.3s}
+@keyframes in{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
+#bar{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,#22d3ee,#a78bfa);z-index:60;transition:width .3s,opacity .3s;opacity:0}
+.spin{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.sk td{padding:12px 8px}.sk span{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--line),transparent,var(--line));background-size:200% 100%;animation:sh 1.2s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="toasts" aria-live="polite"></div>
+<header class="hero"><div class="wrap">
+  <div class="bar">
+    <div class="brand"><span>🗓️</span><span data-t="title"></span></div>
+    <div class="tools"><button class="btn-i" id="lang">বাংলা</button><button class="btn-i" id="theme" aria-label="Theme">🌙</button></div>
+  </div>
+  <div class="dateblock"><div class="date" id="date"></div><div class="clock" id="clock"></div></div>
+</div></header>
+
+<main class="main">
+  <section class="card">
+    <h2 data-t="formTitle"></h2>
+    <label for="name" data-t="name"></label>
+    <input id="name" autocomplete="name" data-p="namePh">
+    <label for="sid" data-t="id"></label>
+    <input id="sid" inputmode="numeric" maxlength="13" autocomplete="off" placeholder="2023200000686">
+    <div class="hint"><span data-t="idHint"></span><span id="cnt">0/13</span></div>
+    <label for="email"><span data-t="email"></span> <span class="opt" data-t="opt"></span></label>
+    <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com">
+    <button class="submit" id="go" data-t="submit"></button>
+  </section>
+
+  <section class="card">
+    <div class="head"><h2 style="margin:0" data-t="today"></h2><span class="count" id="total">0</span></div>
+    <div class="demo" id="demo" hidden data-t="demo"></div>
+    <div class="tw"><table><thead><tr><th>#</th><th data-t="name"></th><th data-t="id"></th><th data-t="time"></th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+    <a class="link" id="view" target="_blank" rel="noopener" hidden data-t="view"></a>
+  </section>
+</main>
+
+<script>
+/* ====== CONFIG: paste your links here after deploying Apps Script ====== */
+const CONFIG = {
+  SCRIPT_URL: "",   // Apps Script Web App URL (ends with /exec). Empty = demo mode
+  SHEET_URL: ""     // Public (view-only) Google Sheet link
+};
+
+const T = {
+ en:{title:"Smart Attendance",formTitle:"Mark your attendance",name:"Name",namePh:"Your full name",id:"Student ID",idHint:"13 digits, numbers only",email:"Email",opt:"(optional)",submit:"Submit Attendance ✓",today:"Today’s Attendance",time:"Time",view:"View all records →",demo:"Demo mode: data is not saved. Add your Apps Script URL to go live.",
+  ok:"Present recorded successfully!",badId:"Invalid ID: it must be exactly 13 digits.",badName:"Please enter your name.",badEmail:"Invalid email address.",dup:"This ID has already been marked today.",net:"Network error. Please try again.",rate:"Too many attempts. Please wait a few seconds.",busy:"Server is busy. Please try again in a moment.",wait:"Submitting…",srv:"Something went wrong. Please try again.",dark:"🌙",light:"☀️"},
+ bn:{title:"স্মার্ট এটেন্ডেন্স",formTitle:"আপনার হাজিরা দিন",name:"নাম",namePh:"আপনার পুরো নাম",id:"স্টুডেন্ট আইডি",idHint:"১৩ ডিজিট, শুধু সংখ্যা",email:"ইমেইল",opt:"(ঐচ্ছিক)",submit:"হাজিরা জমা দিন ✓",today:"আজকের হাজিরা",time:"সময়",view:"সব রেকর্ড দেখুন →",demo:"ডেমো মোড: ডেটা সেভ হচ্ছে না। লাইভ করতে Apps Script URL বসান।",
+  ok:"উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে!",badId:"ভুল আইডি: অবশ্যই ১৩ ডিজিট হতে হবে।",badName:"অনুগ্রহ করে আপনার নাম লিখুন।",badEmail:"ইমেইল ঠিকানা সঠিক নয়।",dup:"এই আইডি আজ ইতিমধ্যে হাজিরা দিয়েছে।",net:"নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।",rate:"অনেকবার চেষ্টা হয়েছে। কয়েক সেকেন্ড অপেক্ষা করুন।",busy:"সার্ভার ব্যস্ত। একটু পরে আবার চেষ্টা করুন।",wait:"জমা হচ্ছে…",srv:"কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",dark:"🌙",light:"☀️"}
+};
+let lang = "en", rows = [];
+try{ lang = localStorage.getItem("lang") || "en"; }catch(e){}
+const $ = id => document.getElementById(id);
+const p2 = n => String(n).padStart(2,"0");
+const todayStr = () => { const d=new Date(); return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); };
+const timeStr = () => { const d=new Date(); return p2(d.getHours())+":"+p2(d.getMinutes())+":"+p2(d.getSeconds()); };
+const loc = () => lang==="bn" ? "bn-BD" : "en-GB";
+const mask = s => s.slice(0,4)+"•••••"+s.slice(-4);
+
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach(e => e.textContent = T[lang][e.dataset.t]);
+  document.querySelectorAll("[data-p]").forEach(e => e.placeholder = T[lang][e.dataset.p]);
+  $("lang").textContent = lang==="en" ? "বাংলা" : "English";
+  document.title = T[lang].title; tick(); render();
+}
+function tick(){
+  const d = new Date();
+  $("date").textContent = d.toLocaleDateString(loc(),{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  $("clock").textContent = d.toLocaleTimeString(loc(),{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true});
+}
+setInterval(tick,1000);
+
+function toast(msg,type){
+  const el = document.createElement("div");
+  el.className = "toast "+type;
+  el.textContent = (type==="ok"?"✅ ":type==="err"?"⛔ ":"⚠️ ")+msg;
+  $("toasts").appendChild(el);
+  setTimeout(()=>{ el.classList.add("out"); setTimeout(()=>el.remove(),320); },3200);
+}
+
+function render(){
+  $("total").textContent = rows.length.toLocaleString(loc());
+  $("rows").innerHTML = rows.length ? rows.map((r,i)=>
+    "<tr><td>"+(i+1).toLocaleString(loc())+"</td><td>"+esc(r.name)+"</td><td>"+esc(r.idm||mask(String(r.id)))+"</td><td>"+esc(r.time)+"</td><td class='tick'>✔</td></tr>").join("")
+    : "<tr><td colspan='5' class='empty'>—</td></tr>";
+}
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let busy=false,lastSubmit=0,lastLoad=0,failCount=0,loading=false,firstLoad=true,pollTimer=null,barTimer=null,memIds=[];
+const bar=$("bar");
+function barStart(){clearTimeout(barTimer);bar.style.opacity=1;bar.style.width="70%";}
+function barDone(){bar.style.width="100%";barTimer=setTimeout(()=>{bar.style.opacity=0;bar.style.width="0";},300);}
+function localIds(){let a=[];try{a=JSON.parse(localStorage.getItem("done_"+todayStr())||"[]");}catch(e){}return a.concat(memIds);}
+function addLocalId(id){memIds.push(id);try{localStorage.setItem("done_"+todayStr(),JSON.stringify(localIds()));}catch(e){}}
+function fetchT(url,opt,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms||15000);return fetch(url,Object.assign({signal:c.signal},opt)).finally(()=>clearTimeout(t));}
+
+async function load(force){
+  if(!CONFIG.SCRIPT_URL||loading) return;
+  if(!force && Date.now()-lastLoad<5000) return;
+  loading=true; lastLoad=Date.now();
+  if(firstLoad) $("rows").innerHTML="<tr class='sk'><td colspan='5'><span></span></td></tr>".repeat(4);
+  try{
+    const r=await fetchT(CONFIG.SCRIPT_URL+"?date="+todayStr());
+    const j=await r.json();
+    if(j.ok){rows=j.rows;failCount=0;}else failCount++;
+  }catch(e){failCount++;}
+  firstLoad=false; loading=false; render(); schedule();
+}
+function schedule(){
+  clearTimeout(pollTimer);
+  const wait=Math.min(30000*Math.pow(2,failCount),240000)+Math.random()*5000;
+  pollTimer=setTimeout(()=>{document.hidden?schedule():load();},wait);
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden) load();});
+
+$("sid").addEventListener("input",e=>{
+  e.target.value = e.target.value.replace(/\D/g,"").slice(0,13);
+  $("cnt").textContent = e.target.value.length+"/13"; e.target.classList.remove("err");
+});
+
+$("go").addEventListener("click", async ()=>{
+  if(busy) return;
+  const name=$("name").value.trim(), id=$("sid").value.trim(), email=$("email").value.trim(), t=T[lang];
+  if(name.length<2){ $("name").classList.add("err"); return toast(t.badName,"err"); }
+  if(!/^\d{13}$/.test(id)){ $("sid").classList.add("err"); return toast(t.badId,"err"); }
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("email").classList.add("err"); return toast(t.badEmail,"err"); }
+  if(localIds().includes(id) || rows.some(r=>r.id===id)){ $("sid").classList.add("err"); return toast(t.dup,"warn"); }
+  if(Date.now()-lastSubmit<3000) return toast(t.rate,"warn");
+  busy=true; lastSubmit=Date.now();
+  const btn=$("go"); btn.disabled=true; btn.innerHTML="<span class='spin'></span>"+t.wait; barStart();
+  const payload={date:todayStr(),name,id,email,time:timeStr()};
+  try{
+    if(!CONFIG.SCRIPT_URL){                       // demo mode
+      await new Promise(r=>setTimeout(r,700));
+      rows.push(Object.assign({idm:mask(id)},payload)); addLocalId(id); render(); toast(t.ok,"ok"); clearForm();
+    } else {
+      const r=await fetchT(CONFIG.SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)},25000);
+      const j=await r.json();
+      if(j.ok){ addLocalId(id); toast(t.ok,"ok"); clearForm(); load(true); }
+      else if(j.error==="dup"){ addLocalId(id); toast(t.dup,"warn"); }
+      else if(j.error==="rate") toast(t.rate,"warn");
+      else if(j.error==="busy") toast(t.busy,"warn");
+      else if(j.error==="bad_id") toast(t.badId,"err");
+      else toast(t.srv,"err");
+    }
+  }catch(e){ toast(t.net,"err"); }
+  barDone(); btn.disabled=false; btn.textContent=T[lang].submit; busy=false;
+});
+function clearForm(){ ["name","sid","email"].forEach(k=>$(k).value=""); $("cnt").textContent="0/13"; }
+
+function setTheme(m){
+  document.documentElement.dataset.theme = m;
+  $("theme").textContent = m==="dark" ? T[lang].light : T[lang].dark;
+  try{ localStorage.setItem("theme",m); }catch(e){}
+}
+$("theme").addEventListener("click",()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark"));
+$("lang").addEventListener("click",()=>{ lang = lang==="en"?"bn":"en"; try{localStorage.setItem("lang",lang);}catch(e){} applyLang(); setTheme(document.documentElement.dataset.theme); });
+
+let saved = null; try{ saved = localStorage.getItem("theme"); }catch(e){}
+setTheme(saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+if(CONFIG.SHEET_URL){ $("view").href = CONFIG.SHEET_URL; $("view").hidden = false; }
+$("demo").hidden = !!CONFIG.SCRIPT_URL;
+applyLang(); load(true);
+</script>
+</body>
+</html>
