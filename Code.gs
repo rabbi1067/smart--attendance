@@ -48,20 +48,16 @@ function doPost(e) {
   if (name.length < 2) return json_({ ok: false, error: "bad_name" });
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json_({ ok: false, error: "bad_email" });
 
-  // 2) fast duplicate check (cache) - no sheet read
-  const dupKey = "d_" + date + "_" + id;
-  if (cache.get(dupKey)) return json_({ ok: false, error: "dup" });
-
-  // 3) rate limits: per ID and for the whole site
+  // 2) anti-spam rate limits (3s per ID, 80 per 10s for site)
   const rateKey = "r_" + id;
   if (cache.get(rateKey)) return json_({ ok: false, error: "rate" });
-  cache.put(rateKey, "1", RATE_SECONDS);
+  cache.put(rateKey, "1", 3);
   const gKey = "g_" + Math.floor(Date.now() / 10000);
   const n = Number(cache.get(gKey) || 0) + 1;
   cache.put(gKey, String(n), 30);
   if (n > GLOBAL_LIMIT) return json_({ ok: false, error: "busy" });
 
-  // 4) short locked section: real duplicate check on the sheet + save
+  // 3) check duplicate directly in the Sheet and save
   const lock = LockService.getScriptLock();
   try { lock.waitLock(25000); } catch (err) { return json_({ ok: false, error: "busy" }); }
   try {
@@ -70,12 +66,10 @@ function doPost(e) {
     if (last > 1) {
       const ids = sh.getRange(2, 3, last - 1, 1).getValues().flat().map(String);
       if (ids.indexOf(id) !== -1) {
-        cache.put(dupKey, "1", 21600);
         return json_({ ok: false, error: "dup" });
       }
     }
     sh.appendRow([date, name, id, email, 1, time]);     // Attendance = 1 (Present)
-    cache.put(dupKey, "1", 21600);
     cache.remove("list_" + date);
     return json_({ ok: true });
   } catch (err) {
@@ -106,20 +100,14 @@ function formatTime12_(val) {
   return str;
 }
 
-function doGet() {
-  const cache = CacheService.getScriptCache();
-  const date = today_();
-  const key = "list_" + date;
-  const hit = cache.get(key);
-  if (hit) return ContentService.createTextOutput(hit).setMimeType(ContentService.MimeType.JSON);
-
+function doGet(e) {
+  const date = (e && e.parameter && e.parameter.date) ? String(e.parameter.date) : today_();
   const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(date);
   let rows = [];
   if (sh && sh.getLastRow() > 1) {
     rows = sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues()
-      .map(r => ({ name: r[1], idm: mask_(String(r[2])), time: formatTime12_(r[5]) }));   // public list: masked ID only
+      .map(r => ({ name: r[1], idm: mask_(String(r[2])), time: formatTime12_(r[5]) }));
   }
   const out = JSON.stringify({ ok: true, rows: rows });
-  if (out.length < 90000) cache.put(key, out, LIST_CACHE_SECONDS);
   return ContentService.createTextOutput(out).setMimeType(ContentService.MimeType.JSON);
 }
