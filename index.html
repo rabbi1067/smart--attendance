@@ -24,9 +24,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,"Hind Sil
 .dateblock{margin-top:26px;text-align:center}
 .date{font-size:clamp(1.3rem,4.5vw,2.1rem);font-weight:700}
 .clock{font-size:clamp(2rem,8vw,3.6rem);font-weight:700;letter-spacing:1px;font-variant-numeric:tabular-nums;opacity:.95}
-.main{max-width:980px;margin:-56px auto 40px;padding:0 16px;display:grid;grid-template-columns:1fr 1.2fr;gap:18px}
-@media (max-width:760px){.main{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+.main{max-width:980px;margin:-56px auto 40px;padding:0 16px;display:grid;grid-template-columns:380px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:780px){.main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);min-width:0}
 h2{margin:0 0 14px;font-size:1.1rem}
 label{display:block;font-size:.85rem;font-weight:600;margin:14px 0 6px}
 .opt{color:var(--muted);font-weight:400}
@@ -34,13 +34,15 @@ input{width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--l
 input:focus{border-color:var(--pri);box-shadow:0 0 0 4px rgba(79,70,229,.15)}
 input.err{border-color:var(--bad)}
 .hint{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:5px}
-.submit{width:100%;margin-top:20px;padding:14px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;font:inherit;font-weight:700;font-size:1rem;cursor:pointer;transition:transform .15s,opacity .2s}
+.submit{width:100%;margin-top:20px;padding:14px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;font:inherit;font-weight:700;font-size:1rem;cursor:pointer;transition:transform .15s,opacity .2s;white-space:nowrap}
 .submit:hover{transform:translateY(-1px)}.submit:disabled{opacity:.6;cursor:wait}
 .head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
 .count{background:rgba(79,70,229,.12);color:var(--pri);padding:4px 12px;border-radius:99px;font-weight:700;font-size:.85rem}
-.tw{max-height:380px;overflow:auto;overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:.9rem}
-th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.tw{max-height:380px;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:12px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{width:36px;text-align:center}
+th:last-child,td:last-child{width:36px;text-align:center}
 th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0;background:var(--card)}
 .tick{color:var(--ok);font-weight:700}
 .empty{text-align:center;color:var(--muted);padding:34px 0}
@@ -108,9 +110,33 @@ try{ lang = localStorage.getItem("lang") || "en"; }catch(e){}
 const $ = id => document.getElementById(id);
 const p2 = n => String(n).padStart(2,"0");
 const todayStr = () => { const d=new Date(); return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); };
-const timeStr = () => { const d=new Date(); return p2(d.getHours())+":"+p2(d.getMinutes())+":"+p2(d.getSeconds()); };
+const timeStr = () => {
+  const d = new Date();
+  let h = d.getHours();
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return h + ":" + p2(d.getMinutes()) + ":" + p2(d.getSeconds()) + " " + ampm;
+};
 const loc = () => lang==="bn" ? "bn-BD" : "en-GB";
 const mask = s => s.slice(0,4)+"•••••"+s.slice(-4);
+
+function formatTime(val){
+  if(!val) return "";
+  const str = String(val).trim();
+  const m12 = str.match(/^(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM|am|pm)$/i);
+  if(m12){
+    const h = parseInt(m12[1], 10);
+    return h + ":" + m12[2] + ":" + m12[3] + " " + m12[4].toUpperCase();
+  }
+  const m24 = str.match(/(?:^|\s|T)(\d{1,2}):(\d{2}):(\d{2})/);
+  if(m24){
+    let h = parseInt(m24[1], 10);
+    const ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return h + ":" + m24[2] + ":" + m24[3] + " " + ampm;
+  }
+  return str;
+}
 
 function applyLang(){
   document.documentElement.lang = lang;
@@ -137,7 +163,7 @@ function toast(msg,type){
 function render(){
   $("total").textContent = rows.length.toLocaleString(loc());
   $("rows").innerHTML = rows.length ? rows.map((r,i)=>
-    "<tr><td>"+(i+1).toLocaleString(loc())+"</td><td>"+esc(r.name)+"</td><td>"+esc(r.idm||mask(String(r.id)))+"</td><td>"+esc(r.time)+"</td><td class='tick'>✔</td></tr>").join("")
+    "<tr><td>"+(i+1).toLocaleString(loc())+"</td><td>"+esc(r.name)+"</td><td>"+esc(r.idm||mask(String(r.id)))+"</td><td>"+esc(formatTime(r.time))+"</td><td class='tick'>✔</td></tr>").join("")
     : "<tr><td colspan='5' class='empty'>—</td></tr>";
 }
 const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));

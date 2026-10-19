@@ -8,7 +8,7 @@ function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 function today_() { return Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd"); }
-function now_() { return Utilities.formatDate(new Date(), TIMEZONE, "HH:mm:ss"); }
+function now_() { return Utilities.formatDate(new Date(), TIMEZONE, "h:mm:ss a"); }
 function mask_(id) { return id.slice(0, 4) + "•••••" + id.slice(-4); }
 
 function getDaySheet_(ss, date) {
@@ -40,7 +40,7 @@ function doPost(e) {
   const id = String(d.id || "").trim();
   const email = String(d.email || "").trim().slice(0, 100);
   let time = String(d.time || "").trim();
-  if (!/^\d{2}:\d{2}:\d{2}$/.test(time)) time = now_();
+  if (!time || !/(?:AM|PM|\d{1,2}:\d{2})/i.test(time)) time = now_();
   const date = today_();
 
   // 1) validation
@@ -85,6 +85,27 @@ function doPost(e) {
   }
 }
 
+function formatTime12_(val) {
+  if (!val) return "";
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, TIMEZONE, "h:mm:ss a");
+  }
+  const str = String(val).trim();
+  const m12 = str.match(/^(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM|am|pm)$/i);
+  if (m12) {
+    const h = parseInt(m12[1], 10);
+    return h + ":" + m12[2] + ":" + m12[3] + " " + m12[4].toUpperCase();
+  }
+  const m = str.match(/(?:^|\s|T)(\d{1,2}):(\d{2}):(\d{2})/);
+  if (m) {
+    let h = parseInt(m[1], 10);
+    const ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return h + ":" + m[2] + ":" + m[3] + " " + ampm;
+  }
+  return str;
+}
+
 function doGet() {
   const cache = CacheService.getScriptCache();
   const date = today_();
@@ -96,7 +117,7 @@ function doGet() {
   let rows = [];
   if (sh && sh.getLastRow() > 1) {
     rows = sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues()
-      .map(r => ({ name: r[1], idm: mask_(String(r[2])), time: String(r[5]) }));   // public list: masked ID only
+      .map(r => ({ name: r[1], idm: mask_(String(r[2])), time: formatTime12_(r[5]) }));   // public list: masked ID only
   }
   const out = JSON.stringify({ ok: true, rows: rows });
   if (out.length < 90000) cache.put(key, out, LIST_CACHE_SECONDS);
