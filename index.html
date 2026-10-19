@@ -98,7 +98,10 @@ th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.
   <section class="card">
     <div class="head">
       <div style="display:flex;align-items:center;gap:8px">
-        <h2 style="margin:0" data-t="today"></h2>
+        <h2 style="margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span data-t="today"></span>
+          <span id="classBadge" style="font-size:.78rem;color:var(--pri);background:rgba(79,70,229,.12);padding:2px 8px;border-radius:6px;font-weight:600;display:none"></span>
+        </h2>
         <button id="syncBtn" type="button" title="Refresh list from Sheet" style="background:transparent;border:0;cursor:pointer;font-size:1.05rem;padding:2px 4px;border-radius:6px;opacity:.7;transition:transform .3s,opacity .2s">🔄</button>
       </div>
       <span class="count" id="total">0</span>
@@ -117,35 +120,41 @@ const CONFIG = {
   SHEET_URL: "https://docs.google.com/spreadsheets/d/1SWVflizfr5ro1tXGnDuXSb1_f0QWHs4-rLjKy4khgP4/edit?gid=0#gid=0"     // Public (view-only) Google Sheet link
 };
 
-// config.js থেকে TIMER_CONFIG লোড হবে। ফাইল লোড না হলে ডিফল্ট ২৪ ঘণ্টা খোলা থাকবে:
-if (typeof TIMER_CONFIG === "undefined") {
-  window.TIMER_CONFIG = { ENABLED: false, START_TIME: "09:00 AM", END_TIME: "10:00 AM" };
-}
+// config.js থেকে SCHEDULE_CONFIG বা TIMER_CONFIG লোড হবে:
+const getScheduleConfig = () => {
+  if (typeof SCHEDULE_CONFIG !== "undefined") return SCHEDULE_CONFIG;
+  if (typeof TIMER_CONFIG !== "undefined") return TIMER_CONFIG;
+  return { ENABLED: false };
+};
 
 const T = {
  en:{title:"Smart Attendance",formTitle:"Mark your attendance",name:"Name",namePh:"Your full name",id:"Student ID",idHint:"13 digits, numbers only",email:"Email",opt:"(optional)",submit:"Submit Attendance ✓",today:"Today’s Attendance",time:"Time",view:"View all records →",demo:"Demo mode: data is not saved. Add your Apps Script URL to go live.",
-  ok:"Present recorded successfully!",badId:"Invalid ID: it must be exactly 13 digits.",badName:"Please enter your name.",badEmail:"Invalid email address.",dup:"This ID has already been marked today.",net:"Network error. Please try again.",rate:"Too many attempts. Please wait a few seconds.",busy:"Server is busy. Please try again in a moment.",wait:"Submitting…",srv:"Something went wrong. Please try again.",dark:"🌙",light:"☀️",
-  closed:"Attendance is closed for today.",timeRemaining:"Time remaining",startsIn:"Attendance starts in",closedBtn:"Closed"},
+  ok:"Present recorded successfully!",badId:"Invalid ID: it must be exactly 13 digits.",badName:"Please enter your name.",badEmail:"Invalid email address.",dup:"This ID has already been marked for this class.",net:"Network error. Please try again.",rate:"Too many attempts. Please wait a few seconds.",busy:"Server is busy. Please try again in a moment.",wait:"Submitting…",srv:"Something went wrong. Please try again.",dark:"🌙",light:"☀️",
+  closed:"Attendance is closed.",timeRemaining:"Time remaining",startsIn:"Starts in",closedBtn:"Closed",nextClass:"Next class",allDone:"All classes completed for today"},
  bn:{title:"স্মার্ট এটেন্ডেন্স",formTitle:"আপনার হাজিরা দিন",name:"নাম",namePh:"আপনার পুরো নাম",id:"স্টুডেন্ট আইডি",idHint:"১৩ ডিজিট, শুধু সংখ্যা",email:"ইমেইল",opt:"(ঐচ্ছিক)",submit:"হাজিরা জমা দিন ✓",today:"আজকের হাজিরা",time:"সময়",view:"সব রেকর্ড দেখুন →",demo:"ডেমো মোড: ডেটা সেভ হচ্ছে না। লাইভ করতে Apps Script URL বসান।",
-  ok:"উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে!",badId:"ভুল আইডি: অবশ্যই ১৩ ডিজিট হতে হবে।",badName:"অনুগ্রহ করে আপনার নাম লিখুন।",badEmail:"ইমেইল ঠিকানা সঠিক নয়।",dup:"এই আইডি আজ ইতিমধ্যে হাজিরা দিয়েছে।",net:"নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।",rate:"অনেকবার চেষ্টা হয়েছে। কয়েক সেকেন্ড অপেক্ষা করুন।",busy:"সার্ভার ব্যস্ত। একটু পরে আবার চেষ্টা করুন।",wait:"জমা হচ্ছে…",srv:"কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",dark:"🌙",light:"☀️",
-  closed:"আজকের মতো হাজিরা নেওয়ার সময় শেষ।",timeRemaining:"হাজিরা দেওয়ার সময় বাকি",startsIn:"হাজিরা শুরু হতে বাকি",closedBtn:"বন্ধ আছে"}
+  ok:"উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে!",badId:"ভুল আইডি: অবশ্যই ১৩ ডিজিট হতে হবে।",badName:"অনুগ্রহ করে আপনার নাম লিখুন।",badEmail:"ইমেইল ঠিকানা সঠিক নয়।",dup:"এই আইডি দিয়ে এই ক্লাসে ইতিমধ্যে হাজিরা দেওয়া হয়েছে।",net:"নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।",rate:"অনেকবার চেষ্টা হয়েছে। কয়েক সেকেন্ড অপেক্ষা করুন।",busy:"সার্ভার ব্যস্ত। একটু পরে আবার চেষ্টা করুন।",wait:"জমা হচ্ছে…",srv:"কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",dark:"🌙",light:"☀️",
+  closed:"হাজিরা নেওয়া বন্ধ আছে।",timeRemaining:"সময় বাকি",startsIn:"শুরু হতে বাকি",closedBtn:"বন্ধ আছে",nextClass:"পরবর্তী ক্লাস",allDone:"আজকের সব ক্লাস সম্পন্ন হয়েছে"}
 };
 let lang = "en", rows = [];
 try{ lang = localStorage.getItem("lang") || "en"; }catch(e){}
 const $ = id => document.getElementById(id);
 const p2 = n => String(n).padStart(2,"0");
 const todayStr = () => { const d=new Date(); return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); };
-const CACHE_KEY = "att_rows_" + todayStr();
-try{
-  const cached = localStorage.getItem(CACHE_KEY);
-  if(cached){
-    const parsed = JSON.parse(cached);
-    if(Array.isArray(parsed) && parsed.length) rows = parsed;
-  }
-}catch(e){}
-function saveRows(data){
+
+const getCacheKey = (c) => "att_rows_" + todayStr() + (c ? "_" + String(c).replace(/\s+/g,"_") : "");
+function loadLocalRows(c){
+  try{
+    const cached = localStorage.getItem(getCacheKey(c));
+    if(cached){
+      const parsed = JSON.parse(cached);
+      if(Array.isArray(parsed)) return parsed;
+    }
+  }catch(e){}
+  return [];
+}
+function saveRows(data, c){
   rows = data;
-  try{ localStorage.setItem(CACHE_KEY, JSON.stringify(rows)); }catch(e){}
+  try{ localStorage.setItem(getCacheKey(c || (timerState && timerState.cls)), JSON.stringify(rows)); }catch(e){}
   render();
 }
 const timeStr = () => {
@@ -206,12 +215,18 @@ function formatDiff(sec) {
   return `${m}m ${s}s`;
 }
 
-let timerState = { allowed: true };
+let timerState = { allowed: true, cls: "" };
+let lastActiveCls = null;
+
 function updateTimer() {
   const banner = $("timerBanner");
-  if (!TIMER_CONFIG || !TIMER_CONFIG.ENABLED) {
+  const badge = $("classBadge");
+  const cfg = getScheduleConfig();
+
+  if (!cfg || !cfg.ENABLED) {
     if (banner) banner.hidden = true;
-    timerState = { allowed: true };
+    if (badge) badge.style.display = "none";
+    timerState = { allowed: true, cls: "" };
     if (!busy) {
       $("name").disabled = $("sid").disabled = $("email").disabled = false;
       $("go").disabled = false;
@@ -220,53 +235,94 @@ function updateTimer() {
     return;
   }
 
+  // Normalize classes list
+  let classList = [];
+  if (Array.isArray(cfg.CLASSES) && cfg.CLASSES.length > 0) {
+    classList = cfg.CLASSES;
+  } else if (cfg.START_TIME && cfg.END_TIME) {
+    classList = [{ name: cfg.NAME || "Class", start: cfg.START_TIME, end: cfg.END_TIME }];
+  }
+
   const now = new Date();
-  const start = parseTimeToday(TIMER_CONFIG.START_TIME);
-  const end = parseTimeToday(TIMER_CONFIG.END_TIME);
-  if (!start || !end) {
-    if (banner) banner.hidden = true;
-    timerState = { allowed: true };
+  let activeClass = null, activeEnd = null;
+  let nextClass = null, nextStart = null;
+
+  for (const c of classList) {
+    const s = parseTimeToday(c.start);
+    const e = parseTimeToday(c.end);
+    if (!s || !e) continue;
+
+    if (now >= s && now <= e) {
+      activeClass = c;
+      activeEnd = e;
+      break;
+    } else if (now < s) {
+      if (!nextClass || s < nextStart) {
+        nextClass = c;
+        nextStart = s;
+      }
+    }
+  }
+
+  // Detect class transition and auto-refresh table
+  const currentClsName = activeClass ? activeClass.name : (nextClass ? nextClass.name : "");
+  if (lastActiveCls !== null && lastActiveCls !== currentClsName) {
+    lastActiveCls = currentClsName;
+    rows = loadLocalRows(currentClsName);
+    render();
+    load(true);
+  } else if (lastActiveCls === null) {
+    lastActiveCls = currentClsName;
+    rows = loadLocalRows(currentClsName);
+  }
+
+  if (activeClass) {
+    const diff = Math.floor((activeEnd - now) / 1000);
+    timerState = { allowed: true, cls: activeClass.name, state: "open" };
+    if (banner) {
+      banner.hidden = false;
+      banner.className = "timer-banner open";
+      banner.innerHTML = `<span>🟢</span><span><strong>${esc(activeClass.name)}</strong> ${lang === "bn" ? "চলছে" : "in session"} | ${T[lang].timeRemaining}: <strong>${formatDiff(diff)}</strong></span>`;
+    }
+    if (badge) {
+      badge.textContent = activeClass.name;
+      badge.style.display = "inline-block";
+    }
+    if (!busy) {
+      $("name").disabled = $("sid").disabled = $("email").disabled = false;
+      $("go").disabled = false;
+      if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
+    }
     return;
   }
 
-  if (now < start) {
-    const diff = Math.floor((start - now) / 1000);
-    timerState = { allowed: false, state: "before" };
+  if (nextClass) {
+    const diff = Math.floor((nextStart - now) / 1000);
+    timerState = { allowed: false, cls: nextClass.name, state: "before" };
     if (banner) {
       banner.hidden = false;
       banner.className = "timer-banner before";
-      banner.innerHTML = `<span>⏳</span><span>${T[lang].startsIn}: <strong>${formatDiff(diff)}</strong> (${TIMER_CONFIG.START_TIME})</span>`;
+      banner.innerHTML = `<span>⏳</span><span>${T[lang].nextClass}: <strong>${esc(nextClass.name)}</strong> (${nextClass.start}) | ${T[lang].startsIn}: <strong>${formatDiff(diff)}</strong></span>`;
+    }
+    if (badge) {
+      badge.textContent = nextClass.name + (lang === "bn" ? " (আসন্ন)" : " (Upcoming)");
+      badge.style.display = "inline-block";
     }
     $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
     $("go").textContent = "🔒 " + T[lang].closedBtn;
     return;
   }
 
-  if (now > end) {
-    timerState = { allowed: false, state: "after" };
-    if (banner) {
-      banner.hidden = false;
-      banner.className = "timer-banner closed";
-      banner.innerHTML = `<span>⛔</span><span>${T[lang].closed}</span>`;
-    }
-    $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
-    $("go").textContent = "⛔ " + T[lang].closedBtn;
-    return;
-  }
-
-  // Active time window
-  const diff = Math.floor((end - now) / 1000);
-  timerState = { allowed: true, state: "open" };
+  // All classes ended for today
+  timerState = { allowed: false, cls: "", state: "after" };
   if (banner) {
     banner.hidden = false;
-    banner.className = "timer-banner open";
-    banner.innerHTML = `<span>⏳</span><span>${T[lang].timeRemaining}: <strong>${formatDiff(diff)}</strong></span>`;
+    banner.className = "timer-banner closed";
+    banner.innerHTML = `<span>⛔</span><span>${T[lang].allDone}</span>`;
   }
-  if (!busy) {
-    $("name").disabled = $("sid").disabled = $("email").disabled = false;
-    $("go").disabled = false;
-    if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
-  }
+  if (badge) badge.style.display = "none";
+  $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
+  $("go").textContent = "⛔ " + T[lang].closedBtn;
 }
 
 function applyLang(){
@@ -320,12 +376,13 @@ async function load(force){
     </td></tr>`;
   }
 
+  const clsParam = timerState.cls ? ("&cls=" + encodeURIComponent(timerState.cls)) : "";
   try{
-    const url = CONFIG.SCRIPT_URL + "?date=" + todayStr() + (force ? "&force=1" : "") + "&_t=" + Date.now();
+    const url = CONFIG.SCRIPT_URL + "?date=" + todayStr() + clsParam + (force ? "&force=1" : "") + "&_t=" + Date.now();
     const r = await fetchT(url);
     const j = await r.json();
     if(j.ok && Array.isArray(j.rows)){
-      saveRows(j.rows);
+      saveRows(j.rows, timerState.cls);
       failCount = 0;
     } else {
       failCount++;
@@ -354,7 +411,8 @@ $("sid").addEventListener("input",e=>{
 
 $("go").addEventListener("click", async ()=>{
   if(busy) return;
-  if(TIMER_CONFIG.ENABLED && !timerState.allowed){
+  const cfg = getScheduleConfig();
+  if(cfg && cfg.ENABLED && !timerState.allowed){
     return toast(T[lang].closed, "warn");
   }
   const name=$("name").value.trim(), id=$("sid").value.trim(), email=$("email").value.trim(), t=T[lang];
@@ -367,12 +425,13 @@ $("go").addEventListener("click", async ()=>{
   barStart();
 
   const formattedNow = formatTime(timeStr());
-  const payload={date:todayStr(),name,id,email,time:formattedNow};
+  const curCls = timerState.cls || "";
+  const payload={date:todayStr(),cls:curCls,name,id,email,time:formattedNow};
   const newRow={name, id, idm:mask(id), time:formattedNow};
 
   // ⚡ INSTANT INSERTION (< 0.2s): Table updates immediately, form clears, toast pops up
   rows.push(newRow);
-  saveRows(rows);
+  saveRows(rows, curCls);
   clearForm();
   toast(t.ok,"ok");
 
@@ -386,7 +445,7 @@ $("go").addEventListener("click", async ()=>{
       if(!j.ok){
         // Rollback optimistic row if rejected by server
         rows = rows.filter(r => r.id !== id && r.idm !== mask(id));
-        saveRows(rows);
+        saveRows(rows, curCls);
         if(j.error==="dup"){
           $("sid").classList.add("err");
           toast(t.dup,"warn");
