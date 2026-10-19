@@ -224,9 +224,13 @@ function updateTimer() {
   const cfg = getScheduleConfig();
 
   if (!cfg || !cfg.ENABLED) {
+    const defName = (cfg && cfg.DEFAULT_CLASS) ? cfg.DEFAULT_CLASS.trim() : "";
     if (banner) banner.hidden = true;
-    if (badge) badge.style.display = "none";
-    timerState = { allowed: true, cls: "" };
+    if (badge) {
+      if (defName) { badge.textContent = defName; badge.style.display = "inline-block"; }
+      else { badge.style.display = "none"; }
+    }
+    timerState = { allowed: true, cls: defName };
     if (!busy) {
       $("name").disabled = $("sid").disabled = $("email").disabled = false;
       $("go").disabled = false;
@@ -264,8 +268,9 @@ function updateTimer() {
     }
   }
 
+  const defaultCls = (cfg.DEFAULT_CLASS && cfg.DEFAULT_CLASS.trim()) ? cfg.DEFAULT_CLASS.trim() : "";
   // Detect class transition and auto-refresh table
-  const currentClsName = activeClass ? activeClass.name : (nextClass ? nextClass.name : "");
+  const currentClsName = activeClass ? activeClass.name : (defaultCls || (nextClass ? nextClass.name : ""));
   if (lastActiveCls !== null && lastActiveCls !== currentClsName) {
     lastActiveCls = currentClsName;
     rows = loadLocalRows(currentClsName);
@@ -286,6 +291,31 @@ function updateTimer() {
     }
     if (badge) {
       badge.textContent = activeClass.name;
+      badge.style.display = "inline-block";
+    }
+    if (!busy) {
+      $("name").disabled = $("sid").disabled = $("email").disabled = false;
+      $("go").disabled = false;
+      if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
+    }
+    return;
+  }
+
+  // When no scheduled class is currently running:
+  if (defaultCls) {
+    // Keep attendance open under default class
+    timerState = { allowed: true, cls: defaultCls, state: "open" };
+    if (banner) {
+      banner.hidden = false;
+      banner.className = "timer-banner open";
+      if (nextClass) {
+        banner.innerHTML = `<span>🟢</span><span><strong>${esc(defaultCls)}</strong> | ${T[lang].nextClass}: <strong>${esc(nextClass.name)}</strong> (${nextClass.start})</span>`;
+      } else {
+        banner.innerHTML = `<span>🟢</span><span><strong>${esc(defaultCls)}</strong> ${lang === "bn" ? "চলছে" : "active"}</span>`;
+      }
+    }
+    if (badge) {
+      badge.textContent = defaultCls;
       badge.style.display = "inline-block";
     }
     if (!busy) {
