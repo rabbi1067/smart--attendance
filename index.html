@@ -67,6 +67,7 @@ th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.
 @keyframes sp{to{transform:rotate(360deg)}}
 .sk td{padding:12px 8px}.sk span{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--line),transparent,var(--line));background-size:200% 100%;animation:sh 1.2s infinite}
 @keyframes sh{to{background-position:-200% 0}}
+#syncBtn.spinning{animation:sp .7s linear infinite}
 </style>
 </head>
 <body>
@@ -309,16 +310,35 @@ async function load(force){
   if(!CONFIG.SCRIPT_URL||loading) return;
   if(!force && Date.now()-lastLoad<2500) return;
   loading=true; lastLoad=Date.now();
-  if(firstLoad && !rows.length) $("rows").innerHTML="<tr class='sk'><td colspan='5'><span></span></td></tr>".repeat(4);
+  const syncBtn = $("syncBtn");
+  if(syncBtn) syncBtn.classList.add("spinning");
+
+  if(!rows.length){
+    $("rows").innerHTML = `<tr class="empty"><td colspan="5" style="padding:28px 0;color:var(--muted)">
+      <span class="spin" style="border-color:var(--pri);border-top-color:transparent;width:15px;height:15px;display:inline-block;vertical-align:middle;margin-right:8px"></span>
+      ${lang==="bn"?"হাজিরা লোড হচ্ছে…":"Loading attendance…"}
+    </td></tr>`;
+  }
+
   try{
-    const r=await fetchT(CONFIG.SCRIPT_URL+"?date="+todayStr()+"&_t="+Date.now());
-    const j=await r.json();
+    const url = CONFIG.SCRIPT_URL + "?date=" + todayStr() + (force ? "&force=1" : "") + "&_t=" + Date.now();
+    const r = await fetchT(url);
+    const j = await r.json();
     if(j.ok && Array.isArray(j.rows)){
       saveRows(j.rows);
-      failCount=0;
-    } else failCount++;
-  }catch(e){failCount++;}
-  firstLoad=false; loading=false; render(); schedule();
+      failCount = 0;
+    } else {
+      failCount++;
+    }
+  }catch(e){
+    failCount++;
+  }finally{
+    loading = false;
+    firstLoad = false;
+    if(syncBtn) syncBtn.classList.remove("spinning");
+    render();
+    schedule();
+  }
 }
 function schedule(){
   clearTimeout(pollTimer);
@@ -395,11 +415,7 @@ $("go").addEventListener("click", async ()=>{
 });
 function clearForm(){ ["name","sid","email"].forEach(k=>$(k).value=""); $("cnt").textContent="0/13"; }
 
-if($("syncBtn")) $("syncBtn").addEventListener("click",()=>{
-  $("syncBtn").style.transform="rotate(360deg)";
-  setTimeout(()=>$("syncBtn").style.transform="",350);
-  load(true);
-});
+if($("syncBtn")) $("syncBtn").addEventListener("click",()=>load(true));
 
 function setTheme(m){
   document.documentElement.dataset.theme = m;
@@ -413,7 +429,9 @@ let saved = null; try{ saved = localStorage.getItem("theme"); }catch(e){}
 setTheme(saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
 if(CONFIG.SHEET_URL){ $("view").href = CONFIG.SHEET_URL; $("view").hidden = false; }
 $("demo").hidden = !!CONFIG.SCRIPT_URL;
-applyLang(); load(true);
+applyLang();
+render();
+load();
 </script>
 </body>
 </html>

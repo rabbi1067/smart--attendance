@@ -101,7 +101,16 @@ function formatTime12_(val) {
 }
 
 function doGet(e) {
+  const cache = CacheService.getScriptCache();
   const date = (e && e.parameter && e.parameter.date) ? String(e.parameter.date) : today_();
+  const force = !!(e && e.parameter && (e.parameter.force === "1" || e.parameter.force === "true"));
+  const key = "list_" + date;
+
+  if (!force) {
+    const hit = cache.get(key);
+    if (hit) return ContentService.createTextOutput(hit).setMimeType(ContentService.MimeType.JSON);
+  }
+
   const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(date);
   let rows = [];
   if (sh && sh.getLastRow() > 1) {
@@ -109,5 +118,8 @@ function doGet(e) {
       .map(r => ({ name: r[1], idm: mask_(String(r[2])), time: formatTime12_(r[5]) }));
   }
   const out = JSON.stringify({ ok: true, rows: rows });
+  if (out.length < 95000) {
+    cache.put(key, out, 120); // 2 minutes cache: instant load, auto-expires
+  }
   return ContentService.createTextOutput(out).setMimeType(ContentService.MimeType.JSON);
 }
