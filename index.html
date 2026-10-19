@@ -231,46 +231,56 @@ $("go").addEventListener("click", async ()=>{
   if(name.length<2){ $("name").classList.add("err"); return toast(t.badName,"err"); }
   if(!/^\d{13}$/.test(id)){ $("sid").classList.add("err"); return toast(t.badId,"err"); }
   if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("email").classList.add("err"); return toast(t.badEmail,"err"); }
-  if(Date.now()-lastSubmit<2000) return toast(t.rate,"warn");
+  if(Date.now()-lastSubmit<1500) return toast(t.rate,"warn");
   busy=true; lastSubmit=Date.now();
-  const btn=$("go"); btn.disabled=true; btn.innerHTML="<span class='spin'></span>"+t.wait; barStart();
+  const btn=$("go");
+  barStart();
 
   const formattedNow = formatTime(timeStr());
   const payload={date:todayStr(),name,id,email,time:formattedNow};
+  const newRow={name, id, idm:mask(id), time:formattedNow};
+
+  // ⚡ INSTANT INSERTION (< 0.2s): Table updates immediately, form clears, toast pops up
+  rows.push(newRow);
+  saveRows(rows);
+  clearForm();
+  toast(t.ok,"ok");
+
+  btn.disabled = true;
+  btn.textContent = (lang === "bn" ? "✓ জমা হয়েছে" : "✓ Submitted");
 
   try{
-    if(!CONFIG.SCRIPT_URL){                       // demo mode
-      await new Promise(r=>setTimeout(r,300));
-      rows.push({name, id, idm:mask(id), time:formattedNow});
-      saveRows(rows);
-      clearForm();
-      toast(t.ok,"ok");
-    } else {
-      const r=await fetchT(CONFIG.SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)},20000);
+    if(CONFIG.SCRIPT_URL){
+      const r=await fetchT(CONFIG.SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)},15000);
       const j=await r.json();
-      if(j.ok){
-        rows.push({name, id, idm:mask(id), time:formattedNow});
+      if(!j.ok){
+        // Rollback optimistic row if rejected by server
+        rows = rows.filter(r => r.id !== id && r.idm !== mask(id));
         saveRows(rows);
-        clearForm();
-        toast(t.ok,"ok");
-      } else if(j.error==="dup"){
-        $("sid").classList.add("err");
-        toast(t.dup,"warn");
-      } else if(j.error==="rate"){
-        toast(t.rate,"warn");
-      } else if(j.error==="busy"){
-        toast(t.busy,"warn");
-      } else if(j.error==="bad_id"){
-        $("sid").classList.add("err");
-        toast(t.badId,"err");
-      } else {
-        toast(t.srv,"err");
+        if(j.error==="dup"){
+          $("sid").classList.add("err");
+          toast(t.dup,"warn");
+        } else if(j.error==="rate"){
+          toast(t.rate,"warn");
+        } else if(j.error==="busy"){
+          toast(t.busy,"warn");
+        } else if(j.error==="bad_id"){
+          $("sid").classList.add("err");
+          toast(t.badId,"err");
+        } else {
+          toast(t.srv,"err");
+        }
       }
     }
   }catch(e){
     toast(t.net,"err");
   } finally {
-    barDone(); btn.disabled=false; btn.textContent=T[lang].submit; busy=false;
+    barDone();
+    setTimeout(()=>{
+      btn.disabled = false;
+      btn.textContent = T[lang].submit;
+      busy = false;
+    }, 600);
   }
 });
 function clearForm(){ ["name","sid","email"].forEach(k=>$(k).value=""); $("cnt").textContent="0/13"; }
