@@ -68,6 +68,12 @@ th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.
 .sk td{padding:12px 8px}.sk span{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--line),transparent,var(--line));background-size:200% 100%;animation:sh 1.2s infinite}
 @keyframes sh{to{background-position:-200% 0}}
 #syncBtn.spinning{animation:sp .7s linear infinite}
+.hero-countdown{display:inline-flex;align-items:center;gap:9px;margin-top:14px;padding:7px 18px;border-radius:99px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.32);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:clamp(.88rem,2.5vw,1.02rem);font-weight:600;letter-spacing:.3px;box-shadow:0 8px 24px rgba(0,0,0,.15);animation:popIn .3s ease-out}
+.pulse-dot{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px #22c55e;animation:pulse 1.5s infinite;flex-shrink:0}
+.pulse-dot.warn{background:#fbbf24;box-shadow:0 0 10px #fbbf24}
+.pulse-dot.bad{background:#ef4444;box-shadow:0 0 10px #ef4444;animation:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.85)}}
+@keyframes popIn{from{opacity:0;transform:translateY(-8px) scale(.96)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -78,7 +84,14 @@ th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.
     <div class="brand"><span>🗓️</span><span data-t="title"></span></div>
     <div class="tools"><button class="btn-i" id="lang">বাংলা</button><button class="btn-i" id="theme" aria-label="Theme">🌙</button></div>
   </div>
-  <div class="dateblock"><div class="date" id="date"></div><div class="clock" id="clock"></div></div>
+  <div class="dateblock">
+    <div class="date" id="date"></div>
+    <div class="clock" id="clock"></div>
+    <div id="heroCountdown" class="hero-countdown" style="display:none">
+      <span class="pulse-dot" id="pulseDot"></span>
+      <span id="heroCountdownText"></span>
+    </div>
+  </div>
 </div></header>
 
 <main class="main">
@@ -218,14 +231,38 @@ function formatDiff(sec) {
 let timerState = { allowed: true, cls: "" };
 let lastActiveCls = null;
 
-function updateTimer() {
+function setCountdownUI(state, htmlContent) {
   const banner = $("timerBanner");
+  const heroCd = $("heroCountdown");
+  const dot = $("pulseDot");
+  const heroText = $("heroCountdownText");
+
+  if (state === "hide") {
+    if (banner) banner.hidden = true;
+    if (heroCd) heroCd.style.display = "none";
+    return;
+  }
+
+  if (heroCd) {
+    heroCd.style.display = "inline-flex";
+    if (dot) dot.className = "pulse-dot " + (state === "open" ? "" : state === "before" ? "warn" : "bad");
+    if (heroText) heroText.innerHTML = htmlContent;
+  }
+
+  if (banner) {
+    banner.hidden = false;
+    banner.className = "timer-banner " + state;
+    banner.innerHTML = htmlContent;
+  }
+}
+
+function updateTimer() {
   const badge = $("classBadge");
   const cfg = getScheduleConfig();
 
-  // 1. If ENABLED is false, everything is open 24 hours
+  // 1. If ENABLED is false, everything is open 24 hours and countdown is completely hidden
   if (!cfg || !cfg.ENABLED) {
-    if (banner) banner.hidden = true;
+    setCountdownUI("hide");
     if (badge) badge.style.display = "none";
     timerState = { allowed: true, cls: "" };
     if (!busy) {
@@ -274,11 +311,8 @@ function updateTimer() {
     if (activeClass) {
       const diff = Math.floor((activeEnd - now) / 1000);
       timerState = { allowed: true, cls: activeClass.name, state: "open" };
-      if (banner) {
-        banner.hidden = false;
-        banner.className = "timer-banner open";
-        banner.innerHTML = `<span>🟢</span><span><strong>${esc(activeClass.name)}</strong> ${lang === "bn" ? "চলছে" : "in session"} | ${T[lang].timeRemaining}: <strong>${formatDiff(diff)}</strong></span>`;
-      }
+      const content = `<span>🟢</span><span><strong>${esc(activeClass.name)}</strong> ${lang === "bn" ? "চলছে" : "in session"} | ${T[lang].timeRemaining}: <strong>${formatDiff(diff)}</strong></span>`;
+      setCountdownUI("open", content);
       if (badge) {
         badge.textContent = activeClass.name;
         badge.style.display = "inline-block";
@@ -294,11 +328,8 @@ function updateTimer() {
     if (nextClass) {
       const diff = Math.floor((nextStart - now) / 1000);
       timerState = { allowed: false, cls: nextClass.name, state: "before" };
-      if (banner) {
-        banner.hidden = false;
-        banner.className = "timer-banner before";
-        banner.innerHTML = `<span>⏳</span><span>${T[lang].nextClass}: <strong>${esc(nextClass.name)}</strong> (${nextClass.start}) | ${T[lang].startsIn}: <strong>${formatDiff(diff)}</strong></span>`;
-      }
+      const content = `<span>⏳</span><span>${T[lang].nextClass}: <strong>${esc(nextClass.name)}</strong> (${nextClass.start}) | ${T[lang].startsIn}: <strong>${formatDiff(diff)}</strong></span>`;
+      setCountdownUI("before", content);
       if (badge) {
         badge.textContent = nextClass.name + (lang === "bn" ? " (আসন্ন)" : " (Upcoming)");
         badge.style.display = "inline-block";
@@ -310,11 +341,7 @@ function updateTimer() {
 
     // All classes ended for today
     timerState = { allowed: false, cls: "", state: "after" };
-    if (banner) {
-      banner.hidden = false;
-      banner.className = "timer-banner closed";
-      banner.innerHTML = `<span>⛔</span><span>${T[lang].allDone}</span>`;
-    }
+    setCountdownUI("closed", `<span>⛔</span><span>${T[lang].allDone}</span>`);
     if (badge) badge.style.display = "none";
     $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
     $("go").textContent = "⛔ " + T[lang].closedBtn;
@@ -335,7 +362,7 @@ function updateTimer() {
   const start = parseTimeToday(cfg.START_TIME || "10:00 PM");
   const end = parseTimeToday(cfg.END_TIME || "11:00 PM");
   if (!start || !end) {
-    if (banner) banner.hidden = true;
+    setCountdownUI("hide");
     timerState = { allowed: true, cls: "" };
     return;
   }
@@ -343,11 +370,8 @@ function updateTimer() {
   if (now < start) {
     const diff = Math.floor((start - now) / 1000);
     timerState = { allowed: false, cls: "", state: "before" };
-    if (banner) {
-      banner.hidden = false;
-      banner.className = "timer-banner before";
-      banner.innerHTML = `<span>⏳</span><span>${T[lang].startsIn}: <strong>${formatDiff(diff)}</strong> (${cfg.START_TIME})</span>`;
-    }
+    const content = `<span>⏳</span><span>${T[lang].startsIn}: <strong>${formatDiff(diff)}</strong> (${cfg.START_TIME})</span>`;
+    setCountdownUI("before", content);
     $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
     $("go").textContent = "🔒 " + T[lang].closedBtn;
     return;
@@ -355,11 +379,7 @@ function updateTimer() {
 
   if (now > end) {
     timerState = { allowed: false, cls: "", state: "after" };
-    if (banner) {
-      banner.hidden = false;
-      banner.className = "timer-banner closed";
-      banner.innerHTML = `<span>⛔</span><span>${T[lang].closed}</span>`;
-    }
+    setCountdownUI("closed", `<span>⛔</span><span>${T[lang].closed}</span>`);
     $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
     $("go").textContent = "⛔ " + T[lang].closedBtn;
     return;
@@ -368,11 +388,8 @@ function updateTimer() {
   // Active time window
   const diff = Math.floor((end - now) / 1000);
   timerState = { allowed: true, cls: "", state: "open" };
-  if (banner) {
-    banner.hidden = false;
-    banner.className = "timer-banner open";
-    banner.innerHTML = `<span>⏳</span><span>${T[lang].timeRemaining}: <strong>${formatDiff(diff)}</strong></span>`;
-  }
+  const content = `<span>⏳</span><span>${T[lang].timeRemaining}: <strong>${formatDiff(diff)}</strong></span>`;
+  setCountdownUI("open", content);
   if (!busy) {
     $("name").disabled = $("sid").disabled = $("email").disabled = false;
     $("go").disabled = false;
