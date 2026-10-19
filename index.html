@@ -223,14 +223,11 @@ function updateTimer() {
   const badge = $("classBadge");
   const cfg = getScheduleConfig();
 
+  // 1. If ENABLED is false, everything is open 24 hours
   if (!cfg || !cfg.ENABLED) {
-    const defName = (cfg && cfg.DEFAULT_CLASS) ? cfg.DEFAULT_CLASS.trim() : "";
     if (banner) banner.hidden = true;
-    if (badge) {
-      if (defName) { badge.textContent = defName; badge.style.display = "inline-block"; }
-      else { badge.style.display = "none"; }
-    }
-    timerState = { allowed: true, cls: defName };
+    if (badge) badge.style.display = "none";
+    timerState = { allowed: true, cls: "" };
     if (!busy) {
       $("name").disabled = $("sid").disabled = $("email").disabled = false;
       $("go").disabled = false;
@@ -239,120 +236,148 @@ function updateTimer() {
     return;
   }
 
-  // Normalize classes list
-  let classList = [];
-  if (Array.isArray(cfg.CLASSES) && cfg.CLASSES.length > 0) {
-    classList = cfg.CLASSES;
-  } else if (cfg.START_TIME && cfg.END_TIME) {
-    classList = [{ name: cfg.NAME || "Class", start: cfg.START_TIME, end: cfg.END_TIME }];
+  // 2. If USE_CLASSES is true, run multi-class schedule
+  if (cfg.USE_CLASSES && Array.isArray(cfg.CLASSES) && cfg.CLASSES.length > 0) {
+    const classList = cfg.CLASSES;
+    const now = new Date();
+    let activeClass = null, activeEnd = null;
+    let nextClass = null, nextStart = null;
+
+    for (const c of classList) {
+      const s = parseTimeToday(c.start);
+      const e = parseTimeToday(c.end);
+      if (!s || !e) continue;
+
+      if (now >= s && now <= e) {
+        activeClass = c;
+        activeEnd = e;
+        break;
+      } else if (now < s) {
+        if (!nextClass || s < nextStart) {
+          nextClass = c;
+          nextStart = s;
+        }
+      }
+    }
+
+    const currentClsName = activeClass ? activeClass.name : (nextClass ? nextClass.name : "");
+    if (lastActiveCls !== null && lastActiveCls !== currentClsName) {
+      lastActiveCls = currentClsName;
+      rows = loadLocalRows(currentClsName);
+      render();
+      load(true);
+    } else if (lastActiveCls === null) {
+      lastActiveCls = currentClsName;
+      rows = loadLocalRows(currentClsName);
+    }
+
+    if (activeClass) {
+      const diff = Math.floor((activeEnd - now) / 1000);
+      timerState = { allowed: true, cls: activeClass.name, state: "open" };
+      if (banner) {
+        banner.hidden = false;
+        banner.className = "timer-banner open";
+        banner.innerHTML = `<span>🟢</span><span><strong>${esc(activeClass.name)}</strong> ${lang === "bn" ? "চলছে" : "in session"} | ${T[lang].timeRemaining}: <strong>${formatDiff(diff)}</strong></span>`;
+      }
+      if (badge) {
+        badge.textContent = activeClass.name;
+        badge.style.display = "inline-block";
+      }
+      if (!busy) {
+        $("name").disabled = $("sid").disabled = $("email").disabled = false;
+        $("go").disabled = false;
+        if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
+      }
+      return;
+    }
+
+    if (nextClass) {
+      const diff = Math.floor((nextStart - now) / 1000);
+      timerState = { allowed: false, cls: nextClass.name, state: "before" };
+      if (banner) {
+        banner.hidden = false;
+        banner.className = "timer-banner before";
+        banner.innerHTML = `<span>⏳</span><span>${T[lang].nextClass}: <strong>${esc(nextClass.name)}</strong> (${nextClass.start}) | ${T[lang].startsIn}: <strong>${formatDiff(diff)}</strong></span>`;
+      }
+      if (badge) {
+        badge.textContent = nextClass.name + (lang === "bn" ? " (আসন্ন)" : " (Upcoming)");
+        badge.style.display = "inline-block";
+      }
+      $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
+      $("go").textContent = "🔒 " + T[lang].closedBtn;
+      return;
+    }
+
+    // All classes ended for today
+    timerState = { allowed: false, cls: "", state: "after" };
+    if (banner) {
+      banner.hidden = false;
+      banner.className = "timer-banner closed";
+      banner.innerHTML = `<span>⛔</span><span>${T[lang].allDone}</span>`;
+    }
+    if (badge) badge.style.display = "none";
+    $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
+    $("go").textContent = "⛔ " + T[lang].closedBtn;
+    return;
+  }
+
+  // 3. Simple default timer (No class name! Just START_TIME to END_TIME, e.g. 10:00 PM - 11:00 PM)
+  if (badge) badge.style.display = "none";
+  timerState = { allowed: true, cls: "" };
+  if (lastActiveCls !== "") {
+    lastActiveCls = "";
+    rows = loadLocalRows("");
+    render();
+    load(true);
   }
 
   const now = new Date();
-  let activeClass = null, activeEnd = null;
-  let nextClass = null, nextStart = null;
-
-  for (const c of classList) {
-    const s = parseTimeToday(c.start);
-    const e = parseTimeToday(c.end);
-    if (!s || !e) continue;
-
-    if (now >= s && now <= e) {
-      activeClass = c;
-      activeEnd = e;
-      break;
-    } else if (now < s) {
-      if (!nextClass || s < nextStart) {
-        nextClass = c;
-        nextStart = s;
-      }
-    }
-  }
-
-  const defaultCls = (cfg.DEFAULT_CLASS && cfg.DEFAULT_CLASS.trim()) ? cfg.DEFAULT_CLASS.trim() : "";
-  // Detect class transition and auto-refresh table
-  const currentClsName = activeClass ? activeClass.name : (defaultCls || (nextClass ? nextClass.name : ""));
-  if (lastActiveCls !== null && lastActiveCls !== currentClsName) {
-    lastActiveCls = currentClsName;
-    rows = loadLocalRows(currentClsName);
-    render();
-    load(true);
-  } else if (lastActiveCls === null) {
-    lastActiveCls = currentClsName;
-    rows = loadLocalRows(currentClsName);
-  }
-
-  if (activeClass) {
-    const diff = Math.floor((activeEnd - now) / 1000);
-    timerState = { allowed: true, cls: activeClass.name, state: "open" };
-    if (banner) {
-      banner.hidden = false;
-      banner.className = "timer-banner open";
-      banner.innerHTML = `<span>🟢</span><span><strong>${esc(activeClass.name)}</strong> ${lang === "bn" ? "চলছে" : "in session"} | ${T[lang].timeRemaining}: <strong>${formatDiff(diff)}</strong></span>`;
-    }
-    if (badge) {
-      badge.textContent = activeClass.name;
-      badge.style.display = "inline-block";
-    }
-    if (!busy) {
-      $("name").disabled = $("sid").disabled = $("email").disabled = false;
-      $("go").disabled = false;
-      if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
-    }
+  const start = parseTimeToday(cfg.START_TIME || "10:00 PM");
+  const end = parseTimeToday(cfg.END_TIME || "11:00 PM");
+  if (!start || !end) {
+    if (banner) banner.hidden = true;
+    timerState = { allowed: true, cls: "" };
     return;
   }
 
-  // When no scheduled class is currently running:
-  if (defaultCls) {
-    // Keep attendance open under default class
-    timerState = { allowed: true, cls: defaultCls, state: "open" };
-    if (banner) {
-      banner.hidden = false;
-      banner.className = "timer-banner open";
-      if (nextClass) {
-        banner.innerHTML = `<span>🟢</span><span><strong>${esc(defaultCls)}</strong> | ${T[lang].nextClass}: <strong>${esc(nextClass.name)}</strong> (${nextClass.start})</span>`;
-      } else {
-        banner.innerHTML = `<span>🟢</span><span><strong>${esc(defaultCls)}</strong> ${lang === "bn" ? "চলছে" : "active"}</span>`;
-      }
-    }
-    if (badge) {
-      badge.textContent = defaultCls;
-      badge.style.display = "inline-block";
-    }
-    if (!busy) {
-      $("name").disabled = $("sid").disabled = $("email").disabled = false;
-      $("go").disabled = false;
-      if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
-    }
-    return;
-  }
-
-  if (nextClass) {
-    const diff = Math.floor((nextStart - now) / 1000);
-    timerState = { allowed: false, cls: nextClass.name, state: "before" };
+  if (now < start) {
+    const diff = Math.floor((start - now) / 1000);
+    timerState = { allowed: false, cls: "", state: "before" };
     if (banner) {
       banner.hidden = false;
       banner.className = "timer-banner before";
-      banner.innerHTML = `<span>⏳</span><span>${T[lang].nextClass}: <strong>${esc(nextClass.name)}</strong> (${nextClass.start}) | ${T[lang].startsIn}: <strong>${formatDiff(diff)}</strong></span>`;
-    }
-    if (badge) {
-      badge.textContent = nextClass.name + (lang === "bn" ? " (আসন্ন)" : " (Upcoming)");
-      badge.style.display = "inline-block";
+      banner.innerHTML = `<span>⏳</span><span>${T[lang].startsIn}: <strong>${formatDiff(diff)}</strong> (${cfg.START_TIME})</span>`;
     }
     $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
     $("go").textContent = "🔒 " + T[lang].closedBtn;
     return;
   }
 
-  // All classes ended for today
-  timerState = { allowed: false, cls: "", state: "after" };
+  if (now > end) {
+    timerState = { allowed: false, cls: "", state: "after" };
+    if (banner) {
+      banner.hidden = false;
+      banner.className = "timer-banner closed";
+      banner.innerHTML = `<span>⛔</span><span>${T[lang].closed}</span>`;
+    }
+    $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
+    $("go").textContent = "⛔ " + T[lang].closedBtn;
+    return;
+  }
+
+  // Active time window
+  const diff = Math.floor((end - now) / 1000);
+  timerState = { allowed: true, cls: "", state: "open" };
   if (banner) {
     banner.hidden = false;
-    banner.className = "timer-banner closed";
-    banner.innerHTML = `<span>⛔</span><span>${T[lang].allDone}</span>`;
+    banner.className = "timer-banner open";
+    banner.innerHTML = `<span>⏳</span><span>${T[lang].timeRemaining}: <strong>${formatDiff(diff)}</strong></span>`;
   }
-  if (badge) badge.style.display = "none";
-  $("name").disabled = $("sid").disabled = $("email").disabled = $("go").disabled = true;
-  $("go").textContent = "⛔ " + T[lang].closedBtn;
+  if (!busy) {
+    $("name").disabled = $("sid").disabled = $("email").disabled = false;
+    $("go").disabled = false;
+    if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
+  }
 }
 
 function applyLang(){
