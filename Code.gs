@@ -1,4 +1,4 @@
-const HEADERS = ["Date", "Name", "ID", "Email", "Attendance", "Local Time"];
+const HEADERS = ["SL", "Date", "Name", "ID", "Email", "Attendance", "Local Time"];
 const TIMEZONE = "Asia/Dhaka";        // server decides the attendance date (device date can't be faked)
 const RATE_SECONDS = 10;              // same ID can't hit the server again within this time
 const GLOBAL_LIMIT = 80;              // max requests per 10s window for the whole site
@@ -11,22 +11,41 @@ function today_() { return Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-d
 function now_() { return Utilities.formatDate(new Date(), TIMEZONE, "h:mm:ss a"); }
 function mask_(id) { return id.slice(0, 4) + "•••••" + id.slice(-4); }
 
+function getSheetCols_(sh) {
+  const h1 = String(sh.getRange(1, 1).getValue()).trim();
+  if (h1 === "SL" || h1 === "#") {
+    return { hasSl: true, idCol: 4, timeCol: 7, totalCols: 7 };
+  }
+  return { hasSl: false, idCol: 3, timeCol: 6, totalCols: 6 };
+}
+
 function getDaySheet_(ss, sheetName) {
   let sh = ss.getSheetByName(sheetName);
   if (sh) return sh;
   sh = ss.insertSheet(sheetName, 0);                       // newest date/class tab comes first
-  ["A:A", "B:B", "C:C", "D:D", "F:F"].forEach(r => sh.getRange(r).setNumberFormat("@")); // text: keeps 13 digits, blocks formulas
+  ["A:A", "B:B", "C:C", "D:D", "E:E", "G:G"].forEach(r => sh.getRange(r).setNumberFormat("@")); // text: keeps 13 digits, blocks formulas
+  
+  // 1) Column A is SL (Starts counting 1 from row 2, Row 1 is header)
   sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
     .setBackground("#4f46e5").setFontColor("#ffffff").setFontWeight("bold")
     .setFontSize(11).setHorizontalAlignment("center").setVerticalAlignment("middle");
   sh.setRowHeight(1, 36);
   sh.setFrozenRows(1);
-  [110, 200, 150, 240, 110, 120].forEach((w, i) => sh.setColumnWidth(i + 1, w));
-  sh.getRange("A2:F").setVerticalAlignment("middle");
-  sh.getRange("E2:E").setHorizontalAlignment("center").setFontColor("#16a34a").setFontWeight("bold");
-  ["A2:A", "C2:C", "F2:F"].forEach(r => sh.getRange(r).setHorizontalAlignment("center"));
+  [60, 110, 200, 150, 240, 110, 120].forEach((w, i) => sh.setColumnWidth(i + 1, w));
+  
+  sh.getRange("A2:G").setVerticalAlignment("middle");
+  sh.getRange("F2:F").setHorizontalAlignment("center").setFontColor("#16a34a").setFontWeight("bold");
+  ["A2:A", "B2:B", "D2:D", "G2:G"].forEach(r => sh.getRange(r).setHorizontalAlignment("center"));
+  
   sh.getRange(1, 1, sh.getMaxRows(), HEADERS.length)
     .applyRowBanding(SpreadsheetApp.BandingTheme.INDIGO, true, false);
+    
+  // 2) Automatic Total Counter in Sheet: Starts counting from row 2 as 1, never counts row 1
+  sh.getRange("I1").setValue("Total:").setFontWeight("bold").setHorizontalAlignment("right");
+  sh.getRange("J1").setFormula('=COUNT(F2:F)').setFontWeight("bold").setFontColor("#16a34a").setHorizontalAlignment("center");
+  sh.setColumnWidth(9, 65);
+  sh.setColumnWidth(10, 60);
+
   sh.setTabColor("#4f46e5");
   return sh;
 }
@@ -65,13 +84,23 @@ function doPost(e) {
   try {
     const sh = getDaySheet_(SpreadsheetApp.getActiveSpreadsheet(), sheetName);
     const last = sh.getLastRow();
+    const cols = getSheetCols_(sh);
+
     if (last > 1) {
-      const ids = sh.getRange(2, 3, last - 1, 1).getValues().flat().map(String);
+      const ids = sh.getRange(2, cols.idCol, last - 1, 1).getValues().flat().map(String);
       if (ids.indexOf(id) !== -1) {
         return json_({ ok: false, error: "dup" });
       }
     }
-    sh.appendRow([date, name, id, email, 1, time]);     // Attendance = 1 (Present)
+
+    // ⚡ Automatic Serial Number (Row 2 gets 1, Row 3 gets 2, never counts row 1 header)
+    if (cols.hasSl) {
+      const sl = last; // when last row is 1 (header), new row is row 2, so sl = 1
+      sh.appendRow([sl, date, name, id, email, 1, time]);
+    } else {
+      sh.appendRow([date, name, id, email, 1, time]);
+    }
+
     cache.remove("list_" + sheetName);                  // Invalidate cache for this class
     return json_({ ok: true, sheet: sheetName });
   } catch (err) {
@@ -121,8 +150,13 @@ function doGet(e) {
   const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   let rows = [];
   if (sh && sh.getLastRow() > 1) {
-    rows = sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues()
-      .map(r => ({ name: r[1], idm: mask_(String(r[2])), time: formatTime12_(r[5]) }));
+    const cols = getSheetCols_(sh);
+    rows = sh.getRange(2, 1, sh.getLastRow() - 1, cols.totalCols).getValues()
+      .map(r => ({
+        name: cols.hasSl ? r[2] : r[1],
+        idm: mask_(String(cols.hasSl ? r[3] : r[2])),
+        time: formatTime12_(cols.hasSl ? r[6] : r[5])
+      }));
   }
   const out = JSON.stringify({ ok: true, sheet: sheetName, rows: rows });
   if (out.length < 95000) {
