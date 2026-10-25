@@ -6,7 +6,12 @@ let userEmail = sessionStorage.getItem('admin_email') || '';
 let sheets = [], sheetData = null, currentEdit = null, currentDelete = null;
 let toastTimer;
 function notice(message) {
-  $('toast').textContent = String(message); $('toast').classList.remove('hidden');
+  const t = $('toast');
+  if (!t) return;
+  const isErr = /fail|error|wrong|invalid|required|maximum/i.test(String(message));
+  const icon = isErr ? '⚠️' : '✓';
+  t.innerHTML = `<span style="font-size:1.05rem;line-height:1">${icon}</span><span>${String(message)}</span>`;
+  t.classList.remove('hidden');
   clearTimeout(toastTimer); toastTimer = setTimeout(()=> $('toast').classList.add('hidden'),4500);
 }
 async function request(path,{method='GET',body=null,protectedRoute=true}={}) {

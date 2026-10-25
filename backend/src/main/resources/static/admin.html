@@ -167,7 +167,9 @@
     .tip{background:var(--priLight);border-radius:12px;padding:14px 16px;color:var(--pri);font-size:.84rem;line-height:1.6;border:1px solid rgba(79,70,229,0.18)}
     :root[data-theme="dark"] .tip{background:rgba(99,102,241,0.12);color:#c7d2fe;border-color:rgba(99,102,241,0.3)}
     :root[data-theme="dark"] .tip strong{color:#ffffff}
-    #toast{position:fixed;bottom:22px;right:24px;background:#17213b;color:#fff;padding:14px 21px;border-radius:13px;max-width:380px;box-shadow:var(--shadow);z-index:100;font-size:.9rem}
+    #toast{position:fixed;top:calc(env(safe-area-inset-top,0px) + 20px);right:22px;background:#0f172a;color:#f8fafc;padding:13px 18px;border-radius:13px;max-width:min(90vw,400px);box-shadow:0 14px 35px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.15);z-index:9999;font-size:.88rem;font-weight:600;display:flex;align-items:center;gap:10px;animation:toastSlideIn .25s ease-out}
+    :root[data-theme="dark"] #toast{background:#1e293b;color:#ffffff;border-color:rgba(255,255,255,.2);box-shadow:0 16px 40px rgba(0,0,0,.6)}
+    @keyframes toastSlideIn{from{opacity:0;transform:translateY(-10px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
     @media(max-width:750px){.provider-choices,.mail-grid{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.timepair{grid-template-columns:1fr 1fr}.card{padding:19px}.class-row{grid-template-columns:1fr 1fr}.class-row>div:first-child{grid-column:1/-1}.login-card{padding:26px}.modal-fields{grid-template-columns:1fr}.topbar{padding:14px 16px}.search-box-wrap{max-width:100%}}
     .password-wrapper{position:relative;display:flex;align-items:center}
     .password-wrapper input{padding-right:44px!important}
