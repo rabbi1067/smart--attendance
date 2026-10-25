@@ -1,9 +1,10 @@
 services:
-  # 1. Backend Web Service (Spring Boot 3.4 / Docker)
+  # =========================================================================
+  # Smart Attendance • All-in-One Single Service (Frontend + Backend Bundled)
+  # =========================================================================
   - type: web
-    name: smart-attendance-backend
+    name: smart-attendance
     runtime: docker
-    rootDir: backend
     dockerfilePath: Dockerfile
     plan: free
     healthCheckPath: /actuator/health
@@ -20,23 +21,3 @@ services:
         generateValue: true
       - key: MAIL_ENCRYPTION_KEY
         sync: false
-      - key: FRONTEND_ORIGINS
-        fromService:
-          type: web
-          name: smart-attendance-frontend
-          envVarKey: RENDER_EXTERNAL_URL
-
-  # 2. Frontend Static Site (HTML / JS / CSS)
-  - type: web
-    name: smart-attendance-frontend
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm run build
-    staticPublishPath: dist
-    plan: free
-    envVars:
-      - key: API_BASE_URL
-        fromService:
-          type: web
-          name: smart-attendance-backend
-          envVarKey: RENDER_EXTERNAL_URL

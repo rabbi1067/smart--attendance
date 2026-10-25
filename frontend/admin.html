@@ -93,7 +93,19 @@
 </head>
 <body>
 <header class="topbar">
- <a class="brand" href="index.html">🗓️ Smart Attendance <span class="muted">/ Admin</span></a>
+ <a class="brand" href="index.html" style="display:flex;align-items:center;gap:10px;">
+   <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+     <rect width="32" height="32" rx="8" fill="url(#adminBrandGrad)"/>
+     <path d="M9 16.5L13.5 21L23 11.5" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+     <defs>
+       <linearGradient id="adminBrandGrad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+         <stop stop-color="#4F46E5"/>
+         <stop offset="1" stop-color="#7C3AED"/>
+       </linearGradient>
+     </defs>
+   </svg>
+   <span>Smart Attendance <span class="muted" style="font-weight:400;font-size:.9rem">/ Admin</span></span>
+ </a>
  <div class="top-actions"><span id="account" class="chip hidden"></span><a href="index.html" class="btn btn-white small">← Public site</a><button id="logout" class="btn btn-danger small hidden">Logout</button></div>
 </header>
 <section id="loginView" class="login-page">

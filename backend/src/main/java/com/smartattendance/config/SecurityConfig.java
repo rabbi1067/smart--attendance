@@ -23,8 +23,11 @@ public class SecurityConfig {
   @Bean SecurityFilterChain security(HttpSecurity http, TokenService tokens, AdminAuthService accounts) throws Exception {
     http.csrf(c->c.disable()).cors(c->{}).httpBasic(c->c.disable()).formLogin(c->c.disable())
        .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-       .authorizeHttpRequests(a->a.requestMatchers("/actuator/health","/api/public/**","/api/admin/auth/login").permitAll()
-           .requestMatchers("/api/admin/**").authenticated().anyRequest().denyAll())
+       .authorizeHttpRequests(a->a
+           .requestMatchers("/actuator/health","/api/public/**","/api/admin/auth/login").permitAll()
+           .requestMatchers("/api/admin/**").authenticated()
+           .requestMatchers("/api/**").denyAll()
+           .anyRequest().permitAll())
        .exceptionHandling(e->e.authenticationEntryPoint((req,res,err)->{
          res.setStatus(401);res.setContentType("application/json");res.getWriter().write("{\"ok\":false,\"error\":\"unauthorized\"}");
        }))
@@ -41,9 +44,13 @@ public class SecurityConfig {
        },UsernamePasswordAuthenticationFilter.class);
     return http.build();
   }
-  @Bean CorsConfigurationSource cors(@Value("${app.frontend-origins}") String origins) {
+  @Bean CorsConfigurationSource cors(@Value("${app.frontend-origins:}") String origins) {
     CorsConfiguration cfg=new CorsConfiguration();
-    Arrays.stream(origins.split(",")).map(String::trim).filter(s->!s.isBlank()).forEach(cfg::addAllowedOrigin);
+    if(origins!=null && !origins.isBlank()){
+      Arrays.stream(origins.split(",")).map(String::trim).filter(s->!s.isBlank()).forEach(cfg::addAllowedOrigin);
+    } else {
+      cfg.addAllowedOriginPattern("*");
+    }
     cfg.setAllowedMethods(List.of("GET","POST","PUT","OPTIONS"));
     cfg.setAllowedHeaders(List.of("Content-Type","Authorization"));
     cfg.setMaxAge(3600L);

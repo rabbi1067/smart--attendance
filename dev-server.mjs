@@ -18,12 +18,12 @@ function ensureBuild() {
       fs.copyFileSync(src, path.join(DIST_DIR, f));
     }
   }
-  const apiOrigin = `http://localhost:${PORT}`;
+  const apiOrigin = '';
   fs.writeFileSync(
     path.join(DIST_DIR, 'config-runtime.js'),
     `window.ATTENDANCE_API_BASE = ${JSON.stringify(apiOrigin)};\n`
   );
-  console.log(`[Build] Frontend dist prepared with API origin: ${apiOrigin}`);
+  console.log(`[Build] Frontend dist prepared with same-origin relative API`);
 }
 
 ensureBuild();
