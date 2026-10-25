@@ -84,7 +84,7 @@ public class SettingsService {
       saved.senderName = senderName;
     }
 
-    String key = saved.email.toLowerCase(Locale.ROOT).trim();
+    String key = (saved.id != null && !saved.id.isBlank() ? saved.id : email).toLowerCase(Locale.ROOT).trim();
     memoryStore.put(key, saved);
     try {
       return repo.save(saved);

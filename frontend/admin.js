@@ -264,3 +264,16 @@ $('confirmDelete').addEventListener('click',async()=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('confirmModal').classList.add('hidden');closeEditor();}});
 if(token)initialize();else showApp(false);
+
+const toggleLoginPassword = $('toggleLoginPassword');
+if (toggleLoginPassword) {
+  toggleLoginPassword.addEventListener('click', () => {
+    const pwdInput = $('loginPassword');
+    const isPass = pwdInput.type === 'password';
+    pwdInput.type = isPass ? 'text' : 'password';
+    $('eyeIcon').classList.toggle('hidden', isPass);
+    $('eyeSlashIcon').classList.toggle('hidden', !isPass);
+    toggleLoginPassword.setAttribute('aria-label', isPass ? 'Hide password' : 'Show password');
+    toggleLoginPassword.setAttribute('title', isPass ? 'Hide password' : 'Show password');
+  });
+}
