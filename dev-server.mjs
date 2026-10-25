@@ -187,8 +187,7 @@ const server = http.createServer(async (req, res) => {
         const password = body.password || '';
 
         // Allow configured admin or default admin credentials
-        if ((email === state.adminEmail && (password === state.adminPassword || password === 'admin' || password === 'admin123')) ||
-            (password.length >= 4 && email.includes('@'))) {
+        if (password.length >= 1 && email.includes('@')) {
           return sendJson(res, 200, {
             ok: true,
             token: 'local-dev-jwt-token-xyz',

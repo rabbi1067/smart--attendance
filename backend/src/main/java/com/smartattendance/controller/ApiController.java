@@ -45,12 +45,12 @@ public class ApiController {
     ObjectNode result=((ObjectNode)recorded).deepCopy();result.put("emailStatus",status);
     return result;
   }
-  public record Login(@NotBlank @Email String email,@NotBlank String password) {}
-  @PostMapping("/admin/auth/login") public Object login(@Valid @RequestBody Login input,HttpServletRequest request) {
-    // Trust only the real TCP peer, not client-supplied X-Forwarded-For values.
-    if(!auth.login(input.email(),input.password(),request.getRemoteAddr())) throw new InvalidLoginException();
-    String email=input.email().trim().toLowerCase(Locale.ROOT);
-    return Map.of("ok",true,"token",tokens.issue(email),"email",email,"expiresInSeconds",14400);
+  public record Login(@NotBlank String email, @NotBlank String password) {}
+  @PostMapping("/admin/auth/login") public Object login(@Valid @RequestBody Login input, HttpServletRequest request) {
+    String email = input.email() == null ? "" : input.email().trim().toLowerCase(Locale.ROOT);
+    String password = input.password() == null ? "" : input.password().trim();
+    if (!auth.login(email, password, request.getRemoteAddr())) throw new InvalidLoginException();
+    return Map.of("ok", true, "token", tokens.issue(email), "email", email, "expiresInSeconds", 14400);
   }
   @GetMapping("/admin/config") public Object getAdminConfig(Authentication principal) { return settings.adminConfig(principal.getName()); }
   @PutMapping("/admin/config") public Object saveAdminConfig(Authentication principal, @RequestBody SettingsService.ConfigUpdate update) {

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Smart Attendance</title>
-<meta name="description" content="Next-generation automated attendance tracking platform">
+<meta name="description" content="Next-generation automated attendance tracking system">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
   --pri-hover: #4338ca;
   --pri-light: rgba(79, 70, 229, 0.08);
   --pri2: #7c3aed;
-  --accent: #06b6d4;
+  --accent: #38bdf8;
   --bg: #f8fafc;
   --card: #ffffff;
   --card-border: #e2e8f0;
@@ -34,29 +34,30 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #090d16;
-    --card: #111827;
-    --card-border: #1f2937;
+    --bg: #070b14;
+    --card: #0d1322;
+    --card-border: #1a2336;
     --text: #f1f5f9;
-    --text-muted: #94a3b8;
-    --line: #1f2937;
+    --text-muted: #8b9bb4;
+    --line: #1a2336;
     --pri-light: rgba(99, 102, 241, 0.15);
-    --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.4);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #090d16;
-  --card: #111827;
-  --card-border: #1f2937;
+  --bg: #070b14;
+  --card: #0d1322;
+  --card-border: #1a2336;
   --text: #f1f5f9;
-  --text-muted: #94a3b8;
-  --line: #1f2937;
+  --text-muted: #8b9bb4;
+  --line: #1a2336;
   --pri-light: rgba(99, 102, 241, 0.15);
-  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
 * { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
   margin: 0;
   background: var(--bg);
@@ -69,25 +70,26 @@ body {
 
 /* Hero Section */
 .hero {
-  background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #7c3aed 100%);
+  background: linear-gradient(135deg, #090e1a 0%, #151a30 50%, #1e1b4b 100%);
   color: #fff;
-  padding: 20px 20px 84px;
+  padding: 22px 20px 88px;
   position: relative;
   overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.hero::after {
+.hero::before {
   content: "";
   position: absolute;
-  top: -50%;
+  top: -40%;
   right: -20%;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.22) 0%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
 }
 .wrap {
-  max-width: 1020px;
+  max-width: 1040px;
   margin: 0 auto;
   position: relative;
   z-index: 2;
@@ -110,41 +112,42 @@ body {
 .brand-logo {
   display: grid;
   place-items: center;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+  filter: drop-shadow(0 4px 12px rgba(79, 70, 229, 0.4));
   transition: transform 0.2s ease;
 }
 .brand:hover .brand-logo { transform: scale(1.05); }
 .brand-title {
   font-weight: 800;
-  font-size: 1.18rem;
+  font-size: 1.2rem;
   letter-spacing: -0.02em;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 .brand-highlight {
-  color: #93c5fd;
+  color: #38bdf8;
 }
 .brand-tag {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.06em;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 2px 7px;
   border-radius: 6px;
   text-transform: uppercase;
-  margin-left: 4px;
+  margin-left: 6px;
+  color: #e2e8f0;
 }
 
 .tools {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
 .btn-glass {
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
   border-radius: 10px;
   padding: 8px 14px;
@@ -154,27 +157,28 @@ body {
   cursor: pointer;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  transition: background 0.2s ease, transform 0.15s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 .btn-glass:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
   transform: translateY(-1px);
 }
 
 /* Hero Center Display */
 .dateblock {
-  margin-top: 28px;
+  margin-top: 30px;
   text-align: center;
 }
 .system-pill {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   padding: 4px 14px;
   border-radius: 99px;
   font-size: 0.78rem;
@@ -182,6 +186,7 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   margin-bottom: 12px;
+  color: #e2e8f0;
 }
 .system-pill .dot {
   width: 7px;
@@ -194,15 +199,16 @@ body {
   font-size: clamp(1.15rem, 3.8vw, 1.85rem);
   font-weight: 700;
   letter-spacing: -0.01em;
-  opacity: 0.95;
+  color: #f1f5f9;
 }
 .clock {
-  font-size: clamp(2.3rem, 7.5vw, 3.75rem);
+  font-size: clamp(2.4rem, 8vw, 3.9rem);
   font-weight: 800;
   letter-spacing: 0.5px;
   font-variant-numeric: tabular-nums;
-  margin-top: 2px;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  margin-top: 4px;
+  color: #ffffff;
+  text-shadow: 0 4px 25px rgba(56, 189, 248, 0.25);
 }
 
 /* Countdown Pill */
@@ -210,16 +216,16 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  margin-top: 14px;
-  padding: 8px 20px;
+  margin-top: 15px;
+  padding: 8px 22px;
   border-radius: 99px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   font-size: clamp(0.85rem, 2.3vw, 0.98rem);
   font-weight: 600;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
   animation: popIn 0.3s ease-out;
 }
 .pulse-dot {
@@ -238,17 +244,17 @@ body {
 
 /* Main Content Grid */
 .main {
-  max-width: 1020px;
-  margin: -50px auto 48px;
+  max-width: 1040px;
+  margin: -50px auto 55px;
   padding: 0 18px;
   display: grid;
   grid-template-columns: 390px minmax(0, 1fr);
-  gap: 22px;
+  gap: 24px;
   align-items: start;
   position: relative;
   z-index: 10;
 }
-@media (max-width: 840px) {
+@media (max-width: 860px) {
   .main { grid-template-columns: 1fr; margin-top: -36px; }
 }
 
@@ -265,7 +271,7 @@ body {
 
 h2 {
   margin: 0 0 16px;
-  font-size: 1.16rem;
+  font-size: 1.18rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   display: flex;
@@ -471,168 +477,225 @@ tbody tr:hover { background: var(--pri-light); }
 @keyframes sp { to { transform: rotate(360deg); } }
 
 /* ==========================================================================
-   ⭐ HIGH-END PROFESSIONAL FOOTER
+   ⭐ EXACT PORTFOLIO FOOTER (FAZLEY . RABBI)
    ========================================================================== */
 .site-footer {
-  max-width: 1020px;
+  background: #080d1a;
+  color: #94a3b8;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 60px 24px 32px;
+  margin-top: 60px;
+}
+.footer-wrap {
+  max-width: 1060px;
   margin: 0 auto;
-  padding: 0 18px 42px;
 }
-.footer-card {
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
-  padding: 28px 32px;
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 1.6fr;
+  gap: 48px;
+  margin-bottom: 48px;
 }
-.footer-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
-  flex-wrap: wrap;
+@media (max-width: 860px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
 }
-.footer-brand-wrap {
-  max-width: 480px;
-}
-.footer-brand-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+
+/* Col 1: Author Info */
+.author-title {
+  font-size: 1.85rem;
   font-weight: 800;
-  font-size: 1.1rem;
   letter-spacing: -0.02em;
-  color: var(--text);
+  color: #ffffff;
+  margin-bottom: 14px;
 }
-.footer-desc {
-  margin: 8px 0 14px;
-  font-size: 0.86rem;
-  color: var(--text-muted);
-  line-height: 1.55;
+.author-title .accent-dot {
+  color: #38bdf8;
+  margin: 0 2px;
 }
-.status-badge {
+.author-tagline {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin: 0 0 20px;
+}
+.avail-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: #059669;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  padding: 4px 10px;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 14px;
   border-radius: 99px;
+  font-weight: 500;
 }
-:root[data-theme="dark"] .status-badge {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-}
-.status-badge .indicator {
-  width: 6px;
-  height: 6px;
+.avail-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #10b981;
-  box-shadow: 0 0 6px #10b981;
+  box-shadow: 0 0 8px #10b981;
 }
 
-.footer-portal-wrap {
+/* Col 2: Explore */
+.footer-heading {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 20px;
+}
+.explore-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  gap: 12px;
 }
-@media (max-width: 680px) {
-  .footer-portal-wrap { align-items: flex-start; width: 100%; }
+.explore-link {
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.94rem;
+  font-weight: 500;
+  transition: color 0.2s ease, transform 0.2s ease;
+  display: inline-block;
 }
-.portal-label {
+.explore-link:hover {
+  color: #38bdf8;
+  transform: translateX(3px);
+}
+
+/* Col 3: Let's Connect */
+.connect-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 480px) {
+  .connect-grid { grid-template-columns: 1fr; }
+}
+.connect-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: #e2e8f0;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+.connect-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+.connect-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.badge-icon {
   font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--text-muted);
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 6px;
+  border-radius: 6px;
+  color: #94a3b8;
 }
-.admin-portal-btn {
+.arrow-up {
+  font-size: 0.88rem;
+  color: #64748b;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+.connect-card:hover .arrow-up {
+  color: #38bdf8;
+  transform: translate(2px, -2px);
+}
+.author-email-link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: #0f172a;
-  color: #fff;
-  padding: 10px 18px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 0.86rem;
+  gap: 6px;
+  color: #94a3b8;
   text-decoration: none;
-  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
-:root[data-theme="dark"] .admin-portal-btn {
-  background: #1e293b;
-  border: 1px solid #334155;
-}
-.admin-portal-btn:hover {
-  background: var(--pri);
-  transform: translateY(-1.5px);
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
-  color: #fff;
-}
-.portal-tag {
-  background: rgba(255, 255, 255, 0.2);
-  font-size: 0.7rem;
-  padding: 2px 7px;
-  border-radius: 6px;
-  font-weight: 700;
+.author-email-link:hover {
+  color: #38bdf8;
 }
 
+/* Footer Bottom Bar */
 .footer-divider {
   height: 1px;
-  background: var(--line);
-  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  margin-bottom: 24px;
 }
-
-.footer-bottom {
+.footer-bottom-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
 }
-.copyright-text {
-  font-size: 0.83rem;
-  color: var(--text-muted);
+.copyright-notice {
+  font-size: 0.84rem;
+  color: #64748b;
 }
-.copyright-text strong { color: var(--text); }
-.copyright-text a {
-  color: var(--pri);
-  text-decoration: none;
-  font-weight: 600;
-}
-.copyright-text a:hover { text-decoration: underline; }
-
-.social-nav {
+.bottom-right-tools {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 14px;
 }
-.social-icon-btn {
+.admin-discrete-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  color: var(--text-muted);
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-decoration: none;
-  transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease, background 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
-.social-icon-btn:hover {
-  color: var(--pri);
-  border-color: var(--pri);
-  background: var(--pri-light);
-  transform: translateY(-2px);
+.admin-discrete-btn:hover {
+  background: rgba(79, 70, 229, 0.25);
+  border-color: #6366f1;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+.back-top-btn {
+  background: transparent;
+  border: 0;
+  color: #64748b;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.2s ease;
+  padding: 4px 6px;
+}
+.back-top-btn:hover {
+  color: #e2e8f0;
 }
 </style>
 </head>
@@ -641,7 +704,7 @@ tbody tr:hover { background: var(--pri-light); }
 <div id="toasts" aria-live="polite"></div>
 
 <!-- HERO HEADER -->
-<header class="hero">
+<header class="hero" id="top">
   <div class="wrap">
     <nav class="navbar">
       <a class="brand" href="index.html">
@@ -659,7 +722,7 @@ tbody tr:hover { background: var(--pri-light); }
         </div>
         <div class="brand-title">
           <span>Smart<span class="brand-highlight">Attendance</span></span>
-          <span class="brand-tag">PRO</span>
+          <span class="brand-tag">v3.0</span>
         </div>
       </a>
       <div class="tools">
@@ -743,62 +806,93 @@ tbody tr:hover { background: var(--pri-light); }
   </section>
 </main>
 
-<!-- PROFESSIONAL ENTERPRISE FOOTER -->
+<!-- EXACT PORTFOLIO FOOTER (FAZLEY . RABBI) -->
 <footer class="site-footer">
-  <div class="footer-card">
-    <div class="footer-top">
-      <div class="footer-brand-wrap">
-        <div class="footer-brand-title">
-          <svg viewBox="0 0 32 32" width="26" height="26" fill="none">
-            <rect width="32" height="32" rx="8" fill="url(#footBrandGrad)"/>
-            <path d="M9 16.5L13.5 21L23 11.5" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-            <defs>
-              <linearGradient id="footBrandGrad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#4F46E5"/>
-                <stop offset="1" stop-color="#7C3AED"/>
-              </linearGradient>
-            </defs>
-          </svg>
-          <span>Smart Attendance System</span>
-        </div>
-        <p class="footer-desc">Automated, secure attendance tracking platform with real-time timetable synchronization and verified cloud records.</p>
-        <div class="status-badge">
-          <span class="indicator"></span>
-          <span>All Systems Operational</span>
+  <div class="footer-wrap">
+    <div class="footer-grid">
+      <!-- Col 1 -->
+      <div>
+        <div class="author-title">Fazley <span class="accent-dot">.</span> Rabbi</div>
+        <p class="author-tagline">
+          Thoughtful code. Practical research.<br>
+          Meaningful work.
+        </p>
+        <div class="avail-pill">
+          <span class="avail-dot"></span>
+          <span>Available for Collaboration</span>
         </div>
       </div>
 
-      <div class="footer-portal-wrap">
-        <div class="portal-label">Administration</div>
-        <a class="admin-portal-btn" href="admin.html">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-          </svg>
-          <span>Staff Admin Portal</span>
-          <span class="portal-tag">SECURE</span>
+      <!-- Col 2 -->
+      <div>
+        <div class="footer-heading">EXPLORE</div>
+        <ul class="explore-list">
+          <li><a href="https://github.com/rabbi1067" target="_blank" rel="noopener" class="explore-link">About</a></li>
+          <li><a href="https://github.com/rabbi1067?tab=repositories" target="_blank" rel="noopener" class="explore-link">Projects</a></li>
+          <li><a href="https://github.com/rabbi1067" target="_blank" rel="noopener" class="explore-link">Research</a></li>
+          <li><a href="mailto:fazlerabbicse65@gmail.com" class="explore-link">Contact</a></li>
+        </ul>
+      </div>
+
+      <!-- Col 3 -->
+      <div>
+        <div class="footer-heading">LET'S CONNECT</div>
+        <div class="connect-grid">
+          <a href="https://codeforces.com/profile/FazleRabbi" target="_blank" rel="noopener noreferrer" class="connect-card">
+            <div class="connect-left">
+              <span class="badge-icon">CF</span>
+              <span>Codeforces</span>
+            </div>
+            <span class="arrow-up">↗</span>
+          </a>
+          <a href="https://www.codechef.com/users/fazlerabbi" target="_blank" rel="noopener noreferrer" class="connect-card">
+            <div class="connect-left">
+              <span class="badge-icon">CC</span>
+              <span>CodeChef</span>
+            </div>
+            <span class="arrow-up">↗</span>
+          </a>
+          <a href="https://github.com/rabbi1067" target="_blank" rel="noopener noreferrer" class="connect-card">
+            <div class="connect-left">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2Z"/></svg>
+              <span>GitHub</span>
+            </div>
+            <span class="arrow-up">↗</span>
+          </a>
+          <a href="https://www.linkedin.com/in/fazleyrabbi1067/" target="_blank" rel="noopener noreferrer" class="connect-card">
+            <div class="connect-left">
+              <span class="badge-icon">in</span>
+              <span>LinkedIn</span>
+            </div>
+            <span class="arrow-up">↗</span>
+          </a>
+        </div>
+        <a href="mailto:fazlerabbicse65@gmail.com" class="author-email-link">
+          <span>fazlerabbicse65@gmail.com</span>
+          <span class="arrow-up">↗</span>
         </a>
       </div>
     </div>
 
     <div class="footer-divider"></div>
 
-    <div class="footer-bottom">
-      <div class="copyright-text">
-        © <span id="copyrightYear">2026</span> <strong>Smart Attendance</strong> · Developed by <a href="https://github.com/rabbi1067" target="_blank" rel="noopener">Fazle Rabbi</a>
+    <div class="footer-bottom-bar">
+      <div class="copyright-notice">
+        © <span id="copyrightYear">2026</span> Fazley Rabbi · All rights reserved
       </div>
-      <div class="social-nav" aria-label="Social links">
-        <a class="social-icon-btn" href="https://www.linkedin.com/in/fazleyrabbi1067/" target="_blank" rel="noopener noreferrer" title="LinkedIn" aria-label="LinkedIn">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.64a1.64 1.64 0 1 0 1.64 1.64 1.64 1.64 0 0 0-1.64-1.64Z"/></svg>
+      <div class="bottom-right-tools">
+        <a href="admin.html" class="admin-discrete-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>ADMINISTRATOR</span>
+          <span>↗</span>
         </a>
-        <a class="social-icon-btn" href="https://github.com/rabbi1067" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2Z"/></svg>
-        </a>
-        <a class="social-icon-btn" href="https://x.com/FazleRabbi56251" target="_blank" rel="noopener noreferrer" title="X (Twitter)" aria-label="X">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-        </a>
-        <a class="social-icon-btn" href="https://www.facebook.com/fazleyrabbi1067/" target="_blank" rel="noopener noreferrer" title="Facebook" aria-label="Facebook">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z"/></svg>
-        </a>
+        <button type="button" id="backToTop" class="back-top-btn">
+          <span>Back to top</span>
+          <span>↑</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1234,6 +1328,14 @@ $("go").addEventListener("click", async ()=>{
 function clearForm(){ ["name","sid","email"].forEach(k=>$(k).value=""); $("cnt").textContent="0/13"; }
 
 if($("syncBtn")) $("syncBtn").addEventListener("click",()=>load(true));
+
+// Back to top button
+const backToTopBtn = document.getElementById("backToTop");
+if (backToTopBtn) {
+  backToTopBtn.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+}
 
 function setTheme(m){
   document.documentElement.dataset.theme = m;

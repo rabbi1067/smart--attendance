@@ -41,7 +41,7 @@ $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault(); $('loginError').classList.add('hidden');
   const btn=$('loginBtn');btn.disabled=true;btn.textContent='Signing in…';
   try {
-    const data=await request('/admin/auth/login',{method:'POST',protectedRoute:false,body:{email:$('loginEmail').value.trim(),password:$('loginPassword').value}});
+    const data=await request('/admin/auth/login',{method:'POST',protectedRoute:false,body:{email:$('loginEmail').value.trim(),password:$('loginPassword').value.trim()}});
     token=data.token;userEmail=data.email;
     sessionStorage.setItem('admin_token',token);sessionStorage.setItem('admin_email',userEmail);
     $('loginPassword').value=''; await initialize();
