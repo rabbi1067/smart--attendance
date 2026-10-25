@@ -518,7 +518,8 @@ function renderPagination(totalItems) {
   const end = pageSize === 'all' ? totalItems : Math.min(currentPage * pageSize, totalItems);
 
   if (currentLang === 'bn') {
-    info.textContent = `মোট ${totalItems} টির মধ্যে ${start}–${end} দেখানো হচ্ছে (পৃষ্ঠা ${currentPage}/${totalPages})`;
+    const toBn = n => Number(n).toLocaleString('bn-BD');
+    info.textContent = `মোট ${toBn(totalItems)} টির মধ্যে ${toBn(start)}–${toBn(end)} দেখানো হচ্ছে (পৃষ্ঠা ${toBn(currentPage)}/${toBn(totalPages)})`;
   } else {
     info.textContent = `Showing ${start}–${end} of ${totalItems} records (Page ${currentPage} of ${totalPages})`;
   }
@@ -552,22 +553,23 @@ function renderPagination(totalItems) {
   addBtn('⏮', 1, currentPage === 1, false, currentLang === 'bn' ? 'প্রথম পাতা' : 'First page');
   addBtn('◀', currentPage - 1, currentPage === 1, false, currentLang === 'bn' ? 'আগের পাতা' : 'Previous page');
 
+  const toPNum = n => currentLang === 'bn' ? Number(n).toLocaleString('bn-BD') : String(n);
   if (totalPages <= 7) {
     for (let p = 1; p <= totalPages; p++) {
-      addBtn(String(p), p, false, p === currentPage);
+      addBtn(toPNum(p), p, false, p === currentPage);
     }
   } else {
-    addBtn('1', 1, false, currentPage === 1);
+    addBtn(toPNum(1), 1, false, currentPage === 1);
     if (currentPage > 3) addEllipsis();
 
     const startP = Math.max(2, currentPage - 1);
     const endP = Math.min(totalPages - 1, currentPage + 1);
     for (let p = startP; p <= endP; p++) {
-      addBtn(String(p), p, false, p === currentPage);
+      addBtn(toPNum(p), p, false, p === currentPage);
     }
 
     if (currentPage < totalPages - 2) addEllipsis();
-    addBtn(String(totalPages), totalPages, false, currentPage === totalPages);
+    addBtn(toPNum(totalPages), totalPages, false, currentPage === totalPages);
   }
 
   addBtn('▶', currentPage + 1, currentPage === totalPages, false, currentLang === 'bn' ? 'পরের পাতা' : 'Next page');
@@ -592,8 +594,26 @@ function drawTable(){
     return;
   }
   const headers=sheetData.headers||[],all=sheetData.rows||[];
-  const tr=document.createElement('tr');tr.append(mk('th','Row'));
-  for(const h of headers) tr.append(mk('th',h));tr.append(mk('th','Actions'));head.append(tr);
+  const tr=document.createElement('tr');
+  tr.append(mk('th', currentLang === 'bn' ? 'সারি' : 'Row'));
+  for(const h of headers) {
+    let title = h;
+    if (currentLang === 'bn') {
+      const hMap = {
+        'SL': 'ক্রমিক',
+        'Date': 'তারিখ',
+        'Name': 'নাম',
+        'ID': 'আইডি',
+        'Email': 'ইমেইল',
+        'Attendance': 'উপস্থিতি',
+        'Local Time': 'সময়'
+      };
+      title = hMap[h] || h;
+    }
+    tr.append(mk('th', title));
+  }
+  tr.append(mk('th', currentLang === 'bn' ? 'অ্যাকশন' : 'Actions'));
+  head.append(tr);
   updateSearchClearBtn();
   const query=$('searchRows')?$('searchRows').value.trim():'';
   const tokens=query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -614,16 +634,27 @@ function drawTable(){
 
   for(const row of pageRows){
     const line=document.createElement('tr');
-    const tdRow=document.createElement('td');tdRow.appendChild(highlightMatch(row.rowIndex,tokens));line.append(tdRow);
+    const tdRow=document.createElement('td');
+    const rIdxStr = currentLang === 'bn' ? Number(row.rowIndex).toLocaleString('bn-BD') : String(row.rowIndex);
+    tdRow.appendChild(highlightMatch(rIdxStr,tokens));
+    line.append(tdRow);
     for(const v of row.values){
       const td=document.createElement('td');
       td.appendChild(highlightMatch(v,tokens));
       line.append(td);
     }
     const actions=document.createElement('td');
-    const edit=mk('button','Edit');edit.className='btn btn-light small';edit.style.marginRight='8px';edit.addEventListener('click',()=>editRow(row));
-    const del=mk('button','Delete');del.className='btn btn-danger small';del.addEventListener('click',()=>deleteRow(row));
-    actions.append(edit,del);line.append(actions);body.append(line);
+    const edit=mk('button', currentLang === 'bn' ? 'সম্পাদনা' : 'Edit');
+    edit.className='btn btn-light small';
+    edit.style.marginRight='8px';
+    edit.addEventListener('click',()=>editRow(row));
+
+    const del=mk('button', currentLang === 'bn' ? 'মুছুন' : 'Delete');
+    del.className='btn btn-danger small';
+    del.addEventListener('click',()=>deleteRow(row));
+    actions.append(edit,del);
+    line.append(actions);
+    body.append(line);
   }
   if(!filtered.length){
     const line=document.createElement('tr'),cell=document.createElement('td');

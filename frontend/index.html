@@ -373,12 +373,25 @@ input.val-err {
   margin-bottom: 14px;
 }
 .count-badge {
-  background: var(--pri-light);
-  color: var(--pri);
-  padding: 4px 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 10px;
   border-radius: 99px;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 0.88rem;
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1.5px solid #c7d2fe;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.12);
+}
+:root[data-theme="dark"] .count-badge {
+  background: rgba(99, 102, 241, 0.22);
+  color: #c7d2fe;
+  border-color: rgba(165, 180, 252, 0.4);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 .tw {
   max-height: 420px;
@@ -430,9 +443,9 @@ th:nth-child(4), td:nth-child(4), .cell-time {
   font-size: 0.82rem;
 }
 th:nth-child(5), td:nth-child(5), .cell-status {
-  width: 40px;
-  min-width: 40px;
-  max-width: 40px;
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
   text-align: center;
   padding: 12px 2px;
 }
@@ -453,13 +466,20 @@ tbody tr:hover { background: var(--pri-light); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--ok-bg);
+  border: 1px solid rgba(16, 185, 129, 0.4);
   color: var(--ok);
-  font-weight: 700;
-  font-size: 0.8rem;
+  font-weight: 800;
+  font-size: 0.85rem;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.15);
+}
+:root[data-theme="dark"] .status-tag {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(52, 211, 153, 0.5);
+  color: #34d399;
 }
 .empty {
   text-align: center;
@@ -467,18 +487,26 @@ tbody tr:hover { background: var(--pri-light); }
   padding: 40px 0;
   font-size: 0.92rem;
 }
-/* Table Limit Control */
+/* Table Limit Control & Filter */
 .limit-control {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--bg);
-  border: 1px solid var(--line);
+  background: var(--card);
+  border: 1.5px solid var(--line);
   padding: 4px 10px;
-  border-radius: 9px;
-  font-size: 0.78rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
   font-weight: 600;
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.limit-control label {
   color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin: 0;
+  user-select: none;
 }
 .limit-control select {
   border: 0;
@@ -486,13 +514,29 @@ tbody tr:hover { background: var(--pri-light); }
   color: var(--text);
   font: inherit;
   font-weight: 700;
+  font-size: 0.84rem;
   cursor: pointer;
   outline: none;
-  padding: 1px 2px;
+  padding: 2px 4px;
+}
+.limit-control select option {
+  background: var(--card);
+  color: var(--text);
 }
 :root[data-theme="dark"] .limit-control {
-  background: #0d1424;
-  border-color: #243044;
+  background: #111827;
+  border-color: #374151;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme="dark"] .limit-control label {
+  color: #94a3b8;
+}
+:root[data-theme="dark"] .limit-control select {
+  color: #f1f5f9;
+}
+:root[data-theme="dark"] .limit-control select option {
+  background: #1e293b;
+  color: #f8fafc;
 }
 
 /* Table Footer Bar */
@@ -672,7 +716,13 @@ tbody tr:hover { background: var(--pri-light); }
   flex: 1;
   max-height: 52vh;
   overflow-y: auto;
-  overflow-x: auto;
+  overflow-x: hidden !important;
+  width: 100%;
+}
+.modal-table-scroll table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
 }
 .modal-footer-row {
   display: flex;
@@ -1190,7 +1240,7 @@ tbody tr:hover { background: var(--pri-light); }
             <th data-t="name">Name</th>
             <th data-t="id">Student ID</th>
             <th data-t="time">Time</th>
-            <th>Status</th>
+            <th data-t="status">Status</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -1241,7 +1291,7 @@ tbody tr:hover { background: var(--pri-light); }
             <th data-t="name">Name</th>
             <th data-t="id">Student ID</th>
             <th data-t="time">Time</th>
-            <th>Status</th>
+            <th data-t="status">Status</th>
           </tr>
         </thead>
         <tbody id="modalRows"></tbody>
@@ -1392,12 +1442,102 @@ async function refreshConfiguration() {
 }
 
 const T = {
- en:{title:"Smart Attendance",formTitle:"Mark your attendance",name:"Name",namePh:"Your full name",id:"Student ID",idHint:"13 digits, numbers only",email:"Email",opt:"(optional)",submit:"Submit Attendance ✓",today:"Today’s Attendance",time:"Time",view:"View all records",demo:"System Notice: Setup required. Please contact administrator.",
-  ok:"Present recorded successfully!",badId:"Invalid ID: it must be exactly 13 digits.",badName:"Please enter your name.",badEmail:"Invalid email address.",dup:"This ID has already been marked for this class.",net:"Network error. Please try again.",rate:"Too many attempts. Please wait a few seconds.",busy:"Server is busy. Please try again in a moment.",wait:"Submitting…",srv:"Something went wrong. Please try again.",dark:"🌙",light:"☀️",
-  closed:"Attendance is closed.",timeRemaining:"Time remaining",startsIn:"Starts in",closedBtn:"Closed",nextClass:"Next class",allDone:"All classes completed for today"},
- bn:{title:"স্মার্ট এটেন্ডেন্স",formTitle:"আপনার হাজিরা দিন",name:"নাম",namePh:"আপনার পুরো নাম",id:"স্টুডেন্ট আইডি",idHint:"১৩ ডিজিট, শুধু সংখ্যা",email:"ইমেইল",opt:"(ঐচ্ছিক)",submit:"হাজিরা জমা দিন ✓",today:"আজকের হাজিরা",time:"সময়",view:"সব রেকর্ড দেখুন",demo:"সিস্টেম নোটিশ: কনফিগারেশন প্রয়োজন। প্রশাসকের সাথে যোগাযোগ করুন।",
-  ok:"উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে!",badId:"ভুল আইডি: অবশ্যই ১৩ ডিজিট হতে হবে।",badName:"অনুগ্রহ করে আপনার নাম লিখুন।",badEmail:"ইমেইল ঠিকানা সঠিক নয়।",dup:"এই আইডি দিয়ে এই ক্লাসে ইতিমধ্যে হাজিরা দেওয়া হয়েছে।",net:"নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।",rate:"অনেকবার চেষ্টা হয়েছে। কয়েক সেকেন্ড অপেক্ষা করুন।",busy:"সার্ভার ব্যস্ত। একটু পরে আবার চেষ্টা করুন।",wait:"জমা হচ্ছে…",srv:"কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",dark:"🌙",light:"☀️",
-  closed:"হাজিরা নেওয়া বন্ধ আছে।",timeRemaining:"সময় বাকি",startsIn:"শুরু হতে বাকি",closedBtn:"বন্ধ আছে",nextClass:"পরবর্তী ক্লাস",allDone:"আজকের সব ক্লাস সম্পন্ন হয়েছে"}
+  en: {
+    title: "Smart Attendance",
+    formTitle: "Mark your attendance",
+    name: "Name",
+    namePh: "Your full name",
+    id: "Student ID",
+    idHint: "13 digits, numbers only",
+    email: "Email",
+    opt: "(optional)",
+    submit: "Submit Attendance ✓",
+    today: "Today's Attendance",
+    time: "Time",
+    status: "Status",
+    view: "View all records",
+    showLimit: "Show:",
+    limitAll: "All",
+    todayAllTitle: "Today's Attendance Records",
+    allRecordsSub: "All verified attendance entries for today",
+    searchPh: "Search by name, student ID, or time…",
+    closeBtn: "Close",
+    demo: "System Notice: Setup required. Please contact administrator.",
+    ok: "Attendance recorded successfully!",
+    badId: "Invalid ID: it must be exactly 13 digits.",
+    badName: "Please enter your name.",
+    badEmail: "Invalid email address.",
+    dup: "This ID has already been marked for this class today.",
+    dupBtn: "⛔ Already Marked Attendance",
+    dupInline: "⛔ <strong>Duplicate ID!</strong> Attendance already recorded for this ID today.",
+    digitsEntered: "✓ 13 digits entered",
+    numbersOnly: "⚠️ Numbers only.",
+    net: "Network error. Please try again.",
+    rate: "Too many attempts. Please wait a few seconds.",
+    busy: "Server is busy. Please try again in a moment.",
+    wait: "Submitting…",
+    srv: "Something went wrong. Please try again.",
+    dark: "🌙",
+    light: "☀️",
+    closed: "Attendance is closed.",
+    timeRemaining: "Time remaining",
+    startsIn: "Starts in",
+    closedBtn: "Closed",
+    nextClass: "Next class",
+    allDone: "All classes completed for today",
+    inSession: "in session",
+    noRecords: "No records yet",
+    serviceUnavail: "System is not configured yet. Please contact the administrator.",
+    connError: "Cannot connect to the attendance server. Please try again later."
+  },
+  bn: {
+    title: "স্মার্ট অ্যাটেনডেন্স",
+    formTitle: "আপনার হাজিরা দিন",
+    name: "নাম",
+    namePh: "আপনার পুরো নাম",
+    id: "স্টুডেন্ট আইডি",
+    idHint: "১৩ ডিজিট, শুধু সংখ্যা",
+    email: "ইমেইল",
+    opt: "(ঐচ্ছিক)",
+    submit: "হাজিরা জমা দিন ✓",
+    today: "আজকের হাজিরা",
+    time: "সময়",
+    status: "স্ট্যাটাস",
+    view: "সব রেকর্ড দেখুন",
+    showLimit: "প্রদর্শন:",
+    limitAll: "সব",
+    todayAllTitle: "আজকের হাজিরা রেকর্ডসমূহ",
+    allRecordsSub: "আজকের সকল যাচাইকৃত হাজিরার তালিকা",
+    searchPh: "নাম, আইডি বা সময় দিয়ে খুঁজুন…",
+    closeBtn: "বন্ধ করুন",
+    demo: "সিস্টেম নোটিশ: কনফিগারেশন প্রয়োজন। প্রশাসকের সাথে যোগাযোগ করুন।",
+    ok: "উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে!",
+    badId: "ভুল আইডি: অবশ্যই ১৩ ডিজিট হতে হবে।",
+    badName: "অনুগ্রহ করে আপনার নাম লিখুন।",
+    badEmail: "ইমেইল ঠিকানা সঠিক নয়।",
+    dup: "এই আইডি দিয়ে আজকের ক্লাসে ইতিমধ্যে হাজিরা দেওয়া হয়েছে।",
+    dupBtn: "⛔ ইতিমধ্যে হাজিরা দেওয়া হয়েছে",
+    dupInline: "⛔ <strong>ডুপ্লিকেট আইডি!</strong> এই আইডি দিয়ে আজকের হাজিরা ইতিমধ্যে দেওয়া হয়েছে।",
+    digitsEntered: "✓ ১৩ ডিজিট পূর্ণ হয়েছে",
+    numbersOnly: "⚠️ শুধুমাত্র সংখ্যা লিখুন।",
+    net: "নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।",
+    rate: "অনেকবার চেষ্টা হয়েছে। কয়েক সেকেন্ড অপেক্ষা করুন।",
+    busy: "সার্ভার ব্যস্ত। একটু পরে আবার চেষ্টা করুন।",
+    wait: "জমা হচ্ছে…",
+    srv: "কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",
+    dark: "🌙",
+    light: "☀️",
+    closed: "হাজিরা নেওয়া বন্ধ আছে।",
+    timeRemaining: "সময় বাকি",
+    startsIn: "শুরু হতে বাকি",
+    closedBtn: "বন্ধ আছে",
+    nextClass: "পরবর্তী ক্লাস",
+    allDone: "আজকের সব ক্লাস সম্পন্ন হয়েছে",
+    inSession: "চলছে",
+    noRecords: "কোনো রেকর্ড নেই",
+    serviceUnavail: "সিস্টেম এখনো কনফিগার করা হয়নি। অ্যাডমিনের সাথে যোগাযোগ করুন।",
+    connError: "সার্ভারের সাথে সংযোগ স্থাপন করা যাচ্ছে না। একটু পর আবার চেষ্টা করুন।"
+  }
 };
 let lang = "en", rows = [];
 try{ lang = localStorage.getItem("lang") || "en"; }catch(e){}
@@ -1439,19 +1579,24 @@ const mask = s => s.slice(0,4)+"•••••"+s.slice(-4);
 function formatTime(val){
   if(!val) return "";
   const str = String(val).trim();
+  let timeStr = str;
   const m12 = str.match(/^(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM|am|pm)$/i);
   if(m12){
     const h = parseInt(m12[1], 10);
-    return h + ":" + m12[2] + ":" + m12[3] + " " + m12[4].toUpperCase();
+    timeStr = h + ":" + m12[2] + ":" + m12[3] + " " + m12[4].toUpperCase();
+  } else {
+    const m24 = str.match(/(?:^|\s|T)(\d{1,2}):(\d{2}):(\d{2})/);
+    if(m24){
+      let h = parseInt(m24[1], 10);
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      timeStr = h + ":" + m24[2] + ":" + m24[3] + " " + ampm;
+    }
   }
-  const m24 = str.match(/(?:^|\s|T)(\d{1,2}):(\d{2}):(\d{2})/);
-  if(m24){
-    let h = parseInt(m24[1], 10);
-    const ampm = h >= 12 ? "PM" : "AM";
-    h = h % 12 || 12;
-    return h + ":" + m24[2] + ":" + m24[3] + " " + ampm;
+  if (lang === "bn") {
+    return timeStr.replace(/\d/g, d => "০১২৩৪৫৬৭৮৯"[d]);
   }
-  return str;
+  return timeStr;
 }
 
 function parseTimeToday(tStr) {
@@ -1675,17 +1820,28 @@ function updateTimer() {
 
 function applyLang(){
   document.documentElement.lang = lang;
-  document.querySelectorAll("[data-t]").forEach(e => e.textContent = T[lang][e.dataset.t]);
-  document.querySelectorAll("[data-p]").forEach(e => e.placeholder = T[lang][e.dataset.p]);
-  $("langText").textContent = lang==="en" ? "বাংলা" : "English";
+  document.querySelectorAll("[data-t]").forEach(e => {
+    const k = e.dataset.t;
+    if (T[lang] && T[lang][k] !== undefined) e.textContent = T[lang][k];
+  });
+  document.querySelectorAll("[data-p]").forEach(e => {
+    const k = e.dataset.p;
+    if (T[lang] && T[lang][k] !== undefined) e.placeholder = T[lang][k];
+  });
+  $("langText").textContent = lang === "en" ? "বাংলা" : "English";
   document.title = T[lang].title;
-  if(scheduleReady && !CONFIG.configured) $('demo').textContent = lang==='bn' ? 'সিস্টেম এখনো কনফিগার করা হয়নি। অ্যাডমিনের সাথে যোগাযোগ করুন।' : 'Attendance is not configured yet. Please contact the administrator.';
+  if(scheduleReady && !CONFIG.configured) $('demo').textContent = T[lang].serviceUnavail;
   tick(); render(); updateTimer();
 }
 function tick(){
   const d = dhakaNow();
-  $("date").textContent = d.toLocaleDateString(loc(),{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-  $("clock").textContent = d.toLocaleTimeString(loc(),{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true});
+  if (lang === "bn") {
+    $("date").textContent = d.toLocaleDateString("bn-BD", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    $("clock").textContent = d.toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+  } else {
+    $("date").textContent = d.toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    $("clock").textContent = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+  }
   updateTimer();
 }
 setInterval(tick,1000);
@@ -1762,12 +1918,14 @@ function openModal() {
   if (!modal) return;
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
-  renderModalRows();
+  modalPage = 1;
   const search = $("modalSearch");
   if (search) {
     search.value = "";
-    search.focus();
+    search.placeholder = T[lang].searchPh;
   }
+  renderModalRows();
+  if (search) search.focus();
 }
 
 function closeModal() {
@@ -1818,12 +1976,12 @@ function renderModalRows() {
     const eDisplay = Math.min(startIdx + modalPageSize, total);
     if (query) {
       summary.textContent = lang === "bn"
-        ? `মোট ${total.toLocaleString(loc())} টির মধ্যে ${sDisplay}–${eDisplay} (পৃষ্ঠা ${modalPage}/${totalPages})`
-        : `Showing ${sDisplay}–${eDisplay} of ${total.toLocaleString(loc())} (Page ${modalPage} of ${totalPages})`;
+        ? `মোট ${total.toLocaleString("bn-BD")} টির মধ্যে ${sDisplay.toLocaleString("bn-BD")}–${eDisplay.toLocaleString("bn-BD")} (পৃষ্ঠা ${modalPage.toLocaleString("bn-BD")}/${totalPages.toLocaleString("bn-BD")})`
+        : `Showing ${sDisplay}–${eDisplay} of ${total} records (Page ${modalPage} of ${totalPages})`;
     } else {
       summary.textContent = lang === "bn"
-        ? `মোট ${total.toLocaleString(loc())} জনের মধ্যে ${sDisplay}–${eDisplay} (পৃষ্ঠা ${modalPage}/${totalPages})`
-        : `Showing ${sDisplay}–${eDisplay} of ${total.toLocaleString(loc())} (Page ${modalPage} of ${totalPages})`;
+        ? `মোট ${total.toLocaleString("bn-BD")} জনের মধ্যে ${sDisplay.toLocaleString("bn-BD")}–${eDisplay.toLocaleString("bn-BD")} (পৃষ্ঠা ${modalPage.toLocaleString("bn-BD")}/${totalPages.toLocaleString("bn-BD")})`
+        : `Showing ${sDisplay}–${eDisplay} of ${total} records (Page ${modalPage} of ${totalPages})`;
     }
   }
 
@@ -2007,7 +2165,7 @@ function validateId(showOk = true) {
   if (val.length < 13) {
     msg.className = "val-msg";
     msg.textContent = lang === "bn"
-      ? `বাকি আছে ${13 - val.length} টি ডিজিট (মোট ১৩ টি)`
+      ? `বাকি আছে ${(13 - val.length).toLocaleString("bn-BD")} টি ডিজিট (মোট ১৩ টি)`
       : `${13 - val.length} more digits needed (13 total)`;
     updateSubmitBtnState(false);
     return false;
