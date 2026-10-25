@@ -1,0 +1,11 @@
+{
+  "name": "smart-attendance",
+  "version": "3.0.0",
+  "description": "Smart Attendance System",
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "start": "node dev-server.mjs",
+    "test": "node tests/apps-script-test.cjs",
+    "build": "cd frontend && node scripts/build.mjs"
+  }
+}
