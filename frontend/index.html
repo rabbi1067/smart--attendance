@@ -431,17 +431,243 @@ tbody tr:hover { background: var(--pri-light); }
   padding: 40px 0;
   font-size: 0.92rem;
 }
-.link-sheet {
+/* Table Limit Control */
+.limit-control {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 14px;
-  color: var(--pri);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 9px;
+  font-size: 0.78rem;
   font-weight: 600;
-  font-size: 0.88rem;
-  text-decoration: none;
+  color: var(--text-muted);
 }
-.link-sheet:hover { text-decoration: underline; }
+.limit-control select {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  padding: 1px 2px;
+}
+:root[data-theme="dark"] .limit-control {
+  background: #0d1424;
+  border-color: #243044;
+}
+
+/* Table Footer Bar */
+.table-footer-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.rows-summary {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.btn-view-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--pri-light);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  color: var(--pri);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 7px 15px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+:root[data-theme="dark"] .btn-view-all {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #a5b4fc;
+}
+.btn-view-all:hover {
+  background: var(--pri);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+}
+:root[data-theme="dark"] .btn-view-all:hover {
+  background: #6366f1;
+  color: #fff;
+}
+.badge-mini {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 0.74rem;
+}
+:root[data-theme="dark"] .badge-mini {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* In-Page Records Modal */
+.records-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(8, 13, 26, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  animation: fadeIn 0.2s ease-out;
+}
+.records-modal-backdrop.hidden {
+  display: none !important;
+}
+.records-modal {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  width: min(100%, 720px);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+:root[data-theme="dark"] .records-modal {
+  background: #111827;
+  border-color: #243044;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.7);
+}
+.records-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+}
+.modal-badge-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--pri-light);
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+.btn-close-modal {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: all 0.18s ease;
+}
+.btn-close-modal:hover {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: #fff;
+  transform: scale(1.06);
+}
+.modal-search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+:root[data-theme="dark"] .modal-search-row {
+  background: #090e1a;
+}
+.modal-search-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+.modal-search-wrap input {
+  padding: 9px 36px 9px 36px !important;
+  font-size: 0.88rem;
+  border-radius: 10px;
+}
+.search-ico {
+  position: absolute;
+  left: 12px;
+  font-size: 0.85rem;
+  opacity: 0.6;
+  pointer-events: none;
+}
+.search-clear-btn {
+  position: absolute;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--text-muted);
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  padding: 0;
+}
+.search-clear-btn.hidden { display: none !important; }
+.modal-table-scroll {
+  flex: 1;
+  max-height: 52vh;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+.modal-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+:root[data-theme="dark"] .modal-footer-row {
+  background: #090e1a;
+}
+.btn-modal-close {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 8px 18px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-modal-close:hover {
+  background: var(--pri-light);
+  border-color: var(--pri);
+  color: var(--pri);
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popInModal { from { opacity: 0; transform: scale(0.95) translateY(12px); } to { opacity: 1; transform: none; } }
 .demo {
   background: rgba(245, 158, 11, 0.12);
   color: var(--warn);
@@ -858,14 +1084,25 @@ tbody tr:hover { background: var(--pri-light); }
   <!-- TABLE CARD -->
   <section class="card">
     <div class="head">
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <h2 style="margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span data-t="today">Today's Attendance</span>
           <span id="classBadge" style="font-size:.76rem;color:var(--pri);background:var(--pri-light);padding:3px 9px;border-radius:6px;font-weight:600;display:none"></span>
         </h2>
         <button id="syncBtn" type="button" title="Refresh records" style="background:transparent;border:0;cursor:pointer;font-size:1.1rem;padding:3px;border-radius:6px;opacity:.75;transition:transform .3s,opacity .2s">🔄</button>
       </div>
-      <span class="count-badge" id="total">0</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="limit-control">
+          <label for="rowLimit" data-t="showLimit">Show:</label>
+          <select id="rowLimit" aria-label="Row show limit">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="25">25</option>
+            <option value="all" data-t="limitAll">All</option>
+          </select>
+        </div>
+        <span class="count-badge" id="total" title="Total attendees today">0</span>
+      </div>
     </div>
 
     <div class="demo" id="demo" hidden data-t="demo"></div>
@@ -885,11 +1122,62 @@ tbody tr:hover { background: var(--pri-light); }
       </table>
     </div>
 
-    <a class="link-sheet" id="view" target="_blank" rel="noopener" hidden>
-      <span data-t="view">View all records</span> ↗
-    </a>
+    <div class="table-footer-bar">
+      <span id="rowsSummary" class="rows-summary">Showing 0 records</span>
+      <button type="button" id="openRecordsModal" class="btn-view-all">
+        <span>📋</span>
+        <span data-t="view">View all records</span>
+        <span id="viewAllCount" class="badge-mini">0</span>
+        <span aria-hidden="true">↗</span>
+      </button>
+    </div>
   </section>
 </main>
+</div>
+
+<!-- TODAY'S ATTENDANCE IN-PAGE MODAL VIEWER -->
+<div id="allRecordsModal" class="records-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="allRecordsTitle">
+  <div class="records-modal">
+    <div class="records-modal-head">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="modal-badge-icon">📊</div>
+        <div>
+          <h2 id="allRecordsTitle" data-t="todayAllTitle" style="margin:0;font-size:1.15rem">Today's Attendance Records</h2>
+          <p id="allRecordsSubtitle" data-t="allRecordsSub" style="margin:2px 0 0;font-size:0.78rem;color:var(--text-muted)">All verified attendance entries for today</p>
+        </div>
+      </div>
+      <button type="button" id="closeRecordsModal" class="btn-close-modal" aria-label="Close">✕</button>
+    </div>
+
+    <div class="modal-search-row">
+      <div class="modal-search-wrap">
+        <span class="search-ico">🔍</span>
+        <input id="modalSearch" placeholder="Search by name, student ID, or time..." data-p="searchPh" autocomplete="off">
+        <button type="button" id="clearModalSearch" class="search-clear-btn hidden" aria-label="Clear search">✕</button>
+      </div>
+      <span class="count-badge" id="modalCountBadge">0</span>
+    </div>
+
+    <div class="modal-table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th data-t="name">Name</th>
+            <th data-t="id">Student ID</th>
+            <th data-t="time">Time</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="modalRows"></tbody>
+      </table>
+    </div>
+
+    <div class="modal-footer-row">
+      <span id="modalSummary" style="font-size:0.82rem;color:var(--text-muted)">Showing all records</span>
+      <button type="button" id="closeRecordsModalBtn" class="btn-modal-close" data-t="closeBtn">Close</button>
+    </div>
+  </div>
 </div>
 
 <!-- EXACT PORTFOLIO FOOTER (FAZLEY . RABBI) -->
@@ -1012,9 +1300,8 @@ async function refreshConfiguration() {
     CONFIG.SHEET_URL = cfg.sheetUrl || '';
     remoteSchedule = cfg.schedule || SCHEDULE_CONFIG;
     scheduleReady = true;
-    const link = $('view');
-    link.hidden = !CONFIG.SHEET_URL;
-    if (CONFIG.SHEET_URL) link.href = CONFIG.SHEET_URL;
+    const openBtn = $('openRecordsModal');
+    if (openBtn) openBtn.hidden = !CONFIG.configured;
     $('demo').hidden = CONFIG.configured;
     if (!CONFIG.configured) $('demo').textContent = lang==='bn' ? 'সিস্টেম এখনো কনফিগার করা হয়নি। অ্যাডমিনের সাথে যোগাযোগ করুন।' : 'Attendance is not configured yet. Please contact the administrator.';
     updateTimer();
@@ -1325,11 +1612,154 @@ function toast(msg,type){
   setTimeout(()=>{ el.classList.add("out"); setTimeout(()=>el.remove(),320); },3200);
 }
 
-function render(){
-  $("total").textContent = rows.length.toLocaleString(loc());
-  $("rows").innerHTML = rows.length ? rows.map((r,i)=>
-    "<tr><td>"+(i+1).toLocaleString(loc())+"</td><td>"+esc(r.name)+"</td><td>"+esc(r.idm||mask(String(r.id)))+"</td><td>"+esc(formatTime(r.time))+"</td><td><span class='status-tag'>✔</span></td></tr>").join("")
-    : "<tr><td colspan='5' class='empty'>—</td></tr>";
+let rowLimit = 10;
+try {
+  const savedLimit = localStorage.getItem("att_row_limit");
+  if (savedLimit) rowLimit = savedLimit === "all" ? "all" : parseInt(savedLimit, 10) || 10;
+  if ($("rowLimit")) $("rowLimit").value = String(rowLimit);
+} catch(e) {}
+
+if ($("rowLimit")) {
+  $("rowLimit").addEventListener("change", e => {
+    rowLimit = e.target.value === "all" ? "all" : parseInt(e.target.value, 10) || 10;
+    try { localStorage.setItem("att_row_limit", String(rowLimit)); } catch(err) {}
+    render();
+  });
+}
+
+function render() {
+  const totalCount = rows.length;
+  $("total").textContent = totalCount.toLocaleString(loc());
+  const viewCount = $("viewAllCount");
+  if (viewCount) viewCount.textContent = totalCount.toLocaleString(loc());
+
+  // Determine slice based on rowLimit
+  let displayRows = rows;
+  if (rowLimit !== "all" && typeof rowLimit === "number") {
+    displayRows = rows.slice(0, rowLimit);
+  }
+
+  // Render main card table rows
+  $("rows").innerHTML = displayRows.length ? displayRows.map((r, i) =>
+    "<tr><td>" + (i + 1).toLocaleString(loc()) + "</td><td>" + esc(r.name) + "</td><td>" + esc(r.idm || mask(String(r.id))) + "</td><td>" + esc(formatTime(r.time)) + "</td><td><span class='status-tag'>✔</span></td></tr>"
+  ).join("") : "<tr><td colspan='5' class='empty'>—</td></tr>";
+
+  // Update summary text
+  const sumEl = $("rowsSummary");
+  if (sumEl) {
+    if (totalCount === 0) {
+      sumEl.textContent = lang === "bn" ? "কোনো রেকর্ড নেই" : "No records yet";
+    } else if (rowLimit === "all" || totalCount <= displayRows.length) {
+      sumEl.textContent = lang === "bn"
+        ? `মোট ${totalCount.toLocaleString(loc())} জনের সব রেকর্ড দেখানো হচ্ছে`
+        : `Showing all ${totalCount.toLocaleString(loc())} records`;
+    } else {
+      sumEl.textContent = lang === "bn"
+        ? `${totalCount.toLocaleString(loc())} জনের মধ্যে ${displayRows.length.toLocaleString(loc())} জন দেখানো হচ্ছে`
+        : `Showing ${displayRows.length.toLocaleString(loc())} of ${totalCount.toLocaleString(loc())} records`;
+    }
+  }
+
+  // If modal is open, refresh modal rows as well
+  if (isModalOpen()) {
+    renderModalRows();
+  }
+}
+
+function isModalOpen() {
+  const modal = $("allRecordsModal");
+  return modal && !modal.classList.contains("hidden");
+}
+
+function openModal() {
+  const modal = $("allRecordsModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+  renderModalRows();
+  const search = $("modalSearch");
+  if (search) {
+    search.value = "";
+    search.focus();
+  }
+}
+
+function closeModal() {
+  const modal = $("allRecordsModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+function renderModalRows() {
+  const tbody = $("modalRows");
+  const badge = $("modalCountBadge");
+  const summary = $("modalSummary");
+  if (!tbody) return;
+
+  const query = ($("modalSearch") ? $("modalSearch").value : "").trim().toLowerCase();
+  let filtered = rows;
+  if (query) {
+    filtered = rows.filter(r => {
+      const name = String(r.name || "").toLowerCase();
+      const id = String(r.id || r.idm || "").toLowerCase();
+      const time = String(r.time || "").toLowerCase();
+      return name.includes(query) || id.includes(query) || time.includes(query);
+    });
+  }
+
+  if (badge) badge.textContent = filtered.length.toLocaleString(loc());
+
+  tbody.innerHTML = filtered.length ? filtered.map((r, i) =>
+    "<tr><td>" + (i + 1).toLocaleString(loc()) + "</td><td>" + esc(r.name) + "</td><td>" + esc(r.idm || mask(String(r.id))) + "</td><td>" + esc(formatTime(r.time)) + "</td><td><span class='status-tag'>✔</span></td></tr>"
+  ).join("") : "<tr><td colspan='5' class='empty'>" + (lang === "bn" ? "কোনো তথ্য মেলেনি" : "No matching records found.") + "</td></tr>";
+
+  if (summary) {
+    if (query) {
+      summary.textContent = lang === "bn"
+        ? `খোঁজের ফলাফল: ${filtered.length.toLocaleString(loc())} টি রেকর্ড পাওয়া গেছে`
+        : `Search results: ${filtered.length.toLocaleString(loc())} records found`;
+    } else {
+      summary.textContent = lang === "bn"
+        ? `আজকের মোট ${filtered.length.toLocaleString(loc())} জনের উপস্থিতি রেকর্ড`
+        : `Total ${filtered.length.toLocaleString(loc())} attendance records for today`;
+    }
+  }
+
+  const clearBtn = $("clearModalSearch");
+  if (clearBtn) {
+    clearBtn.classList.toggle("hidden", !query);
+  }
+}
+
+if ($("openRecordsModal")) $("openRecordsModal").addEventListener("click", openModal);
+if ($("closeRecordsModal")) $("closeRecordsModal").addEventListener("click", closeModal);
+if ($("closeRecordsModalBtn")) $("closeRecordsModalBtn").addEventListener("click", closeModal);
+
+const modalEl = $("allRecordsModal");
+if (modalEl) {
+  modalEl.addEventListener("click", e => {
+    if (e.target === modalEl) closeModal();
+  });
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && isModalOpen()) closeModal();
+});
+
+const modalSearchInp = $("modalSearch");
+if (modalSearchInp) {
+  modalSearchInp.addEventListener("input", renderModalRows);
+}
+const clearModalSearchBtn = $("clearModalSearch");
+if (clearModalSearchBtn) {
+  clearModalSearchBtn.addEventListener("click", () => {
+    if (modalSearchInp) {
+      modalSearchInp.value = "";
+      modalSearchInp.focus();
+    }
+    renderModalRows();
+  });
 }
 const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
