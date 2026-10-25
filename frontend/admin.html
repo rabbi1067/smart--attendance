@@ -210,18 +210,18 @@
             <p class="hint">Create an App Password from Google Account → Security → App passwords. Never use your normal Gmail password.</p>
           </div>
           <div id="scriptMailHint" class="tip" style="margin-top:16px">Email is sent securely by Google Apps Script after Sheet submission. Enable the MailApp permission when updating <strong>Code.gs</strong>. The sender will be the Google account owning the Apps Script deployment.</div>
-          <div class="row" style="margin-top:19px"><button id="testNotification" type="button" class="btn btn-light small" data-t="testEmailBtn">✉ Send test email</button><span class="hint">Save settings first, then test.</span></div>
+          <div class="row" style="margin-top:19px"><button id="testNotification" type="button" class="btn btn-light small" data-t="testEmailBtn">✉ Send test email</button><span class="hint" data-t="testEmailHint">Save settings first, then test.</span></div>
         </div>
         <div>
-          <label style="margin-top:6px">Student email preview</label>
+          <label style="margin-top:6px" data-t="studentEmailPreview">Student email preview</label>
           <div class="preview" aria-label="Example attendance confirmation email">
             <div class="preview-head"><small>SMART ATTENDANCE</small><strong>✓ Attendance confirmed</strong></div>
-            <div class="preview-body"><strong>Hello, Student</strong><p>Your attendance has been successfully recorded. Here is your confirmation summary.</p>
+            <div class="preview-body"><strong id="mailPreviewGreeting" data-t="previewGreeting">Hello, Rabbi</strong><p data-t="previewSummary">Your attendance has been successfully recorded. Here is your confirmation summary.</p>
               <div class="preview-data"><div><b>DATE</b> <span id="mailPreviewDate">Attendance date</span></div><div><b>CLASS</b> Bangla Class</div><div><b>STUDENT ID</b> 2023•••••0686</div></div>
               <p style="font-size:.7rem;margin:15px 0 0">Automatic notification · Please do not reply</p>
             </div>
           </div>
-          <p class="hint">Student ID is masked in email. Notification is attempted only after Google Sheets confirms attendance. Email delivery failure never deletes a saved attendance record.</p>
+          <p class="hint" data-t="emailSecurityHint">Student ID is masked in email. Notification is attempted only after Google Sheets confirms attendance. Email delivery failure never deletes a saved attendance record.</p>
         </div>
       </div>
     </div>

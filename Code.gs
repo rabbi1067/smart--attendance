@@ -135,7 +135,7 @@ function escapeHtml_(val) {
 function sendReceipt_(to, person, studentId, date, cls, displayName, isTest) {
   const recipient = String(to || '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient) || recipient.length > 150) return 'failed';
-  const name = escapeHtml_(String(person || 'Student').slice(0, 80));
+  const name = escapeHtml_(String(person || 'Rabbi').trim().slice(0, 80));
   const masked = studentId && String(studentId).length >= 8 ? escapeHtml_(String(studentId).slice(0, 4) + '•••••' + String(studentId).slice(-4)) : '—';
   const dateHtml = escapeHtml_(date);
   const classHtml = escapeHtml_(cls || 'General Attendance');
@@ -210,7 +210,7 @@ function doPost(e) {
     if (d.action === 'adminTestMail') {
       const email=String(d.email||'').trim();
       if (email.length>150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json_({ok:false,error:'bad_email'});
-      const status=sendReceipt_(email,'Administrator','',today_(),'Email settings test',d.senderName,true);
+      const status=sendReceipt_(email,'Rabbi','',today_(),'Email settings test',d.senderName,true);
       return json_({ok:true,emailStatus:status});
     }
     if (String(d.action||'').startsWith('admin')) return json_(adminMutation_(ss,d));

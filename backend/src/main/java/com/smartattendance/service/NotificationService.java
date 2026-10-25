@@ -39,7 +39,7 @@ public class NotificationService {
       return Map.of("ok",result.path("ok").asBoolean(false),"emailStatus",result.path("emailStatus").asText("failed"));
     }
     try {
-      sendSmtp(s,adminEmail,"Administrator","—","Preview", "Test Email",true);
+      sendSmtp(s,adminEmail,"Rabbi","—","Preview", "Test Email",true);
       return Map.of("ok",true,"emailStatus","sent");
     } catch (Exception e) {return Map.of("ok",true,"emailStatus","failed","message","SMTP delivery failed. Check Gmail App Password and hosting restrictions.");}
   }
