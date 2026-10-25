@@ -186,6 +186,13 @@
     .search-clear-btn:hover{background:#ef4444;color:#fff;transform:scale(1.08)}
     .search-match{background:rgba(245,158,11,.35);color:#fbbf24;font-weight:700;border-radius:3px;padding:1px 4px}
     :root:not([data-theme="dark"]) .search-match{background:rgba(245,158,11,.25);color:#92400e}
+    .url-feedback{display:flex;align-items:flex-start;gap:8px;font-size:.8rem;font-weight:600;margin-top:6px;padding:8px 12px;border-radius:9px;line-height:1.45;transition:all .2s ease}
+    .url-feedback.valid{background:rgba(16,185,129,.12);color:#059669;border:1px solid rgba(16,185,129,.3)}
+    .url-feedback.warn{background:rgba(245,158,11,.12);color:#d97706;border:1px solid rgba(245,158,11,.3)}
+    .url-feedback.err{background:rgba(239,68,68,.12);color:#dc2626;border:1px solid rgba(239,68,68,.3)}
+    :root[data-theme="dark"] .url-feedback.valid{background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(52,211,153,.35)}
+    :root[data-theme="dark"] .url-feedback.warn{background:rgba(245,158,11,.15);color:#fbbf24;border-color:rgba(251,191,36,.35)}
+    :root[data-theme="dark"] .url-feedback.err{background:rgba(239,68,68,.15);color:#f87171;border-color:rgba(248,113,113,.35)}
 
   </style>
 </head>
@@ -240,7 +247,9 @@
   <form id="configForm" class="grid">
    <div class="card"><h2 data-t="sheetsCardTitle">Google Sheets Integration</h2><p class="hint">Stored privately in MongoDB for this administrator. Nothing here is embedded in the student website.</p>
     <label for="scriptUrl" data-t="scriptUrlLabel">Apps Script Web App URL</label><input id="scriptUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+     <div id="scriptUrlFeedback" class="url-feedback hidden"></div>
     <label for="sheetUrl" data-t="sheetUrlLabel">Google Sheet URL</label><input id="sheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/.../edit" autocomplete="off">
+     <div id="sheetUrlFeedback" class="url-feedback hidden"></div>
     <label for="scriptSecret" data-t="scriptSecretLabel">Apps Script gateway secret</label>
     <div class="row" style="flex-wrap:nowrap"><input id="scriptSecret" type="password" minlength="32" maxlength="256" placeholder="32+ characters; blank keeps saved secret" autocomplete="new-password"><button id="generateSecret" type="button" class="btn btn-light small" data-t="generateBtn">Generate</button></div>
     <p id="secretStatus" class="hint"></p>

@@ -124,10 +124,88 @@ $('generateSecret').addEventListener('click',()=>{
   $('scriptSecret').type='text';
   notice('New secret generated. Copy it into Apps Script Script Properties, then save.');
 });
+function validateScriptUrl() {
+  const input = $('scriptUrl'), box = $('scriptUrlFeedback');
+  if (!input || !box) return;
+  const val = input.value.trim();
+  box.className = 'url-feedback hidden';
+  input.style.borderColor = '';
+  if (!val) return;
+
+  if (val.includes('script.google.com') && (val.includes('/projects/') || val.includes('/edit') || val.includes('/home/'))) {
+    box.className = 'url-feedback warn';
+    box.innerHTML = currentLang === 'bn'
+      ? `<span>👉 <strong>এটি এডিটর লিংক!</strong> আসল লিংক পেতে স্ক্রিপ্ট পেজের <strong>Deploy ➔ New deployment ➔ Web app</strong> থেকে কপি করুন।</span>`
+      : `<span>👉 <strong>This is the editor project URL!</strong> To get the live Web App URL, go to <strong>Deploy ➔ New deployment ➔ Web app</strong>.</span>`;
+    input.style.borderColor = '#f59e0b';
+    return;
+  }
+
+  const isExec = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec\/?$/i.test(val);
+  if (isExec) {
+    box.className = 'url-feedback valid';
+    box.innerHTML = currentLang === 'bn'
+      ? `<span>✓ <strong>পারফেক্ট!</strong> এটি সঠিক Web App URL।</span>`
+      : `<span>✓ <strong>Perfect!</strong> This is a valid Web App URL.</span>`;
+    input.style.borderColor = 'var(--ok)';
+    return;
+  }
+
+  if (val.length > 5) {
+    box.className = 'url-feedback err';
+    box.innerHTML = currentLang === 'bn'
+      ? `<span>⚠️ দয়া করে <code>https://script.google.com/macros/s/.../exec</code> ফরম্যাটের লিংক দিন।</span>`
+      : `<span>⚠️ Please enter a valid <code>https://script.google.com/macros/s/.../exec</code> URL.</span>`;
+    input.style.borderColor = 'var(--bad)';
+  }
+}
+
+function validateSheetUrl() {
+  const input = $('sheetUrl'), box = $('sheetUrlFeedback');
+  if (!input || !box) return;
+  const val = input.value.trim();
+  box.className = 'url-feedback hidden';
+  input.style.borderColor = '';
+  if (!val) return;
+
+  const isSheet = /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[A-Za-z0-9_-]+/i.test(val);
+  if (isSheet) {
+    box.className = 'url-feedback valid';
+    box.innerHTML = currentLang === 'bn'
+      ? `<span>✓ <strong>পারফেক্ট!</strong> গুগল স্প্রেডশিট লিংক শনাক্ত হয়েছে।</span>`
+      : `<span>✓ <strong>Perfect!</strong> Google Spreadsheet link verified.</span>`;
+    input.style.borderColor = 'var(--ok)';
+    return;
+  }
+
+  if (val.length > 5) {
+    box.className = 'url-feedback err';
+    box.innerHTML = currentLang === 'bn'
+      ? `<span>⚠️ দয়া করে <code>https://docs.google.com/spreadsheets/d/...</code> ফরম্যাটের লিংক দিন।</span>`
+      : `<span>⚠️ Please enter a valid Google Spreadsheet URL.</span>`;
+    input.style.borderColor = 'var(--bad)';
+  }
+}
+
+const sUrlInput = $('scriptUrl');
+if (sUrlInput) {
+  sUrlInput.addEventListener('input', validateScriptUrl);
+  sUrlInput.addEventListener('change', validateScriptUrl);
+  sUrlInput.addEventListener('paste', () => setTimeout(validateScriptUrl, 50));
+}
+const shUrlInput = $('sheetUrl');
+if (shUrlInput) {
+  shUrlInput.addEventListener('input', validateSheetUrl);
+  shUrlInput.addEventListener('change', validateSheetUrl);
+  shUrlInput.addEventListener('paste', () => setTimeout(validateSheetUrl, 50));
+}
+
 async function loadConfig() {
   const cfg=await request('/admin/config');
   $('scriptUrl').value=cfg.SCRIPT_URL||'';
   $('sheetUrl').value=cfg.SHEET_URL||'';
+  validateScriptUrl();
+  validateSheetUrl();
   $('scriptSecret').value='';$('scriptSecret').type='password';
   $('secretStatus').textContent=cfg.SECRET_CONFIGURED?'✓ A gateway secret is saved. Leave blank to keep it.':'No secret configured yet. Generate one and add it to Apps Script.';
   $('ownerStatus').textContent=cfg.liveSiteOwner?'● LIVE SITE OWNER':'● Personal workspace (not live site owner)';
@@ -502,6 +580,8 @@ function applyAdminLang() {
   if (clearBtn && dict.clearSearchTitle) clearBtn.title = dict.clearSearchTitle;
   setAdminTheme(document.documentElement.dataset.theme || 'light');
   document.title = dict.adminTitle;
+  validateScriptUrl();
+  validateSheetUrl();
 }
 
 function setAdminTheme(m) {
