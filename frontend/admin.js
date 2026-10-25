@@ -277,3 +277,145 @@ if (toggleLoginPassword) {
     toggleLoginPassword.setAttribute('title', isPass ? 'Hide password' : 'Show password');
   });
 }
+
+
+// ==========================================
+// 🌐 Language & 🌓 Theme Support (Default: English)
+// ==========================================
+const T_ADMIN = {
+  en: {
+    adminTitle: "Administrator • Smart Attendance",
+    brandSub: "/ Admin",
+    publicSite: "← Public site",
+    logout: "Logout",
+    loginTitle: "Administrator sign in",
+    loginSubtitle: "Access is restricted to administrator accounts configured on the backend.",
+    loginEmailLabel: "Administrator email",
+    loginEmailPh: "admin@example.com",
+    loginPasswordLabel: "Password",
+    loginPasswordPh: "Enter your password",
+    loginBtn: "Sign in securely →",
+    loginHint: "No account? Contact the site owner. Public registration is disabled.",
+    dashTitle: "Administrator Dashboard",
+    dashSubtitle: "Manage your Google Sheets connection, attendance schedule, email confirmations and records.",
+    tabSettings: "⚙️ General Settings",
+    tabRecords: "📊 Attendance Records",
+    sheetsCardTitle: "Google Sheets Integration",
+    scriptUrlLabel: "Apps Script Web App URL",
+    sheetUrlLabel: "Google Sheet URL",
+    openSheetLink: "Open in Google Sheets ↗",
+    scriptSecretLabel: "Apps Script gateway secret",
+    generateBtn: "Generate",
+    scheduleCardTitle: "Attendance Schedule",
+    enableTimer: "Enable attendance timer",
+    multiClass: "Multiple class schedules",
+    startTimeLabel: "Start time",
+    endTimeLabel: "End time",
+    addClassBtn: "+ Add class",
+    emailCardTitle: "Student Confirmation Emails",
+    enableEmail: "Enable automatic email notifications",
+    senderNameLabel: "Sender display name",
+    senderEmailLabel: "Sender Gmail address",
+    appPasswordLabel: "Google App Password",
+    testEmailBtn: "✉ Send test email",
+    saveConfigBtn: "💾 Save configuration",
+    recordsTitle: "Google Sheet Records",
+    searchPh: "Name, ID, email, date…",
+    addRecordBtn: "+ Add record",
+    reloadSheetsBtn: "↻ Refresh",
+    dark: "🌙",
+    light: "☀️"
+  },
+  bn: {
+    adminTitle: "প্রশাসক • স্মার্ট অ্যাটেনডেন্স",
+    brandSub: "/ অ্যাডমিন",
+    publicSite: "← মূল ওয়েবসাইট",
+    logout: "লগআউট",
+    loginTitle: "প্রশাসক সাইন ইন",
+    loginSubtitle: "শুধুমাত্র ব্যাকএন্ডে কনফিগার করা অ্যাডমিন অ্যাকাউন্টের জন্য সংরক্ষিত।",
+    loginEmailLabel: "প্রশাসকের ইমেইল",
+    loginEmailPh: "admin@example.com",
+    loginPasswordLabel: "পাসওয়ার্ড",
+    loginPasswordPh: "আপনার পাসওয়ার্ড লিখুন",
+    loginBtn: "নিরাপদে সাইন ইন করুন →",
+    loginHint: "অ্যাকাউন্ট নেই? সাইটের সত্ত্বাধিকারীর সাথে যোগাযোগ করুন। উন্মুক্ত রেজিস্ট্রেশন বন্ধ।",
+    dashTitle: "প্রশাসক ড্যাশবোর্ড",
+    dashSubtitle: "গুগল শিট কানেকশন, ক্লাসের সময়সূচী, ইমেইল নোটিফিকেশন ও রেকর্ড পরিচালনা করুন।",
+    tabSettings: "⚙️ সাধারণ সেটিংস",
+    tabRecords: "📊 হাজিরা রেকর্ড",
+    sheetsCardTitle: "গুগল শিট ইন্টিগ্রেশন",
+    scriptUrlLabel: "অ্যাপস স্ক্রিপ্ট ওয়েব অ্যাপ URL",
+    sheetUrlLabel: "গুগল স্প্রেডশিট URL",
+    openSheetLink: "গুগল শিট খুলুন ↗",
+    scriptSecretLabel: "অ্যাপস স্ক্রিপ্ট সিক্রেট কি",
+    generateBtn: "জেনারেট",
+    scheduleCardTitle: "হাজিরার সময়সূচী",
+    enableTimer: "হাজিরা নেওয়ার সময়সীমা সক্রিয় করুন",
+    multiClass: "একাধিক ক্লাসের সময়সূচী ব্যবহার করুন",
+    startTimeLabel: "শুরুর সময়",
+    endTimeLabel: "শেষের সময়",
+    addClassBtn: "+ ক্লাস যোগ করুন",
+    emailCardTitle: "শিক্ষার্থীদের কনফার্মেশন ইমেইল",
+    enableEmail: "স্বয়ংক্রিয় ইমেইল নোটিফিকেশন চালু করুন",
+    senderNameLabel: "প্রেরকের নাম",
+    senderEmailLabel: "প্রেরকের জিমেইল ঠিকানা",
+    appPasswordLabel: "গুগল অ্যাপ পাসওয়ার্ড",
+    testEmailBtn: "✉ টেস্ট ইমেইল পাঠান",
+    saveConfigBtn: "💾 কনফিগারেশন সংরক্ষণ করুন",
+    recordsTitle: "গুগল শিট রেকর্ডস",
+    searchPh: "নাম, আইডি, ইমেইল, তারিখ দিয়ে খুঁজুন…",
+    addRecordBtn: "+ নতুন রেকর্ড যোগ করুন",
+    reloadSheetsBtn: "↻ রিফ্রেশ",
+    dark: "🌙",
+    light: "☀️"
+  }
+};
+
+let currentLang = "en";
+try { currentLang = localStorage.getItem("lang") || "en"; } catch(e) {}
+
+function applyAdminLang() {
+  document.documentElement.lang = currentLang;
+  const dict = T_ADMIN[currentLang] || T_ADMIN.en;
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const k = el.dataset.t;
+    if (dict[k]) el.textContent = dict[k];
+  });
+  document.querySelectorAll('[data-p]').forEach(el => {
+    const k = el.dataset.p;
+    if (dict[k]) el.placeholder = dict[k];
+  });
+  const langText = $('adminLangText');
+  if (langText) langText.textContent = currentLang === 'en' ? 'বাংলা' : 'English';
+  document.title = dict.adminTitle;
+}
+
+function setAdminTheme(m) {
+  document.documentElement.dataset.theme = m;
+  const themeBtn = $('adminTheme');
+  if (themeBtn) themeBtn.textContent = m === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem('theme', m); } catch(e) {}
+}
+
+const adminLangBtn = $('adminLang');
+if (adminLangBtn) {
+  adminLangBtn.addEventListener('click', () => {
+    currentLang = currentLang === 'en' ? 'bn' : 'en';
+    try { localStorage.setItem('lang', currentLang); } catch(e) {}
+    applyAdminLang();
+  });
+}
+
+const adminThemeBtn = $('adminTheme');
+if (adminThemeBtn) {
+  adminThemeBtn.addEventListener('click', () => {
+    const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    setAdminTheme(nextTheme);
+  });
+}
+
+// Initial theme & language setup
+let savedTheme = null;
+try { savedTheme = localStorage.getItem('theme'); } catch(e) {}
+setAdminTheme(savedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+applyAdminLang();
