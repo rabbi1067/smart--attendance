@@ -209,8 +209,28 @@
     .script-guide-box{margin-top:14px}
     .script-guide-box ol code{font-family:monospace;background:rgba(0,0,0,.08);padding:2px 6px;border-radius:5px;font-size:.8rem}
     :root[data-theme="dark"] .script-guide-box ol code{background:rgba(255,255,255,.1)}
+    .dropdown-wrap{position:relative;display:inline-block}
+    .dropdown-menu{position:absolute;right:0;top:calc(100% + 6px);background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.16);z-index:100;min-width:210px;padding:6px;display:flex;flex-direction:column;gap:3px;animation:toastSlideIn .18s ease-out}
+    .dropdown-menu.hidden{display:none !important}
+    .dropdown-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 14px;border:none;background:transparent;color:var(--text);font-size:.85rem;font-weight:500;text-align:left;border-radius:7px;cursor:pointer;transition:background .15s ease,color .15s ease}
+    .dropdown-item:hover{background:var(--priLight);color:var(--pri)}
+    :root[data-theme="dark"] .dropdown-menu{box-shadow:0 12px 32px rgba(0,0,0,0.55);border-color:var(--line)}
 
-  </style>
+
+  
+    .pagination-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 4px 4px;margin-top:12px;border-top:1px solid var(--line);flex-wrap:wrap;font-size:.85rem}
+    .pagination-info{display:flex;align-items:center;gap:16px;color:var(--muted);flex-wrap:wrap}
+    .page-size-wrap{display:flex;align-items:center;gap:6px}
+    .page-size-wrap label{margin:0;font-size:.82rem;font-weight:600}
+    .page-size-wrap select{padding:4px 8px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:.84rem;font-weight:500;cursor:pointer}
+    .pagination-nav{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+    .page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s ease;user-select:none}
+    .page-btn:hover:not(:disabled){background:var(--priLight);border-color:var(--pri);color:var(--pri)}
+    .page-btn.active{background:var(--pri);border-color:var(--pri);color:#ffffff !important}
+    .page-btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+    .page-ellipsis{padding:0 4px;color:var(--muted);font-weight:700;user-select:none}
+
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -344,7 +364,29 @@
  </section>
  <section id="recordsPanel" class="hidden">
    <div class="card">
-    <div class="row justify"><div><h2 data-t="recordsTitle">Google Sheet Records</h2><p class="hint">All date and class tabs from your connected spreadsheet.</p></div><div class="row"><a id="openGoogleSheet" href="#" class="btn btn-white small hidden" target="_blank" rel="noopener noreferrer"><span data-t="openSheetLink">Open in Google Sheets ↗</span></a><button id="reloadSheets" class="btn btn-light small" data-t="reloadSheetsBtn">↻ Refresh</button></div></div>
+    <div class="row justify"><div><h2 data-t="recordsTitle">Google Sheet Records</h2><p class="hint">All date and class tabs from your connected spreadsheet.</p></div><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+  <a id="openGoogleSheet" href="#" class="btn btn-white small hidden" target="_blank" rel="noopener noreferrer"><span data-t="openSheetLink">Open in Google Sheets ↗</span></a>
+  <div class="dropdown-wrap">
+    <button id="downloadCsvBtn" type="button" class="btn btn-white small" title="Download CSV">
+      📥 <span data-t="downloadCsvBtn">Download CSV ▾</span>
+    </button>
+    <div id="csvDropdownMenu" class="dropdown-menu hidden">
+      <button type="button" class="dropdown-item" id="exportCurrentTab">
+        <span>📄</span> <span data-t="csvCurrentTab">Selected Tab CSV</span>
+      </button>
+      <button type="button" class="dropdown-item" id="exportAllRecords">
+        <span>📚</span> <span data-t="csvAllRecords">All Records CSV</span>
+      </button>
+      <button type="button" class="dropdown-item" id="exportDateWise">
+        <span>🗓️</span> <span data-t="csvDateWise">Date-wise CSV…</span>
+      </button>
+      <button type="button" class="dropdown-item" id="exportClassWise">
+        <span>🏫</span> <span data-t="csvClassWise">Class-wise CSV…</span>
+      </button>
+    </div>
+  </div>
+  <button id="reloadSheets" class="btn btn-light small" data-t="reloadSheetsBtn">↻ Refresh</button>
+</div></div>
     <div class="table-tools"><div style="flex:1;max-width:410px"><label for="sheetSelect" style="margin-top:0" data-t="selectSheetLabel">Select sheet / class tab</label><select id="sheetSelect"><option value="">Choose a tab</option></select></div><div class="search-box-wrap">
         <label for="searchRows" style="margin-top:0" data-t="searchRecordsLabel">Search records</label>
         <div class="search-input-wrapper">
@@ -355,6 +397,22 @@
       </div><div style="align-self:end"><button class="btn" id="addRecord" disabled data-t="addRecordBtn">+ Add record</button></div></div>
     <div class="row justify"><p class="hint" id="rowsStatus">Select a sheet to view records.</p><span class="status" id="rowCount">0 records</span></div>
     <div class="table-scroll"><table><thead id="recordHead"></thead><tbody id="recordBody"><tr><td class="empty">No sheet selected.</td></tr></tbody></table></div>
+     <div id="paginationBar" class="pagination-bar">
+       <div class="pagination-info">
+         <span id="pageRangeInfo">Showing 0–0 of 0 records</span>
+         <div class="page-size-wrap">
+           <label for="pageSizeSelect" data-t="pageSizeLabel">Per page:</label>
+           <select id="pageSizeSelect">
+             <option value="10">10</option>
+             <option value="25">25</option>
+             <option value="50">50</option>
+             <option value="100">100</option>
+             <option value="all">All</option>
+           </select>
+         </div>
+       </div>
+       <div class="pagination-nav" id="paginationNav"></div>
+     </div>
    </div>
  </section>
 </section>
@@ -367,6 +425,29 @@
 <div id="confirmModal" class="modal-shade hidden" role="alertdialog" aria-modal="true">
  <div class="modal"><h2>Delete this attendance record?</h2><p class="muted">This action permanently removes the selected row from Google Sheets.</p>
  <div class="row" style="justify-content:flex-end"><button id="cancelDelete" class="btn btn-white">Cancel</button><button id="confirmDelete" class="btn btn-danger">Delete permanently</button></div></div>
+</div>
+<div id="exportFilterModal" class="modal-shade hidden" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head">
+      <h2 id="exportModalTitle">Export CSV</h2>
+      <button type="button" class="btn btn-white small" id="closeExportModal">✕</button>
+    </div>
+    <p class="hint" id="exportModalDesc">Filter and download attendance data in CSV format.</p>
+    <div style="margin-top:14px">
+      <div id="exportDateGroup">
+        <label for="exportDateInput" style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:6px" data-t="csvDateLabel">Select Date</label>
+        <input type="date" id="exportDateInput" style="width:100%;box-sizing:border-box">
+      </div>
+      <div id="exportClassGroup" class="hidden">
+        <label for="exportClassInput" style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:6px" data-t="csvClassLabel">Select or Enter Class</label>
+        <input type="text" id="exportClassInput" placeholder="e.g. Bangla Class" style="width:100%;box-sizing:border-box">
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:24px">
+      <button type="button" class="btn btn-white" id="cancelExportModal" data-t="cancelBtn">Cancel</button>
+      <button type="button" class="btn" id="confirmExportBtn">📥 <span data-t="csvDownloadNow">Download CSV</span></button>
+    </div>
+  </div>
 </div>
 <div id="toast" class="hidden" role="status" aria-live="polite"></div>
 <script src="config-runtime.js"></script><script src="admin.js" defer></script>

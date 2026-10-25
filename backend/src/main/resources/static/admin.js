@@ -387,7 +387,7 @@ async function initialize(){
   }
 }
 async function loadSheets(){
-  $('rowsStatus').textContent='Loading Google Sheets…';
+  $('rowsStatus').textContent=currentLang==='bn'?'রেকর্ড লোড হচ্ছে…':'Loading attendance records…';
   try {
     const data=await request('/admin/sheets');sheets=data.sheets||[];
     const sel=$('sheetSelect'),selected=sel.value;sel.replaceChildren(new Option('Choose a tab',''));
@@ -410,7 +410,7 @@ async function loadSheets(){
   }
 }
 $('reloadSheets').addEventListener('click',loadSheets);
-$('sheetSelect').addEventListener('change',loadRows);
+$('sheetSelect').addEventListener('change',()=>{ currentPage=1; loadRows(); });
 function updateSearchClearBtn() {
   const sInput = $('searchRows');
   const clearBtn = $('clearSearch');
@@ -426,6 +426,7 @@ const searchInput = $('searchRows');
 const clearSearchBtn = $('clearSearch');
 if (searchInput) {
   searchInput.addEventListener('input', () => {
+    currentPage = 1;
     updateSearchClearBtn();
     drawTable();
   });
@@ -487,9 +488,109 @@ async function loadRows(){
   catch(e){$('rowsStatus').textContent=e.message;notice(e.message);drawTable();}
 }
 function mk(tag,text){const el=document.createElement(tag);el.textContent=String(text??'');return el;}
+let currentPage = 1;
+let pageSize = 10;
+try {
+  const savedSize = localStorage.getItem('admin_page_size');
+  if (savedSize) pageSize = savedSize === 'all' ? 'all' : parseInt(savedSize, 10) || 10;
+} catch(e) {}
+
+function renderPagination(totalItems) {
+  const bar = $('paginationBar');
+  const info = $('pageRangeInfo');
+  const nav = $('paginationNav');
+  const sizeSelect = $('pageSizeSelect');
+  if (!bar || !info || !nav) return;
+
+  if (sizeSelect) sizeSelect.value = String(pageSize);
+
+  if (totalItems === 0) {
+    info.textContent = currentLang === 'bn' ? 'কোনো রেকর্ড নেই' : '0 records';
+    nav.replaceChildren();
+    return;
+  }
+
+  const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(totalItems / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const start = pageSize === 'all' ? 1 : (currentPage - 1) * pageSize + 1;
+  const end = pageSize === 'all' ? totalItems : Math.min(currentPage * pageSize, totalItems);
+
+  if (currentLang === 'bn') {
+    info.textContent = `মোট ${totalItems} টির মধ্যে ${start}–${end} দেখানো হচ্ছে (পৃষ্ঠা ${currentPage}/${totalPages})`;
+  } else {
+    info.textContent = `Showing ${start}–${end} of ${totalItems} records (Page ${currentPage} of ${totalPages})`;
+  }
+
+  nav.replaceChildren();
+  if (totalPages <= 1) return;
+
+  const addBtn = (label, targetPage, disabled = false, active = false, title = '') => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'page-btn' + (active ? ' active' : '');
+    btn.textContent = label;
+    if (title) btn.title = title;
+    if (disabled) btn.disabled = true;
+    else {
+      btn.addEventListener('click', () => {
+        currentPage = targetPage;
+        drawTable();
+      });
+    }
+    nav.appendChild(btn);
+  };
+
+  const addEllipsis = () => {
+    const el = document.createElement('span');
+    el.className = 'page-ellipsis';
+    el.textContent = '…';
+    nav.appendChild(el);
+  };
+
+  addBtn('⏮', 1, currentPage === 1, false, currentLang === 'bn' ? 'প্রথম পাতা' : 'First page');
+  addBtn('◀', currentPage - 1, currentPage === 1, false, currentLang === 'bn' ? 'আগের পাতা' : 'Previous page');
+
+  if (totalPages <= 7) {
+    for (let p = 1; p <= totalPages; p++) {
+      addBtn(String(p), p, false, p === currentPage);
+    }
+  } else {
+    addBtn('1', 1, false, currentPage === 1);
+    if (currentPage > 3) addEllipsis();
+
+    const startP = Math.max(2, currentPage - 1);
+    const endP = Math.min(totalPages - 1, currentPage + 1);
+    for (let p = startP; p <= endP; p++) {
+      addBtn(String(p), p, false, p === currentPage);
+    }
+
+    if (currentPage < totalPages - 2) addEllipsis();
+    addBtn(String(totalPages), totalPages, false, currentPage === totalPages);
+  }
+
+  addBtn('▶', currentPage + 1, currentPage === totalPages, false, currentLang === 'bn' ? 'পরের পাতা' : 'Next page');
+  addBtn('⏭', totalPages, currentPage === totalPages, false, currentLang === 'bn' ? 'শেষ পাতা' : 'Last page');
+}
+
+if ($('pageSizeSelect')) {
+  $('pageSizeSelect').addEventListener('change', (e) => {
+    pageSize = e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10) || 10;
+    try { localStorage.setItem('admin_page_size', String(pageSize)); } catch(err) {}
+    currentPage = 1;
+    drawTable();
+  });
+}
+
 function drawTable(){
   const head=$('recordHead'),body=$('recordBody');head.replaceChildren();body.replaceChildren();
-  if(!sheetData){body.append(mk('tr',''));$('rowCount').textContent='0 records';return;}
+  if(!sheetData){
+    body.append(mk('tr',''));
+    $('rowCount').textContent='0 records';
+    renderPagination(0);
+    return;
+  }
   const headers=sheetData.headers||[],all=sheetData.rows||[];
   const tr=document.createElement('tr');tr.append(mk('th','Row'));
   for(const h of headers) tr.append(mk('th',h));tr.append(mk('th','Actions'));head.append(tr);
@@ -502,7 +603,16 @@ function drawTable(){
     return tokens.every(token=>combined.includes(token));
   });
 
-  for(const row of filtered){
+  const totalItems = filtered.length;
+  const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(totalItems / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const startIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
+  const endIndex = pageSize === 'all' ? totalItems : Math.min(startIndex + pageSize, totalItems);
+  const pageRows = filtered.slice(startIndex, endIndex);
+
+  for(const row of pageRows){
     const line=document.createElement('tr');
     const tdRow=document.createElement('td');tdRow.appendChild(highlightMatch(row.rowIndex,tokens));line.append(tdRow);
     for(const v of row.values){
@@ -518,18 +628,19 @@ function drawTable(){
   if(!filtered.length){
     const line=document.createElement('tr'),cell=document.createElement('td');
     if(all.length>0 && query){
-      cell.textContent=currentLang==='bn'?`"${query}" এর জন্য কোনো রেকর্ড পাওয়া যায়নি।`:`No matching records found for "${query}".`;
+      cell.textContent=currentLang==='bn'?'"'+query+'" এর জন্য কোনো রেকর্ড পাওয়া যায়নি।':'No matching records found for "'+query+'".';
     }else{
       cell.textContent=all.length?'No matching records.':'This sheet has no records yet.';
     }
     cell.colSpan=headers.length+2;cell.className='empty';line.append(cell);body.append(line);
   }
   if(query){
-    $('rowCount').textContent=currentLang==='bn'?`${filtered.length} / ${all.length} টি মিল রয়েছে`:`${filtered.length} of ${all.length} matching`;
+    $('rowCount').textContent=currentLang==='bn'?filtered.length+' / '+all.length+' টি মিল রয়েছে':filtered.length+' of '+all.length+' matching';
   }else{
-    $('rowCount').textContent=currentLang==='bn'?`${all.length} টি রেকর্ড`:`${all.length} records`;
+    $('rowCount').textContent=currentLang==='bn'?all.length+' টি রেকর্ড':all.length+' records';
   }
-  $('rowsStatus').textContent=`Viewing: ${sheetData.sheet}`;
+  $('rowsStatus').textContent='Viewing: '+sheetData.sheet;
+  renderPagination(totalItems);
 }
 function editRow(row){openEditor(row);}
 $('addRecord').addEventListener('click',()=>openEditor(null));
@@ -649,6 +760,17 @@ const T_ADMIN = {
     previewGreeting: "Hello, Rabbi",
     previewSummary: "Your attendance has been successfully recorded. Here is your confirmation summary.",
     emailSecurityHint: "Student ID is masked in email. Notification is attempted only after Google Sheets confirms attendance. Email delivery failure never deletes a saved attendance record.",
+    pageSizeLabel: "Per page:",
+    downloadCsvBtn: "Download CSV ▾",
+    csvCurrentTab: "Selected Tab CSV",
+    csvAllRecords: "All Records CSV",
+    csvDateWise: "Date-wise CSV…",
+    csvClassWise: "Class-wise CSV…",
+    csvDateLabel: "Select Date",
+    csvClassLabel: "Select or Enter Class",
+    csvDownloadNow: "Download CSV",
+    recordsTitle: "Attendance Records",
+    recordsSubtitle: "Saved in database and connected Google Sheets.",
     dark: "🌙",
     light: "☀️"
   },
@@ -704,6 +826,17 @@ const T_ADMIN = {
     previewGreeting: "হ্যালো, রাব্বি",
     previewSummary: "আপনার উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে। এখানে আপনার নিশ্চিতকরণ সারাংশ।",
     emailSecurityHint: "ইমেইলে স্টুডেন্ট আইডি গোপন রাখা হয়। গুগল শিটে উপস্থিতি নিশ্চিত হওয়ার পরই নোটিফিকেশন পাঠানো হয়।",
+    pageSizeLabel: "প্রতি পাতায়:",
+    downloadCsvBtn: "CSV ডাউনলোড ▾",
+    csvCurrentTab: "নির্বাচিত ট্যাবের CSV",
+    csvAllRecords: "সকল রেকর্ডের CSV",
+    csvDateWise: "তারিখ অনুযায়ী CSV…",
+    csvClassWise: "ক্লাস অনুযায়ী CSV…",
+    csvDateLabel: "তারিখ নির্বাচন করুন",
+    csvClassLabel: "ক্লাসের নাম লিখুন বা নির্বাচন করুন",
+    csvDownloadNow: "CSV ডাউনলোড করুন",
+    recordsTitle: "হাজিরা রেকর্ডসমূহ",
+    recordsSubtitle: "ডাটাবেজ এবং সংযুক্ত গুগল শিটে সংরক্ষিত রেকর্ড।",
     dark: "🌙",
     light: "☀️"
   }
@@ -772,3 +905,130 @@ let savedTheme = null;
 try { savedTheme = localStorage.getItem('theme'); } catch(e) {}
 setAdminTheme(savedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
 applyAdminLang();
+
+// --- CSV Export Logic ---
+const downloadCsvBtn = $('downloadCsvBtn');
+const csvDropdownMenu = $('csvDropdownMenu');
+if (downloadCsvBtn && csvDropdownMenu) {
+  downloadCsvBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    csvDropdownMenu.classList.toggle('hidden');
+  });
+  document.addEventListener('click', (e) => {
+    if (!csvDropdownMenu.contains(e.target) && e.target !== downloadCsvBtn) {
+      csvDropdownMenu.classList.add('hidden');
+    }
+  });
+}
+
+let currentExportMode = 'date';
+
+async function downloadCsv(params) {
+  if (csvDropdownMenu) csvDropdownMenu.classList.add('hidden');
+  const token = localStorage.getItem('token') || '';
+  const qs = new URLSearchParams(params).toString();
+  notice(currentLang === 'bn' ? 'CSV ফাইল প্রস্তুত হচ্ছে…' : 'Preparing CSV download…');
+  try {
+    const res = await fetch((window.ATTENDANCE_API_BASE || '') + '/api/admin/sheets/export/csv?' + qs, {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    if (!res.ok) throw new Error('Failed to generate CSV (HTTP ' + res.status + ')');
+    const blob = await res.blob();
+    let filename = 'attendance.csv';
+    const dispo = res.headers.get('content-disposition');
+    if (dispo && dispo.includes('filename=')) {
+      const m = dispo.match(/filename="?([^"]+)"?/);
+      if (m && m[1]) filename = m[1];
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    notice(currentLang === 'bn' ? '✓ CSV ডাউনলোড সফল হয়েছে!' : '✓ CSV downloaded successfully!');
+  } catch (e) {
+    notice('CSV Download error: ' + e.message);
+  }
+}
+
+if ($('exportCurrentTab')) {
+  $('exportCurrentTab').addEventListener('click', () => {
+    const curSheet = $('sheetSelect') ? $('sheetSelect').value : '';
+    if (!curSheet) {
+      notice(currentLang === 'bn' ? 'অনুগ্রহ করে প্রথমে একটি ট্যাব সিলেক্ট করুন।' : 'Please select a sheet tab first.');
+      return;
+    }
+    downloadCsv({ type: 'sheet', sheet: curSheet });
+  });
+}
+
+if ($('exportAllRecords')) {
+  $('exportAllRecords').addEventListener('click', () => {
+    downloadCsv({ type: 'all' });
+  });
+}
+
+function openExportModal(mode) {
+  if (csvDropdownMenu) csvDropdownMenu.classList.add('hidden');
+  currentExportMode = mode;
+  const modal = $('exportFilterModal');
+  if (!modal) return;
+  const title = $('exportModalTitle');
+  const dateGrp = $('exportDateGroup');
+  const clsGrp = $('exportClassGroup');
+  if (mode === 'date') {
+    if (title) title.textContent = currentLang === 'bn' ? 'তারিখ অনুযায়ী CSV ডাউনলোড' : 'Export CSV by Date';
+    if (dateGrp) dateGrp.classList.remove('hidden');
+    if (clsGrp) clsGrp.classList.add('hidden');
+    if ($('exportDateInput')) $('exportDateInput').value = new Date().toISOString().slice(0, 10);
+  } else {
+    if (title) title.textContent = currentLang === 'bn' ? 'ক্লাস অনুযায়ী CSV ডাউনলোড' : 'Export CSV by Class';
+    if (dateGrp) dateGrp.classList.add('hidden');
+    if (clsGrp) clsGrp.classList.remove('hidden');
+    if ($('exportClassInput')) {
+      $('exportClassInput').value = '';
+      setTimeout(() => $('exportClassInput').focus(), 80);
+    }
+  }
+  modal.classList.remove('hidden');
+}
+
+function closeExportModal() {
+  const modal = $('exportFilterModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+if ($('exportDateWise')) {
+  $('exportDateWise').addEventListener('click', () => openExportModal('date'));
+}
+if ($('exportClassWise')) {
+  $('exportClassWise').addEventListener('click', () => openExportModal('class'));
+}
+if ($('closeExportModal')) $('closeExportModal').addEventListener('click', closeExportModal);
+if ($('cancelExportModal')) $('cancelExportModal').addEventListener('click', closeExportModal);
+if ($('confirmExportBtn')) {
+  $('confirmExportBtn').addEventListener('click', () => {
+    if (currentExportMode === 'date') {
+      const dateVal = $('exportDateInput') ? $('exportDateInput').value : '';
+      if (!dateVal) {
+        notice(currentLang === 'bn' ? 'একটি তারিখ নির্বাচন করুন।' : 'Please select a date.');
+        return;
+      }
+      closeExportModal();
+      downloadCsv({ type: 'date', date: dateVal });
+    } else {
+      const clsVal = $('exportClassInput') ? $('exportClassInput').value.trim() : '';
+      if (!clsVal) {
+        notice(currentLang === 'bn' ? 'ক্লাসের নাম লিখুন।' : 'Please enter a class name.');
+        return;
+      }
+      closeExportModal();
+      downloadCsv({ type: 'class', cls: clsVal });
+    }
+  });
+}

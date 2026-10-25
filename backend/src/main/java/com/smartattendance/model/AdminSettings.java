@@ -19,4 +19,7 @@ public class AdminSettings {
   public String encryptedAppPassword = "";
   public AdminSettings() {}
   public AdminSettings(String id) { this.id = id; }
+  public boolean hasGoogleSheets() {
+    return scriptUrl != null && !scriptUrl.isBlank() && scriptSecret != null && !scriptSecret.isBlank();
+  }
 }

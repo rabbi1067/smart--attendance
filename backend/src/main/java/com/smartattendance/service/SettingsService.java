@@ -98,7 +98,7 @@ public class SettingsService {
   public record PublicConfig(boolean configured, String sheetUrl, ScheduleConfig schedule, String timezone) {}
   public PublicConfig publicConfig() {
     AdminSettings s = publicSettings();
-    return new PublicConfig(!s.scriptUrl.isBlank() && !s.scriptSecret.isBlank(), s.sheetUrl, s.schedule, "Asia/Dhaka");
+    return new PublicConfig(true, s.sheetUrl, s.schedule, "Asia/Dhaka");
   }
 
   public record EmailConfig(boolean ENABLED, String PROVIDER, String SENDER_EMAIL, String SENDER_NAME,

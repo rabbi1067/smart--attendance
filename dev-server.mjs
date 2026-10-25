@@ -54,17 +54,15 @@ const state = {
     hasAppPassword: false
   },
   // In-memory data store for local testing
-  records: [
-    {
-      sl: '1',
-      date: new Date().toISOString().slice(0, 10),
-      name: 'Fazle Rabbi',
-      id: '2023200000686',
-      email: 'fazlerabbicse65@gmail.com',
-      attendance: '1',
-      time: '08:30:00 PM'
-    }
-  ]
+  records: Array.from({ length: 28 }, (_, i) => ({
+    sl: String(i + 1),
+    date: new Date().toISOString().slice(0, 10),
+    name: ['Fazle Rabbi', 'Tanvir Ahmed', 'Sadia Islam', 'Nusrat Jahan', 'Mahmudul Hasan', 'Rashedul Karim', 'Sumaiya Akter', 'Mehedi Hasan', 'Jannatul Ferdous', 'Arif Hossain'][i % 10] + ' ' + (i + 1),
+    id: '20232' + String(10000000 + i).slice(-8),
+    email: 'student' + (i + 1) + '@example.com',
+    attendance: '1',
+    time: ['08:30:15 AM', '09:12:04 AM', '10:05:40 AM', '11:20:10 AM', '02:15:30 PM', '04:45:00 PM'][i % 6]
+  }))
 };
 
 const MIME_TYPES = {
@@ -312,6 +310,28 @@ const server = http.createServer(async (req, res) => {
       // 12. POST /api/admin/notifications/test
       if (pathname === '/api/admin/notifications/test' && req.method === 'POST') {
         return sendJson(res, 200, { ok: true, status: 'sent', message: 'Test email simulated successfully' });
+      }
+
+      // 13. GET /api/admin/sheets/export/csv
+      if (pathname === '/api/admin/sheets/export/csv' && req.method === 'GET') {
+        const type = url.searchParams.get('type') || 'all';
+        const filter = url.searchParams.get('filter') || url.searchParams.get('sheet') || url.searchParams.get('date') || '';
+        let list = state.records;
+        if (filter && filter !== 'All Records') {
+          list = state.records.filter(r => r.date === filter || (r.className && r.className === filter));
+        }
+        let csv = '\uFEFFSL,Date,Class,Name,Student ID,Email,Attendance,Time\r\n';
+        list.forEach((r, i) => {
+          const esc = v => `"${String(v || '').replace(/"/g, '""')}"`;
+          csv += `${esc(i + 1)},${esc(r.date)},${esc(r.className || 'General')},${esc(r.name)},"=""${String(r.id || '').replace(/"/g, '""')}""",${esc(r.email)},${esc(r.attendance || '1')},${esc(r.time)}\r\n`;
+        });
+        const filename = `attendance-${(filter || 'all-records').replace(/[^a-zA-Z0-9._-]/g, '_')}.csv`;
+        res.writeHead(200, {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Access-Control-Allow-Origin': '*'
+        });
+        return res.end(csv);
       }
 
       return sendJson(res, 404, { ok: false, error: 'not_found', message: 'API route not found' });

@@ -102,7 +102,7 @@ body {
   pointer-events: none;
 }
 .wrap {
-  max-width: 1040px;
+  max-width: 1140px;
   margin: 0 auto;
   position: relative;
   z-index: 2;
@@ -247,12 +247,12 @@ body {
 /* Main Content Grid */
 .main {
   flex: 1;
-  max-width: 1060px;
+  max-width: 1140px;
   width: 100%;
   margin: -48px auto 60px;
   padding: 0 20px;
   display: grid;
-  grid-template-columns: 390px minmax(0, 1fr);
+  grid-template-columns: 370px minmax(0, 1fr);
   gap: 24px;
   align-items: start;
   position: relative;
@@ -381,25 +381,61 @@ input.val-err {
   font-size: 0.88rem;
 }
 .tw {
-  max-height: 380px;
+  max-height: 420px;
   overflow-y: auto;
-  overflow-x: auto;
+  overflow-x: hidden !important;
   border: 1px solid var(--line);
   border-radius: 12px;
+  width: 100%;
 }
 table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
+  table-layout: fixed;
 }
 th, td {
-  padding: 12px 12px;
+  padding: 12px 8px;
   text-align: left;
   border-bottom: 1px solid var(--line);
+  box-sizing: border-box;
+}
+th:nth-child(1), td:nth-child(1), .cell-sl {
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+  text-align: center;
+  padding: 12px 2px;
+}
+th:nth-child(2), td:nth-child(2), .cell-name {
+  width: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-th:first-child, td:first-child { width: 40px; text-align: center; }
-th:last-child, td:last-child { width: 44px; text-align: center; }
+th:nth-child(3), td:nth-child(3), .cell-id {
+  width: 124px;
+  min-width: 124px;
+  max-width: 124px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+th:nth-child(4), td:nth-child(4), .cell-time {
+  width: 102px;
+  min-width: 102px;
+  max-width: 102px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+th:nth-child(5), td:nth-child(5), .cell-status {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  text-align: center;
+  padding: 12px 2px;
+}
 th {
   color: var(--text-muted);
   font-size: 0.74rem;
@@ -751,7 +787,7 @@ tbody tr:hover { background: var(--pri-light); }
   margin-top: 60px;
 }
 .footer-wrap {
-  max-width: 1060px;
+  max-width: 1140px;
   margin: 0 auto;
 }
 .footer-grid {
@@ -1005,6 +1041,45 @@ tbody tr:hover { background: var(--pri-light); }
   }
 }
 
+
+.modal-pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.modal-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.modal-page-btn:hover:not(:disabled) {
+  background: var(--pri-light);
+  border-color: var(--pri);
+  color: var(--pri);
+}
+.modal-page-btn.active {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: #fff !important;
+}
+.modal-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 </style>
 </head>
 <body>
@@ -1175,6 +1250,7 @@ tbody tr:hover { background: var(--pri-light); }
 
     <div class="modal-footer-row">
       <span id="modalSummary" style="font-size:0.82rem;color:var(--text-muted)">Showing all records</span>
+      <div id="modalPagination" class="modal-pagination"></div>
       <button type="button" id="closeRecordsModalBtn" class="btn-modal-close" data-t="closeBtn">Close</button>
     </div>
   </div>
@@ -1428,6 +1504,19 @@ function setCountdownUI(state, htmlContent) {
   }
 }
 
+function restoreSubmitBtn() {
+  if (busy) return;
+  const sid = $("sid") ? $("sid").value.trim() : "";
+  if (typeof isDuplicateId === 'function' && isDuplicateId(sid)) {
+    updateSubmitBtnState(true);
+  } else {
+    $("go").disabled = false;
+    $("go").style.opacity = "";
+    $("go").style.cursor = "";
+    if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
+  }
+}
+
 function updateTimer() {
   if (!scheduleReady || !CONFIG.configured) {
     timerState = {allowed:false,cls:''};
@@ -1457,8 +1546,7 @@ function updateTimer() {
     timerState = { allowed: true, cls: "" };
     if (!busy) {
       $("name").disabled = $("sid").disabled = $("email").disabled = false;
-      $("go").disabled = false;
-      if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
+      restoreSubmitBtn();
     }
     return;
   }
@@ -1509,8 +1597,7 @@ function updateTimer() {
       }
       if (!busy) {
         $("name").disabled = $("sid").disabled = $("email").disabled = false;
-        $("go").disabled = false;
-        if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
+        restoreSubmitBtn();
       }
       return;
     }
@@ -1582,8 +1669,7 @@ function updateTimer() {
   setCountdownUI("open", content);
   if (!busy) {
     $("name").disabled = $("sid").disabled = $("email").disabled = false;
-    $("go").disabled = false;
-    if ($("go").textContent !== T[lang].submit) $("go").textContent = T[lang].submit;
+    restoreSubmitBtn();
   }
 }
 
@@ -1641,7 +1727,7 @@ function render() {
 
   // Render main card table rows
   $("rows").innerHTML = displayRows.length ? displayRows.map((r, i) =>
-    "<tr><td>" + (i + 1).toLocaleString(loc()) + "</td><td>" + esc(r.name) + "</td><td>" + esc(r.idm || mask(String(r.id))) + "</td><td>" + esc(formatTime(r.time)) + "</td><td><span class='status-tag'>✔</span></td></tr>"
+    "<tr><td class='cell-sl'>" + (i + 1).toLocaleString(loc()) + "</td><td class='cell-name' title='" + esc(r.name) + "'>" + esc(r.name) + "</td><td class='cell-id'>" + esc(r.idm || mask(String(r.id))) + "</td><td class='cell-time'>" + esc(formatTime(r.time)) + "</td><td class='cell-status'><span class='status-tag'>✔</span></td></tr>"
   ).join("") : "<tr><td colspan='5' class='empty'>—</td></tr>";
 
   // Update summary text
@@ -1691,10 +1777,14 @@ function closeModal() {
   document.body.style.overflow = "";
 }
 
+let modalPage = 1;
+const modalPageSize = 10;
+
 function renderModalRows() {
   const tbody = $("modalRows");
   const badge = $("modalCountBadge");
   const summary = $("modalSummary");
+  const nav = $("modalPagination");
   if (!tbody) return;
 
   const query = ($("modalSearch") ? $("modalSearch").value : "").trim().toLowerCase();
@@ -1708,21 +1798,61 @@ function renderModalRows() {
     });
   }
 
-  if (badge) badge.textContent = filtered.length.toLocaleString(loc());
+  const total = filtered.length;
+  if (badge) badge.textContent = total.toLocaleString(loc());
 
-  tbody.innerHTML = filtered.length ? filtered.map((r, i) =>
-    "<tr><td>" + (i + 1).toLocaleString(loc()) + "</td><td>" + esc(r.name) + "</td><td>" + esc(r.idm || mask(String(r.id))) + "</td><td>" + esc(formatTime(r.time)) + "</td><td><span class='status-tag'>✔</span></td></tr>"
-  ).join("") : "<tr><td colspan='5' class='empty'>" + (lang === "bn" ? "কোনো তথ্য মেলেনি" : "No matching records found.") + "</td></tr>";
+  const totalPages = Math.max(1, Math.ceil(total / modalPageSize));
+  if (modalPage > totalPages) modalPage = totalPages;
+  if (modalPage < 1) modalPage = 1;
+
+  const startIdx = (modalPage - 1) * modalPageSize;
+  const pageRows = filtered.slice(startIdx, startIdx + modalPageSize);
+
+  tbody.innerHTML = pageRows.length ? pageRows.map((r, i) => {
+    const sl = startIdx + i + 1;
+    return "<tr><td class='cell-sl'>" + sl.toLocaleString(loc()) + "</td><td class='cell-name' title='" + esc(r.name) + "'>" + esc(r.name) + "</td><td class='cell-id'>" + esc(r.idm || mask(String(r.id))) + "</td><td class='cell-time'>" + esc(formatTime(r.time)) + "</td><td class='cell-status'><span class='status-tag'>✔</span></td></tr>";
+  }).join("") : "<tr><td colspan='5' class='empty'>" + (lang === "bn" ? "কোনো তথ্য মেলেনি" : "No matching records found.") + "</td></tr>";
 
   if (summary) {
+    const sDisplay = total === 0 ? 0 : startIdx + 1;
+    const eDisplay = Math.min(startIdx + modalPageSize, total);
     if (query) {
       summary.textContent = lang === "bn"
-        ? `খোঁজের ফলাফল: ${filtered.length.toLocaleString(loc())} টি রেকর্ড পাওয়া গেছে`
-        : `Search results: ${filtered.length.toLocaleString(loc())} records found`;
+        ? `মোট ${total.toLocaleString(loc())} টির মধ্যে ${sDisplay}–${eDisplay} (পৃষ্ঠা ${modalPage}/${totalPages})`
+        : `Showing ${sDisplay}–${eDisplay} of ${total.toLocaleString(loc())} (Page ${modalPage} of ${totalPages})`;
     } else {
       summary.textContent = lang === "bn"
-        ? `আজকের মোট ${filtered.length.toLocaleString(loc())} জনের উপস্থিতি রেকর্ড`
-        : `Total ${filtered.length.toLocaleString(loc())} attendance records for today`;
+        ? `মোট ${total.toLocaleString(loc())} জনের মধ্যে ${sDisplay}–${eDisplay} (পৃষ্ঠা ${modalPage}/${totalPages})`
+        : `Showing ${sDisplay}–${eDisplay} of ${total.toLocaleString(loc())} (Page ${modalPage} of ${totalPages})`;
+    }
+  }
+
+  // Render modal pagination buttons
+  if (nav) {
+    nav.replaceChildren();
+    if (totalPages > 1) {
+      const addMBtn = (label, p, disabled = false, active = false) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "modal-page-btn" + (active ? " active" : "");
+        b.textContent = label;
+        if (disabled) b.disabled = true;
+        else b.addEventListener("click", () => { modalPage = p; renderModalRows(); });
+        nav.appendChild(b);
+      };
+
+      addMBtn("◀", modalPage - 1, modalPage === 1);
+      for (let p = 1; p <= totalPages; p++) {
+        if (p === 1 || p === totalPages || Math.abs(p - modalPage) <= 1) {
+          addMBtn(p.toLocaleString(loc()), p, false, p === modalPage);
+        } else if (p === 2 && modalPage > 3 || p === totalPages - 1 && modalPage < totalPages - 2) {
+          const dots = document.createElement("span");
+          dots.style.cssText = "color:var(--text-muted);font-weight:700;padding:0 2px;";
+          dots.textContent = "…";
+          nav.appendChild(dots);
+        }
+      }
+      addMBtn("▶", modalPage + 1, modalPage === totalPages);
     }
   }
 
@@ -1826,6 +1956,35 @@ function validateName(showOk = true) {
   return true;
 }
 
+function isDuplicateId(id) {
+  if (!id || id.length !== 13) return false;
+  const targetMasked = mask(id);
+  const targetRaw = String(id).trim();
+  return rows.some(r => {
+    if (r.id && String(r.id).trim() === targetRaw) return true;
+    if (r.idm && r.idm === targetMasked) return true;
+    return false;
+  });
+}
+
+function updateSubmitBtnState(isDuplicate = false) {
+  const btn = $("go");
+  if (!btn || busy) return;
+  if (isDuplicate) {
+    btn.disabled = true;
+    btn.textContent = lang === "bn" ? "⛔ ইতিমধ্যে হাজিরা দেওয়া হয়েছে" : "⛔ Already Marked Attendance";
+    btn.style.opacity = "0.65";
+    btn.style.cursor = "not-allowed";
+  } else {
+    btn.style.opacity = "";
+    btn.style.cursor = "";
+    if (btn.textContent.includes("⛔")) {
+      btn.textContent = T[lang].submit;
+      btn.disabled = false;
+    }
+  }
+}
+
 function validateId(showOk = true) {
   const el = $("sid"), msg = $("sidMsg");
   if (!el || !msg) return false;
@@ -1834,11 +1993,15 @@ function validateId(showOk = true) {
   msg.className = "val-msg";
   msg.textContent = "";
 
-  if (val.length === 0) return false;
+  if (val.length === 0) {
+    updateSubmitBtnState(false);
+    return false;
+  }
   if (!/^\d+$/.test(val)) {
     el.classList.add("val-err");
     msg.className = "val-msg err";
     msg.textContent = lang === "bn" ? "⚠️ শুধুমাত্র সংখ্যা লিখুন।" : "⚠️ Numbers only.";
+    updateSubmitBtnState(false);
     return false;
   }
   if (val.length < 13) {
@@ -1846,14 +2009,27 @@ function validateId(showOk = true) {
     msg.textContent = lang === "bn"
       ? `বাকি আছে ${13 - val.length} টি ডিজিট (মোট ১৩ টি)`
       : `${13 - val.length} more digits needed (13 total)`;
+    updateSubmitBtnState(false);
     return false;
   }
   if (val.length === 13) {
+    // 🚨 Instant Duplicate Check
+    if (isDuplicateId(val)) {
+      el.classList.add("val-err");
+      msg.className = "val-msg err";
+      msg.innerHTML = lang === "bn"
+        ? "⛔ <strong>ডুপ্লিকেট আইডি!</strong> এই আইডি দিয়ে আজকের হাজিরা ইতিমধ্যে দেওয়া হয়েছে।"
+        : "⛔ <strong>Duplicate ID!</strong> Attendance already recorded for this ID today.";
+      updateSubmitBtnState(true);
+      return false;
+    }
+
     if (showOk) {
       el.classList.add("val-ok");
       msg.className = "val-msg ok";
       msg.textContent = lang === "bn" ? "✓ ১৩ ডিজিট পূর্ণ হয়েছে" : "✓ 13 digits entered";
     }
+    updateSubmitBtnState(false);
     return true;
   }
   return false;
@@ -1912,13 +2088,19 @@ $("go").addEventListener("click", async () => {
   if (!idOk) { $("sid").focus(); return toast(T[lang].badId, "err"); }
   if (!emailOk) { $("email").focus(); return toast(T[lang].badEmail, "err"); }
 
+  const id = $("sid").value.trim();
+  if (isDuplicateId(id)) {
+    $("sid").focus();
+    validateId(true);
+    return toast(T[lang].dup, "warn");
+  }
+
   if (Date.now() - lastSubmit < 1500) return toast(T[lang].rate, "warn");
   busy = true; lastSubmit = Date.now();
   const btn = $("go");
   barStart();
 
   const name = $("name").value.trim();
-  const id = $("sid").value.trim();
   const email = $("email").value.trim();
   const t = T[lang];
   const curCls = timerState.cls || "";
@@ -1936,7 +2118,7 @@ $("go").addEventListener("click", async () => {
         idm: mask(id),
         time: timeStr()
       };
-      const alreadyExists = rows.some(r => r.name === name && (r.idm === newEntry.idm || r.id === id));
+      const alreadyExists = isDuplicateId(id);
       if (!alreadyExists) {
         rows.push(newEntry);
         saveRows(rows, curCls);

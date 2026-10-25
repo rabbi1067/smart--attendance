@@ -59,8 +59,20 @@ function validateRow_(values, hasSl) {
 }
 function duplicate_(sh, id, idCol, ignoreRow) {
   if (sh.getLastRow() <= 1) return false;
-  const ids=sh.getRange(2,idCol,sh.getLastRow()-1,1).getDisplayValues().flat();
-  return ids.some((x,i)=>x===id && i+2!==ignoreRow);
+  const n = sh.getLastRow() - 1;
+  const targetId = String(id || '').trim().replace(/\D/g, '');
+  if (!targetId) return false;
+  const disp = sh.getRange(2, idCol, n, 1).getDisplayValues().flat();
+  const raw = sh.getRange(2, idCol, n, 1).getValues().flat();
+  for (let i = 0; i < n; i++) {
+    if (i + 2 === ignoreRow) continue;
+    const sDisp = String(disp[i] || '').trim().replace(/\D/g, '');
+    const sRaw = String(raw[i] || '').trim().replace(/\D/g, '');
+    if ((sDisp.length >= 8 && sDisp === targetId) || (sRaw.length >= 8 && sRaw === targetId)) {
+      return true;
+    }
+  }
+  return false;
 }
 function renumber_(sh) {
   const n=sh.getLastRow()-1;
@@ -237,6 +249,7 @@ function doPost(e) {
     let data=c.sl ? [sh.getLastRow(),date,name,id,email,'1',now_()] : [date,name,id,email,'1',now_()];
     data=data.map(safeValue_);
     sh.appendRow(data);
+    sh.getRange(sh.getLastRow(), c.id).setNumberFormat('@');
     cache.put(rateKey,'1',RATE_SECONDS);
     const mailStatus=(d.mailEnabled===true && email) ?
       sendReceipt_(email,name,id,date,cls,d.senderName,false) : 'disabled';
