@@ -69,43 +69,45 @@ public class NotificationService {
     String desc = test
         ? "Your notification settings are configured and operating properly. Test message verified."
         : "Your attendance record has been successfully recorded in the digital registry. Below is your official receipt summary.";
-    return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
-        + "<title>Smart Attendance</title></head>"
-        + "<body style=\"margin:0;padding:28px 12px;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\x27Segoe UI\x27,Roboto,Helvetica,Arial,sans-serif;color:#0f172a;-webkit-font-smoothing:antialiased;\">"
-        + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"max-width:580px;margin:0 auto;background-color:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);border:1px solid #e2e8f0;\">"
-        + "<tr><td style=\"background:linear-gradient(135deg, #090e1a 0%, #1e1b4b 100%);padding:30px 26px;text-align:left;\">"
-        + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td>"
-        + "<span style=\"font-size:11px;font-weight:700;letter-spacing:1.5px;color:#38bdf8;text-transform:uppercase;\">SMART ATTENDANCE PORTAL</span>"
-        + "<h1 style=\"margin:8px 0 0;font-size:23px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;\">" + title + "</h1>"
-        + "</td><td align=\"right\" style=\"vertical-align:middle;\">"
-        + "<span style=\"display:inline-block;padding:6px 12px;background:rgba(52,211,153,0.18);border:1px solid rgba(52,211,153,0.35);border-radius:99px;color:#34d399;font-size:11px;font-weight:700;letter-spacing:0.5px;\">✓ VERIFIED</span>"
-        + "</td></tr></table></td></tr>"
-        + "<tr><td style=\"padding:28px 26px;\">"
-        + "<p style=\"margin:0 0 6px;font-size:18px;font-weight:700;color:#0f172a;\">Hello, " + name + "</p>"
-        + "<p style=\"margin:0 0 22px;font-size:14px;line-height:1.6;color:#64748b;\">" + desc + "</p>"
-        + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:24px;\">"
-        + "<tr><td style=\"padding:14px 18px;border-bottom:1px solid #e2e8f0;\"><div style=\"font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;\">DATE</div><div style=\"font-size:14px;font-weight:700;color:#0f172a;margin-top:2px;\">" + date + "</div></td></tr>"
-        + "<tr><td style=\"padding:14px 18px;border-bottom:1px solid #e2e8f0;\"><div style=\"font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;\">SESSION / CLASS</div><div style=\"font-size:14px;font-weight:700;color:#0f172a;margin-top:2px;\">" + cls + "</div></td></tr>"
-        + "<tr><td style=\"padding:14px 18px;border-bottom:1px solid #e2e8f0;\"><div style=\"font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;\">STUDENT ID</div><div style=\"font-size:14px;font-weight:700;color:#0f172a;margin-top:2px;font-family:monospace;\">" + id + "</div></td></tr>"
-        + "<tr><td style=\"padding:14px 18px;\"><div style=\"font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;\">RECORD STATUS</div><div style=\"font-size:13px;font-weight:700;color:#10b981;margin-top:2px;\">Recorded &amp; Confirmed</div></td></tr>"
-        + "</table>"
-        + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background:#080d1a;border-radius:14px;padding:20px;color:#ffffff;margin-top:16px;\">"
-        + "<tr><td><div style=\"font-size:11px;font-weight:700;letter-spacing:1px;color:#38bdf8;text-transform:uppercase;margin-bottom:3px;\">SYSTEM DEVELOPER</div>"
-        + "<div style=\"font-size:16px;font-weight:800;color:#ffffff;margin-bottom:5px;\">Fazley <span style=\"color:#38bdf8;\">.</span> Rabbi</div>"
-        + "<p style=\"margin:0 0 14px;font-size:12px;line-height:1.5;color:#94a3b8;\">Thoughtful code. Practical research. Meaningful work.</p>"
-        + "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\"><tr><td>"
-        + "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr>"
-        + "<td style=\"padding-right:6px;padding-bottom:6px;\"><a href=\"https://www.linkedin.com/in/fazleyrabbi1067/\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;\">LinkedIn ↗</a></td>"
-        + "<td style=\"padding-right:6px;padding-bottom:6px;\"><a href=\"https://github.com/rabbi1067\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;\">GitHub ↗</a></td>"
-        + "<td style=\"padding-right:6px;padding-bottom:6px;\"><a href=\"https://x.com/FazleRabbi56251\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;\">X (Twitter) ↗</a></td>"
-        + "<td style=\"padding-bottom:6px;\"><a href=\"https://www.facebook.com/fazleyrabbi1067/\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;\">Facebook ↗</a></td>"
-        + "</tr></table></td></tr>"
-        + "<tr><td style=\"padding-top:4px;\"><a href=\"mailto:fazlerabbicse65@gmail.com\" style=\"color:#38bdf8;font-size:12px;text-decoration:none;font-weight:600;\">fazlerabbicse65@gmail.com ↗</a></td></tr>"
-        + "</table></td></tr></table>"
-        + "<p style=\"margin:20px 0 0;font-size:11px;color:#94a3b8;line-height:1.5;text-align:center;\">Automatic notification · Please do not reply to this email</p>"
-        + "</td></tr>"
-        + "<tr><td style=\"background-color:#f8fafc;padding:14px 26px;text-align:center;border-top:1px solid #e2e8f0;\">"
-        + "<span style=\"font-size:11px;color:#64748b;\">© 2026 Fazley Rabbi · Smart Attendance · All rights reserved</span>"
-        + "</td></tr></table></body></html>";
+    StringBuilder sb = new StringBuilder();
+    sb.append("<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>");
+    sb.append("<title>Smart Attendance</title></head>");
+    sb.append("<body style='margin:0;padding:28px 12px;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a;'>");
+    sb.append("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='max-width:580px;margin:0 auto;background-color:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);border:1px solid #e2e8f0;'>");
+    sb.append("<tr><td style='background:linear-gradient(135deg, #090e1a 0%, #1e1b4b 100%);padding:30px 26px;text-align:left;'>");
+    sb.append("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0'><tr><td>");
+    sb.append("<span style='font-size:11px;font-weight:700;letter-spacing:1.5px;color:#38bdf8;text-transform:uppercase;'>SMART ATTENDANCE PORTAL</span>");
+    sb.append("<h1 style='margin:8px 0 0;font-size:23px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;'>").append(title).append("</h1>");
+    sb.append("</td><td align='right' style='vertical-align:middle;'>");
+    sb.append("<span style='display:inline-block;padding:6px 12px;background:rgba(52,211,153,0.18);border:1px solid rgba(52,211,153,0.35);border-radius:99px;color:#34d399;font-size:11px;font-weight:700;letter-spacing:0.5px;'>✓ VERIFIED</span>");
+    sb.append("</td></tr></table></td></tr>");
+    sb.append("<tr><td style='padding:28px 26px;'>");
+    sb.append("<p style='margin:0 0 6px;font-size:18px;font-weight:700;color:#0f172a;'>Hello, ").append(name).append("</p>");
+    sb.append("<p style='margin:0 0 22px;font-size:14px;line-height:1.6;color:#64748b;'>").append(desc).append("</p>");
+    sb.append("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:24px;'>");
+    sb.append("<tr><td style='padding:14px 18px;border-bottom:1px solid #e2e8f0;'><div style='font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;'>DATE</div><div style='font-size:14px;font-weight:700;color:#0f172a;margin-top:2px;'>").append(date).append("</div></td></tr>");
+    sb.append("<tr><td style='padding:14px 18px;border-bottom:1px solid #e2e8f0;'><div style='font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;'>SESSION / CLASS</div><div style='font-size:14px;font-weight:700;color:#0f172a;margin-top:2px;'>").append(cls).append("</div></td></tr>");
+    sb.append("<tr><td style='padding:14px 18px;border-bottom:1px solid #e2e8f0;'><div style='font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;'>STUDENT ID</div><div style='font-size:14px;font-weight:700;color:#0f172a;margin-top:2px;font-family:monospace;'>").append(id).append("</div></td></tr>");
+    sb.append("<tr><td style='padding:14px 18px;'><div style='font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;'>RECORD STATUS</div><div style='font-size:13px;font-weight:700;color:#10b981;margin-top:2px;'>Recorded &amp; Confirmed</div></td></tr>");
+    sb.append("</table>");
+    sb.append("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='background:#080d1a;border-radius:14px;padding:20px;color:#ffffff;margin-top:16px;'>");
+    sb.append("<tr><td><div style='font-size:11px;font-weight:700;letter-spacing:1px;color:#38bdf8;text-transform:uppercase;margin-bottom:3px;'>SYSTEM DEVELOPER</div>");
+    sb.append("<div style='font-size:16px;font-weight:800;color:#ffffff;margin-bottom:5px;'>Fazley <span style='color:#38bdf8;'>.</span> Rabbi</div>");
+    sb.append("<p style='margin:0 0 14px;font-size:12px;line-height:1.5;color:#94a3b8;'>Thoughtful code. Practical research. Meaningful work.</p>");
+    sb.append("<table role='presentation' cellpadding='0' cellspacing='0' border='0' width='100%'><tr><td>");
+    sb.append("<table role='presentation' cellpadding='0' cellspacing='0' border='0'><tr>");
+    sb.append("<td style='padding-right:6px;padding-bottom:6px;'><a href='https://www.linkedin.com/in/fazleyrabbi1067/' target='_blank' rel='noopener' style='display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;'>LinkedIn ↗</a></td>");
+    sb.append("<td style='padding-right:6px;padding-bottom:6px;'><a href='https://github.com/rabbi1067' target='_blank' rel='noopener' style='display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;'>GitHub ↗</a></td>");
+    sb.append("<td style='padding-right:6px;padding-bottom:6px;'><a href='https://x.com/FazleRabbi56251' target='_blank' rel='noopener' style='display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;'>X (Twitter) ↗</a></td>");
+    sb.append("<td style='padding-bottom:6px;'><a href='https://www.facebook.com/fazleyrabbi1067/' target='_blank' rel='noopener' style='display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;'>Facebook ↗</a></td>");
+    sb.append("</tr></table></td></tr>");
+    sb.append("<tr><td style='padding-top:4px;'><a href='mailto:fazlerabbicse65@gmail.com' style='color:#38bdf8;font-size:12px;text-decoration:none;font-weight:600;'>fazlerabbicse65@gmail.com ↗</a></td></tr>");
+    sb.append("</table></td></tr></table>");
+    sb.append("<p style='margin:20px 0 0;font-size:11px;color:#94a3b8;line-height:1.5;text-align:center;'>Automatic notification · Please do not reply to this email</p>");
+    sb.append("</td></tr>");
+    sb.append("<tr><td style='background-color:#f8fafc;padding:14px 26px;text-align:center;border-top:1px solid #e2e8f0;'>");
+    sb.append("<span style='font-size:11px;color:#64748b;'>© 2026 Fazley Rabbi · Smart Attendance · All rights reserved</span>");
+    sb.append("</td></tr></table></body></html>");
+    return sb.toString();
   }
 }
