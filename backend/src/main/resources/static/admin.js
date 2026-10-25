@@ -495,13 +495,22 @@ function applyAdminLang() {
   if (langText) langText.textContent = currentLang === 'en' ? 'বাংলা' : 'English';
   const clearBtn = $('clearSearch');
   if (clearBtn && dict.clearSearchTitle) clearBtn.title = dict.clearSearchTitle;
+  setAdminTheme(document.documentElement.dataset.theme || 'light');
   document.title = dict.adminTitle;
 }
 
 function setAdminTheme(m) {
   document.documentElement.dataset.theme = m;
   const themeBtn = $('adminTheme');
-  if (themeBtn) themeBtn.textContent = m === 'dark' ? '☀️' : '🌙';
+  if (themeBtn) {
+    const isDark = m === 'dark';
+    const label = isDark 
+      ? (currentLang === 'bn' ? 'লাইট' : 'Light') 
+      : (currentLang === 'bn' ? 'ডার্ক' : 'Dark');
+    const icon = isDark ? '☀️' : '🌙';
+    themeBtn.innerHTML = `<span style="font-size:15px;line-height:1">${icon}</span> <span style="font-size:12px;font-weight:600;letter-spacing:.2px">${label}</span>`;
+    themeBtn.title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+  }
   try { localStorage.setItem('theme', m); } catch(e) {}
 }
 

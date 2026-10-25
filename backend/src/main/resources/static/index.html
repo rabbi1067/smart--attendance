@@ -38,26 +38,28 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #070b14;
-    --card: #0d1322;
-    --card-border: #1a2336;
-    --text: #f1f5f9;
-    --text-muted: #8b9bb4;
-    --line: #1a2336;
-    --pri-light: rgba(99, 102, 241, 0.15);
-    --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+    --bg: #090e1a;
+    --card: #111827;
+    --card-border: #243044;
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --line: #243044;
+    --pri-light: rgba(99, 102, 241, 0.2);
+    --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.55);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #070b14;
-  --card: #0d1322;
-  --card-border: #1a2336;
-  --text: #f1f5f9;
-  --text-muted: #8b9bb4;
-  --line: #1a2336;
-  --pri-light: rgba(99, 102, 241, 0.15);
-  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+  --bg: #090e1a;
+  --card: #111827;
+  --card-border: #243044;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --line: #243044;
+  --pri-light: rgba(99, 102, 241, 0.2);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.55);
 }
 
 * { box-sizing: border-box; }
@@ -293,12 +295,16 @@ input {
   padding: 13px 15px;
   border-radius: 12px;
   border: 1.5px solid var(--line);
-  background: transparent;
+  background: var(--card);
   color: var(--text);
   font: inherit;
   font-size: 0.96rem;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+:root[data-theme="dark"] input {
+  background: #0a0f1d;
+  border-color: #243044;
 }
 input:focus {
   border-color: var(--pri);
