@@ -311,6 +311,26 @@ input:focus {
   box-shadow: 0 0 0 4px var(--pri-light);
 }
 input.err { border-color: var(--bad); }
+.val-msg {
+  display: block;
+  font-size: 0.77rem;
+  margin-top: 4px;
+  min-height: 16px;
+  line-height: 1.35;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+.val-msg.err { color: #ef4444; }
+.val-msg.ok { color: #10b981; }
+:root[data-theme="dark"] .val-msg.err { color: #f87171; }
+:root[data-theme="dark"] .val-msg.ok { color: #34d399; }
+input.val-ok {
+  border-color: #10b981 !important;
+}
+input.val-err {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
 .hint {
   display: flex;
   justify-content: space-between;
@@ -818,6 +838,7 @@ tbody tr:hover { background: var(--pri-light); }
     <h2 data-t="formTitle">Mark your attendance</h2>
     <label for="name" data-t="name">Name</label>
     <input id="name" autocomplete="name" data-p="namePh" placeholder="Your full name">
+    <span id="nameMsg" class="val-msg"></span>
 
     <label for="sid" data-t="id">Student ID</label>
     <input id="sid" inputmode="numeric" maxlength="13" autocomplete="off" placeholder="2023200000686">
@@ -825,9 +846,11 @@ tbody tr:hover { background: var(--pri-light); }
       <span data-t="idHint">13 digits, numbers only</span>
       <span id="cnt">0/13</span>
     </div>
+    <span id="sidMsg" class="val-msg"></span>
 
     <label for="email"><span data-t="email">Email</span> <span class="opt" data-t="opt">(optional)</span></label>
     <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com">
+    <span id="emailMsg" class="val-msg"></span>
 
     <button class="submit" id="go" data-t="submit">Submit Attendance ✓</button>
   </section>
@@ -1129,9 +1152,20 @@ function updateTimer() {
   const badge = $("classBadge");
   const cfg = getScheduleConfig();
 
-  // 1. If ENABLED is false, everything is open 24 hours and countdown is completely hidden
+  // 1. If ENABLED is false, everything is open 24 hours and show friendly open badge
   if (!cfg || !cfg.ENABLED) {
-    setCountdownUI("hide");
+    const heroCd = $("heroCountdown");
+    const dot = $("pulseDot");
+    const heroText = $("heroCountdownText");
+    if (heroCd) {
+      heroCd.style.display = "inline-flex";
+      if (dot) dot.className = "pulse-dot";
+      if (heroText) {
+        heroText.innerHTML = lang === "bn"
+          ? "<span>🟢</span><span><strong>২৪ ঘণ্টা হাজিরা উন্মুক্ত</strong> (টাইমার বন্ধ)</span>"
+          : "<span>🟢</span><span><strong>24/7 Attendance Open</strong> (Timer Off)</span>";
+      }
+    }
     if (badge) badge.style.display = "none";
     timerState = { allowed: true, cls: "" };
     if (!busy) {
@@ -1338,57 +1372,204 @@ function schedule(){
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden) load();});
 
-$("sid").addEventListener("input",e=>{
-  e.target.value = e.target.value.replace(/\D/g,"").slice(0,13);
-  $("cnt").textContent = e.target.value.length+"/13"; e.target.classList.remove("err");
-});
+// Real-time Instant Form Validation
+function validateName(showOk = true) {
+  const el = $("name"), msg = $("nameMsg");
+  if (!el || !msg) return false;
+  const val = el.value.trim();
+  el.classList.remove("val-err", "val-ok", "err");
+  msg.className = "val-msg";
+  msg.textContent = "";
 
-$("go").addEventListener("click", async ()=>{
-  if(busy) return;
-  if(!scheduleReady || !CONFIG.configured) return toast('Attendance service is not ready.', 'warn');
+  if (val.length === 0) return false;
+  if (val.length < 2) {
+    el.classList.add("val-err");
+    msg.className = "val-msg err";
+    msg.textContent = lang === "bn" ? "⚠️ নাম কমপক্ষে ২ অক্ষরের হতে হবে।" : "⚠️ Name must be at least 2 characters.";
+    return false;
+  }
+  if (showOk) {
+    el.classList.add("val-ok");
+    msg.className = "val-msg ok";
+    msg.textContent = lang === "bn" ? "✓ নাম সঠিক হয়েছে" : "✓ Name looks good";
+  }
+  return true;
+}
+
+function validateId(showOk = true) {
+  const el = $("sid"), msg = $("sidMsg");
+  if (!el || !msg) return false;
+  const val = el.value.trim();
+  el.classList.remove("val-err", "val-ok", "err");
+  msg.className = "val-msg";
+  msg.textContent = "";
+
+  if (val.length === 0) return false;
+  if (!/^\d+$/.test(val)) {
+    el.classList.add("val-err");
+    msg.className = "val-msg err";
+    msg.textContent = lang === "bn" ? "⚠️ শুধুমাত্র সংখ্যা লিখুন।" : "⚠️ Numbers only.";
+    return false;
+  }
+  if (val.length < 13) {
+    msg.className = "val-msg";
+    msg.textContent = lang === "bn"
+      ? `বাকি আছে ${13 - val.length} টি ডিজিট (মোট ১৩ টি)`
+      : `${13 - val.length} more digits needed (13 total)`;
+    return false;
+  }
+  if (val.length === 13) {
+    if (showOk) {
+      el.classList.add("val-ok");
+      msg.className = "val-msg ok";
+      msg.textContent = lang === "bn" ? "✓ ১৩ ডিজিট পূর্ণ হয়েছে" : "✓ 13 digits entered";
+    }
+    return true;
+  }
+  return false;
+}
+
+function validateEmail(showOk = true) {
+  const el = $("email"), msg = $("emailMsg");
+  if (!el || !msg) return true;
+  const val = el.value.trim();
+  el.classList.remove("val-err", "val-ok", "err");
+  msg.className = "val-msg";
+  msg.textContent = "";
+
+  if (val.length === 0) return true;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(val)) {
+    el.classList.add("val-err");
+    msg.className = "val-msg err";
+    msg.textContent = lang === "bn" ? "⚠️ সঠিক ইমেইল দিন (যেমন: name@example.com)" : "⚠️ Please enter a valid email address.";
+    return false;
+  }
+  if (showOk) {
+    el.classList.add("val-ok");
+    msg.className = "val-msg ok";
+    msg.textContent = lang === "bn" ? "✓ সঠিক ইমেইল ফরম্যাট" : "✓ Valid email format";
+  }
+  return true;
+}
+
+$("name").addEventListener("input", () => validateName(false));
+$("name").addEventListener("blur", () => validateName(true));
+
+$("sid").addEventListener("input", e => {
+  e.target.value = e.target.value.replace(/\D/g, "").slice(0, 13);
+  $("cnt").textContent = e.target.value.length + "/13";
+  validateId(true);
+});
+$("sid").addEventListener("blur", () => validateId(true));
+
+$("email").addEventListener("input", () => validateEmail(false));
+$("email").addEventListener("blur", () => validateEmail(true));
+
+$("go").addEventListener("click", async () => {
+  if (busy) return;
+  if (!scheduleReady || !CONFIG.configured) return toast(lang === "bn" ? "হাজিরা সিস্টেম প্রস্তুত নয়।" : "Attendance service is not ready.", "warn");
   const cfg = getScheduleConfig();
-  if(cfg && cfg.ENABLED && !timerState.allowed){
+  if (cfg && cfg.ENABLED && !timerState.allowed) {
     return toast(T[lang].closed, "warn");
   }
-  const name=$("name").value.trim(), id=$("sid").value.trim(), email=$("email").value.trim(), t=T[lang];
-  if(name.length<2){ $("name").classList.add("err"); return toast(t.badName,"err"); }
-  if(!/^\d{13}$/.test(id)){ $("sid").classList.add("err"); return toast(t.badId,"err"); }
-  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("email").classList.add("err"); return toast(t.badEmail,"err"); }
-  if(Date.now()-lastSubmit<1500) return toast(t.rate,"warn");
-  busy=true; lastSubmit=Date.now();
-  const btn=$("go");
+
+  const nameOk = validateName(true);
+  const idOk = validateId(true);
+  const emailOk = validateEmail(true);
+
+  if (!nameOk) { $("name").focus(); return toast(T[lang].badName, "err"); }
+  if (!idOk) { $("sid").focus(); return toast(T[lang].badId, "err"); }
+  if (!emailOk) { $("email").focus(); return toast(T[lang].badEmail, "err"); }
+
+  if (Date.now() - lastSubmit < 1500) return toast(T[lang].rate, "warn");
+  busy = true; lastSubmit = Date.now();
+  const btn = $("go");
   barStart();
 
-  const curCls = timerState.cls || '';
+  const name = $("name").value.trim();
+  const id = $("sid").value.trim();
+  const email = $("email").value.trim();
+  const t = T[lang];
+  const curCls = timerState.cls || "";
   const payload = { name, id, email };
+
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span>' + t.wait;
+
   try {
-    const j = await apiRequest('/public/attendance', {method:'POST', body:JSON.stringify(payload)});
+    const j = await apiRequest('/public/attendance', { method: 'POST', body: JSON.stringify(payload) });
     if (j.ok) {
+      // ⚡ OPTIMISTIC UI: Instantly add row to local table for zero-lag response!
+      const newEntry = {
+        name: name,
+        idm: mask(id),
+        time: timeStr()
+      };
+      const alreadyExists = rows.some(r => r.name === name && (r.idm === newEntry.idm || r.id === id));
+      if (!alreadyExists) {
+        rows.push(newEntry);
+        saveRows(rows, curCls);
+        render();
+      }
+
       clearForm();
-      toast(t.ok, 'ok');
-      if(email && j.emailStatus==='sent') toast(lang==='bn'?'কনফার্মেশন ইমেইল পাঠানো হয়েছে।':'Confirmation email sent.', 'ok');
-      if(email && j.emailStatus==='failed') toast(lang==='bn'?'হাজিরা সেভ হয়েছে, কিন্তু ইমেইল পাঠানো যায়নি।':'Attendance saved, but the confirmation email could not be sent.', 'warn');
-      if(loading) setTimeout(() => load(true), 1200);
-      else await load(true);
+      toast(t.ok, "ok");
+      if (email && j.emailStatus === "sent") {
+        toast(lang === "bn" ? "কনফার্মেশন ইমেইল পাঠানো হয়েছে।" : "Confirmation email sent.", "ok");
+      } else if (email && j.emailStatus === "failed") {
+        toast(lang === "bn" ? "হাজিরা সেভ হয়েছে, কিন্তু ইমেইল পাঠানো যায়নি।" : "Attendance saved, but confirmation email could not be sent.", "warn");
+      }
+
+      // Restore submit button immediately!
+      btn.disabled = false;
+      btn.textContent = t.submit;
+      busy = false;
+      barDone();
+
+      // Non-blocking quiet background sync
+      setTimeout(() => load(true), 400);
+      return;
     }
   } catch(e) {
-    if(e.code === 'dup') toast(t.dup,'warn');
-    else if(e.code === 'rate') toast(t.rate,'warn');
-    else if(e.code === 'busy' || e.code === 'too_many_attempts') toast(t.busy,'warn');
-    else if(e.code === 'closed') toast(t.closed,'warn');
-    else if(e.code === 'bad_id') toast(t.badId,'err');
-    else if(e.code === 'bad_name') toast(t.badName,'err');
-    else if(e.code === 'bad_email') toast(t.badEmail,'err');
-    else toast(e.message || t.net,'err');
+    if (e.code === 'dup') toast(t.dup, 'warn');
+    else if (e.code === 'rate') toast(t.rate, 'warn');
+    else if (e.code === 'busy' || e.code === 'too_many_attempts') toast(t.busy, 'warn');
+    else if (e.code === 'closed') toast(t.closed, 'warn');
+    else if (e.code === 'bad_id') toast(t.badId, 'err');
+    else if (e.code === 'bad_name') toast(t.badName, 'err');
+    else if (e.code === 'bad_email') toast(t.badEmail, 'err');
+    else if (/unauthorized/i.test(e.message)) {
+      toast(lang === "bn" 
+        ? "⚠️ Apps Script Secret মেলেনি। অ্যাডমিন প্যানেল থেকে GATEWAY_SECRET চেক করুন।" 
+        : "⚠️ Unauthorized: Check GATEWAY_SECRET in Apps Script Project Settings.", "err");
+    } else {
+      toast(e.message || t.net, 'err');
+    }
   } finally {
     barDone();
     busy = false;
     updateTimer();
   }
 });
-function clearForm(){ ["name","sid","email"].forEach(k=>$(k).value=""); $("cnt").textContent="0/13"; }
+
+function clearForm() {
+  ["name", "sid", "email"].forEach(k => {
+    const el = $(k);
+    if (el) {
+      el.value = "";
+      el.classList.remove("val-ok", "val-err", "err");
+    }
+  });
+  ["nameMsg", "sidMsg", "emailMsg"].forEach(k => {
+    const m = $(k);
+    if (m) {
+      m.textContent = "";
+      m.className = "val-msg";
+    }
+  });
+  $("cnt").textContent = "0/13";
+}
 
 if($("syncBtn")) $("syncBtn").addEventListener("click",()=>load(true));
 

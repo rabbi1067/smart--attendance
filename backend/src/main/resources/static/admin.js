@@ -112,6 +112,7 @@ function updateScheduleSections() {
   // HTML required controls inside hidden sections can otherwise block form submission.
   $('simpleSchedule').querySelectorAll('input').forEach(input=>input.disabled=$('useClasses').checked);
   $('classesSection').querySelectorAll('input').forEach(input=>input.disabled=!$('useClasses').checked);
+  updateScheduleBadge();
 }
 $('useClasses').addEventListener('change',updateScheduleSections);
 $('addClass').addEventListener('click',()=>{
@@ -122,8 +123,135 @@ $('generateSecret').addEventListener('click',()=>{
   const bytes=new Uint8Array(40);crypto.getRandomValues(bytes);
   $('scriptSecret').value = Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
   $('scriptSecret').type='text';
-  notice('New secret generated. Copy it into Apps Script Script Properties, then save.');
+  const toggleSec = $('toggleSecretVisibility');
+  if (toggleSec) { toggleSec.textContent = '🔒'; toggleSec.title = 'Hide secret'; }
+  notice(currentLang === 'bn' 
+    ? 'নতুন Secret জেনারেট হয়েছে! কপি বাটনে চাপ দিয়ে কপি করুন এবং সেভ করুন।' 
+    : 'New secret generated. Click Copy to copy it, then save.');
 });
+
+const toggleSecBtn = $('toggleSecretVisibility');
+if (toggleSecBtn) {
+  toggleSecBtn.addEventListener('click', () => {
+    const inp = $('scriptSecret');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      toggleSecBtn.textContent = '🔒';
+      toggleSecBtn.title = currentLang === 'bn' ? 'সিক্রেট লুকান' : 'Hide secret';
+    } else {
+      inp.type = 'password';
+      toggleSecBtn.textContent = '👁';
+      toggleSecBtn.title = currentLang === 'bn' ? 'সিক্রেট দেখুন' : 'Show secret';
+    }
+  });
+}
+
+const copySecBtn = $('copySecretBtn');
+if (copySecBtn) {
+  copySecBtn.addEventListener('click', async () => {
+    const inp = $('scriptSecret');
+    const val = inp.value.trim();
+    if (!val) {
+      notice(currentLang === 'bn'
+        ? 'কপি করার জন্য আগে 🎲 Generate বাটনে চাপ দিয়ে একটি Secret তৈরি করুন।'
+        : 'Please click 🎲 Generate to create a new secret first, then copy.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(val);
+      notice(currentLang === 'bn' ? '✓ Secret ক্লিপবোর্ডে কপি হয়েছে!' : '✓ Secret copied to clipboard!');
+    } catch(e) {
+      inp.select();
+      document.execCommand('copy');
+      notice(currentLang === 'bn' ? '✓ Secret কপি হয়েছে!' : '✓ Secret copied!');
+    }
+  });
+}
+
+const testConnBtn = $('testScriptConn');
+const connBox = $('connTestResult');
+if (testConnBtn) {
+  testConnBtn.addEventListener('click', async () => {
+    const unsavedSec = $('scriptSecret').value.trim();
+    if (unsavedSec) {
+      notice(currentLang === 'bn'
+        ? '⚠️ আপনি নতুন Secret লিখেছেন বা Generate করেছেন। টেস্ট করার আগে নিচে "💾 Save configuration" চাপুন।'
+        : '⚠️ You entered a new or generated secret. Please click "💾 Save configuration" below first, then test.');
+      return;
+    }
+    testConnBtn.disabled = true;
+    testConnBtn.textContent = currentLang === 'bn' ? 'পরীক্ষা হচ্ছে…' : 'Testing…';
+    connBox.className = 'conn-test-box hidden';
+    try {
+      const res = await request('/admin/sheets');
+      const sheetCount = (res.sheets || []).length;
+      const sheetNames = (res.sheets || []).map(s => s.name).join(', ') || (currentLang === 'bn' ? 'কোনো ট্যাব নেই' : 'None');
+      connBox.className = 'conn-test-box ok';
+      connBox.innerHTML = currentLang === 'bn'
+        ? `<div><strong>✅ সংযোগ সফল হয়েছে! (Connection Successful)</strong><br>গুগল অ্যাপস স্ক্রিপ্ট অনুমোদিত এবং স্প্রেডশিট সংযুক্ত আছে। মোট <strong>${sheetCount}</strong> টি ট্যাব পাওয়া গেছে (${sheetNames})।</div>`
+        : `<div><strong>✅ Connection Successful!</strong><br>Apps Script is authorized and Google Sheet is connected. Found <strong>${sheetCount}</strong> tab(s) (${sheetNames}).</div>`;
+    } catch(err) {
+      connBox.className = 'conn-test-box err';
+      const isUnauth = /unauthorized/i.test(err.message);
+      if (isUnauth) {
+        connBox.innerHTML = currentLang === 'bn'
+          ? `<div><strong>❌ GATEWAY_SECRET মেলেনি! (Unauthorized)</strong><br>` +
+            `Apps Script রিকোয়েস্টটি বাতিল করেছে কারণ Apps Script-এর <code>GATEWAY_SECRET</code> এর সাথে এই অ্যাডমিন সিক্রেট মেলেনি。<br><br>` +
+            `<strong>করণীয়:</strong><br>` +
+            `১. উপরের <strong>🎲 Generate</strong> চাপুন (যদি নতুন চান) এবং <strong>📋 Copy</strong> করুন。<br>` +
+            `২. নিচে <strong>💾 Save configuration</strong> চাপুন。<br>` +
+            `৩. গুগল শিটে <strong>Extensions ➔ Apps Script ➔ ⚙️ Project Settings ➔ Script Properties</strong>-এ গিয়ে <code>GATEWAY_SECRET</code>-এ পেস্ট করে Save করুন。<br>` +
+            `৪. <strong>Deploy ➔ Manage deployments ➔ Edit ➔ New version</strong> দিয়ে Deploy করুন。<br>` +
+            `৫. এরপর আবার <strong>⚡ Test Connection</strong> দিন।</div>`
+          : `<div><strong>❌ Authorization Failed (Unauthorized)</strong><br>` +
+            `Apps Script rejected the secret. Please ensure <code>GATEWAY_SECRET</code> is configured in Apps Script:<br><br>` +
+            `1. Click <strong>🎲 Generate</strong> & <strong>📋 Copy</strong> secret.<br>` +
+            `2. Click <strong>💾 Save configuration</strong> below.<br>` +
+            `3. In Google Sheet, go to <strong>Extensions ➔ Apps Script ➔ ⚙️ Project Settings ➔ Script Properties</strong>, add <code>GATEWAY_SECRET</code> with this secret.<br>` +
+            `4. Click <strong>Deploy ➔ Manage deployments ➔ Edit ➔ New version</strong> ➔ Deploy.<br>` +
+            `5. Click <strong>⚡ Test Connection</strong> again!</div>`;
+      } else {
+        connBox.innerHTML = currentLang === 'bn'
+          ? `<div><strong>❌ কানেকশন ব্যর্থ হয়েছে:</strong><br>${err.message}<br><small>নিশ্চিত করুন Apps Script-এ Deploy as "Web app", Execute as: "Me" এবং Who has access: "Anyone" দেওয়া আছে।</small></div>`
+          : `<div><strong>❌ Connection Failed:</strong><br>${err.message}<br><small>Make sure Apps Script is deployed as Web App with Execute as: Me and Who has access: Anyone.</small></div>`;
+      }
+    } finally {
+      testConnBtn.disabled = false;
+      testConnBtn.innerHTML = '⚡ <span data-t="testConnBtn">' + (currentLang === 'bn' ? 'কানেকশন টেস্ট করুন' : 'Test Connection') + '</span>';
+    }
+  });
+}
+
+function updateScheduleBadge() {
+  const badge = $('scheduleStatusBadge');
+  if (!badge) return;
+  const isTimerOn = $('scheduleEnabled').checked;
+  const useMulti = $('useClasses').checked;
+  if (!isTimerOn) {
+    badge.className = 'schedule-status-badge allopen';
+    badge.innerHTML = currentLang === 'bn'
+      ? '<span>🟢 <strong>২৪ ঘণ্টা উন্মুক্ত:</strong> টাইমার বন্ধ আছে। মূল পেজে ২৪ ঘণ্টা ওপেন দেখাবে (কাউন্টডাউন বন্ধ থাকবে)।</span>'
+      : '<span>🟢 <strong>24-Hour Open:</strong> Attendance timer is OFF. Public site is open anytime (no countdown).</span>';
+    return;
+  }
+  badge.className = 'schedule-status-badge active';
+  if (useMulti) {
+    const count = classState.length;
+    badge.innerHTML = currentLang === 'bn'
+      ? `<span>⏰ <strong>টাইমার সক্রিয় (${count}টি ক্লাস):</strong> ক্লাসের সময়সূচী অনুযায়ী মূল পেজে কাউন্টডাউন চলবে।</span>`
+      : `<span>⏰ <strong>Timer Active (${count} classes):</strong> Countdown runs according to class schedule on public site.</span>`;
+  } else {
+    const s = $('startTime').value ? to12($('startTime').value) : '10:00 PM';
+    const e = $('endTime').value ? to12($('endTime').value) : '11:00 PM';
+    badge.innerHTML = currentLang === 'bn'
+      ? `<span>⏰ <strong>টাইমার সক্রিয় (${s} – ${e}):</strong> মূল পেজে এই সময়ের কাউন্টডাউন চলবে।</span>`
+      : `<span>⏰ <strong>Timer Active (${s} – ${e}):</strong> Countdown runs for this window on public site.</span>`;
+  }
+}
+
+$('scheduleEnabled').addEventListener('change', updateScheduleBadge);
+$('startTime').addEventListener('input', () => { $('scheduleEnabled').checked = true; updateScheduleBadge(); });
+$('endTime').addEventListener('input', () => { $('scheduleEnabled').checked = true; updateScheduleBadge(); });
 function validateScriptUrl() {
   const input = $('scriptUrl'), box = $('scriptUrlFeedback');
   if (!input || !box) return;
@@ -206,6 +334,7 @@ async function loadConfig() {
   $('sheetUrl').value=cfg.SHEET_URL||'';
   validateScriptUrl();
   validateSheetUrl();
+  updateScheduleBadge();
   $('scriptSecret').value='';$('scriptSecret').type='password';
   $('secretStatus').textContent=cfg.SECRET_CONFIGURED?'✓ A gateway secret is saved. Leave blank to keep it.':'No secret configured yet. Generate one and add it to Apps Script.';
   $('ownerStatus').textContent=cfg.liveSiteOwner?'● LIVE SITE OWNER':'● Personal workspace (not live site owner)';
@@ -217,7 +346,7 @@ async function loadConfig() {
   $('useClasses').checked=!!sch.USE_CLASSES;
   $('startTime').value=from12(sch.START_TIME||'10:00 PM');
   $('endTime').value=from12(sch.END_TIME||'11:00 PM');
-  classState=(sch.CLASSES||[]).map(c=>({...c}));drawClasses();updateScheduleSections();
+  classState=(sch.CLASSES||[]).map(c=>({...c}));drawClasses();updateScheduleSections();updateScheduleBadge();
   const m=cfg.EMAIL_CONFIG||{};
   $('mailEnabled').checked=!!m.ENABLED;
   const provider=m.PROVIDER==='SMTP'?'SMTP':'APPS_SCRIPT';
@@ -266,7 +395,19 @@ async function loadSheets(){
     if(sheets.some(s=>s.name===selected)) sel.value=selected;
     else if(sheets.length) sel.value=sheets[0].name;
     if(sel.value) await loadRows();else{sheetData=null;drawTable();$('rowsStatus').textContent='No sheet tabs yet.';}
-  }catch(e){$('rowsStatus').textContent=e.message;notice(e.message);}
+  }catch(e){
+    $('rowsStatus').textContent=e.message;notice(e.message);
+    const body = $('recordBody');
+    if (body && /unauthorized/i.test(e.message)) {
+      body.innerHTML = '<tr><td colspan="7" class="empty" style="color:var(--bad);padding:36px 20px">' +
+        '<div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">⚠️ Google Apps Script Authorization Failed (GATEWAY_SECRET মেলেনি)</div>' +
+        '<div style="font-size:.88rem;color:var(--text);line-height:1.6;max-width:540px;margin:0 auto">' +
+        (currentLang === 'bn' 
+          ? 'Apps Script রিকোয়েস্টটি বাতিল করেছে কারণ Apps Script-এর <code>GATEWAY_SECRET</code>-এর সাথে এই অ্যাডমিন সিক্রেট মেলেনি। দয়া করে <strong>⚙️ সাধারণ সেটিংস</strong> ট্যাবে গিয়ে Secret কপি করে Apps Script-এর Script Properties-এ পেস্ট করে Deploy করুন।'
+          : 'Apps Script rejected the request because the <code>GATEWAY_SECRET</code> does not match. Please switch to the <strong>⚙️ General Settings</strong> tab, copy the secret, paste it into Apps Script Script Properties and deploy.') +
+        '</div></td></tr>';
+    }
+  }
 }
 $('reloadSheets').addEventListener('click',loadSheets);
 $('sheetSelect').addEventListener('change',loadRows);
@@ -479,6 +620,10 @@ const T_ADMIN = {
     openSheetLink: "Open in Google Sheets ↗",
     scriptSecretLabel: "Apps Script gateway secret",
     generateBtn: "Generate",
+    copyBtn: "Copy",
+    testConnBtn: "Test Connection",
+    testConnHint: "Verify Apps Script & Secret connectivity",
+    guideTitle: "Where and how to add this secret?",
     scheduleCardTitle: "Attendance Schedule",
     enableTimer: "Enable attendance timer",
     multiClass: "Multiple class schedules",
@@ -530,6 +675,10 @@ const T_ADMIN = {
     openSheetLink: "গুগল শিট খুলুন ↗",
     scriptSecretLabel: "অ্যাপস স্ক্রিপ্ট সিক্রেট কি",
     generateBtn: "জেনারেট",
+    copyBtn: "কপি",
+    testConnBtn: "কানেকশন টেস্ট করুন",
+    testConnHint: "অ্যাপস স্ক্রিপ্ট ও সিক্রেটের সংযোগ পরীক্ষা করুন",
+    guideTitle: "Secret টি কোথায় ও কীভাবে যুক্ত করবেন?",
     scheduleCardTitle: "হাজিরার সময়সূচী",
     enableTimer: "হাজিরা নেওয়ার সময়সীমা সক্রিয় করুন",
     multiClass: "একাধিক ক্লাসের সময়সূচী ব্যবহার করুন",
@@ -582,6 +731,7 @@ function applyAdminLang() {
   document.title = dict.adminTitle;
   validateScriptUrl();
   validateSheetUrl();
+  updateScheduleBadge();
 }
 
 function setAdminTheme(m) {

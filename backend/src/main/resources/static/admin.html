@@ -193,6 +193,22 @@
     :root[data-theme="dark"] .url-feedback.valid{background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(52,211,153,.35)}
     :root[data-theme="dark"] .url-feedback.warn{background:rgba(245,158,11,.15);color:#fbbf24;border-color:rgba(251,191,36,.35)}
     :root[data-theme="dark"] .url-feedback.err{background:rgba(239,68,68,.15);color:#f87171;border-color:rgba(248,113,113,.35)}
+    .secret-control-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .secret-control-row input{flex:1;min-width:220px}
+    .secret-btn-group{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}
+    .conn-test-box{margin-top:12px;padding:12px 16px;border-radius:12px;font-size:.85rem;line-height:1.5;animation:toastSlideIn .25s ease-out}
+    .conn-test-box.ok{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);color:#065f46}
+    .conn-test-box.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#991b1b}
+    :root[data-theme="dark"] .conn-test-box.ok{background:rgba(16,185,129,.15);border-color:rgba(52,211,153,.35);color:#34d399}
+    :root[data-theme="dark"] .conn-test-box.err{background:rgba(239,68,68,.15);border-color:rgba(248,113,113,.35);color:#fca5a5}
+    .schedule-status-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;font-size:.82rem;font-weight:600;margin-top:12px;line-height:1.4;background:var(--bg);border:1px solid var(--line)}
+    .schedule-status-badge.active{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:#059669}
+    .schedule-status-badge.allopen{background:rgba(79,70,229,.1);border-color:rgba(79,70,229,.25);color:var(--pri)}
+    :root[data-theme="dark"] .schedule-status-badge.active{background:rgba(16,185,129,.15);border-color:rgba(52,211,153,.35);color:#34d399}
+    :root[data-theme="dark"] .schedule-status-badge.allopen{background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.3);color:#a5b4fc}
+    .script-guide-box{margin-top:14px}
+    .script-guide-box ol code{font-family:monospace;background:rgba(0,0,0,.08);padding:2px 6px;border-radius:5px;font-size:.8rem}
+    :root[data-theme="dark"] .script-guide-box ol code{background:rgba(255,255,255,.1)}
 
   </style>
 </head>
@@ -251,14 +267,41 @@
     <label for="sheetUrl" data-t="sheetUrlLabel">Google Sheet URL</label><input id="sheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/.../edit" autocomplete="off">
      <div id="sheetUrlFeedback" class="url-feedback hidden"></div>
     <label for="scriptSecret" data-t="scriptSecretLabel">Apps Script gateway secret</label>
-    <div class="row" style="flex-wrap:nowrap"><input id="scriptSecret" type="password" minlength="32" maxlength="256" placeholder="32+ characters; blank keeps saved secret" autocomplete="new-password"><button id="generateSecret" type="button" class="btn btn-light small" data-t="generateBtn">Generate</button></div>
+    <div class="secret-control-row">
+      <input id="scriptSecret" type="password" minlength="32" maxlength="256" placeholder="32+ characters; blank keeps saved secret" autocomplete="new-password">
+      <div class="secret-btn-group">
+        <button id="toggleSecretVisibility" type="button" class="btn btn-white small" title="Show/Hide secret" aria-label="Show secret">👁</button>
+        <button id="copySecretBtn" type="button" class="btn btn-white small" title="Copy secret" aria-label="Copy secret">📋 <span data-t="copyBtn">Copy</span></button>
+        <button id="generateSecret" type="button" class="btn btn-light small" data-t="generateBtn">🎲 Generate</button>
+      </div>
+    </div>
     <p id="secretStatus" class="hint"></p>
-    <div class="tip">In Google Apps Script → Project Settings → Script Properties, add <strong>GATEWAY_SECRET</strong> with the same secret. Deploy the updated <strong>Code.gs</strong> before testing.</div>
+    <div class="row" style="margin-top:12px;align-items:center;gap:10px">
+      <button id="testScriptConn" type="button" class="btn btn-white small">⚡ <span data-t="testConnBtn">Test Connection</span></button>
+      <span class="hint" data-t="testConnHint">Verify Apps Script & Secret connectivity</span>
+    </div>
+    <div id="connTestResult" class="conn-test-box hidden"></div>
+    <div class="tip script-guide-box">
+      <div style="font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+        <span>📌</span><strong data-t="guideTitle">Secret টি কোথায় ও কীভাবে যুক্ত করবেন?</strong>
+      </div>
+      <ol style="margin:0;padding-left:18px;line-height:1.6;font-size:.82rem" data-t="guideSteps">
+        <li>উপরের <strong>🎲 Generate</strong> চাপুন এবং <strong>📋 Copy</strong> বাটনে চাপ দিন।</li>
+        <li>আপনার Google Sheet ওপেন করে <strong>Extensions ➔ Apps Script</strong>-এ যান।</li>
+        <li>বাম পাশের গিয়ার আইকন <strong>⚙️ Project Settings</strong>-এ ক্লিক করুন।</li>
+        <li>নিচে স্ক্রোল করে <strong>Script Properties</strong> সেকশনে <strong>Add script property</strong> দিন:</li>
+        <li style="list-style:none;margin:4px 0 4px 6px"><code>Property: GATEWAY_SECRET</code><br><code>Value: [আপনার কপি করা Secret]</code></li>
+        <li><strong>Save script properties</strong> দিন।</li>
+        <li>উপরে <strong>Deploy ➔ Manage deployments ➔ Edit (পেন্সিল) ➔ New version</strong> সিলেক্ট করে <strong>Deploy</strong> চাপুন।</li>
+        <li>এরপর ফিরে এসে উপরের <strong>⚡ Test Connection</strong> বাটনে চাপ দিন!</li>
+      </ol>
+    </div>
    </div>
    <div class="card"><h2 data-t="scheduleCardTitle">Attendance Schedule</h2><p class="hint">Asia/Dhaka timezone · server validates the open window on every submission.</p>
     <label class="switchrow"><input type="checkbox" id="scheduleEnabled"><span><strong data-t="enableTimer">Enable attendance timer</strong><br><span class="hint">Off means 24-hour attendance</span></span></label>
     <label class="switchrow"><input type="checkbox" id="useClasses"><span><strong data-t="multiClass">Multiple class schedules</strong><br><span class="hint">Maintain independent date/class attendance tabs</span></span></label>
-    <div id="simpleSchedule"><div class="timepair"><div><label for="startTime" data-t="startTimeLabel">Start time</label><input id="startTime" type="time" required></div><div><label for="endTime" data-t="endTimeLabel">End time</label><input id="endTime" type="time" required></div></div></div>
+    <div id="scheduleStatusBadge" class="schedule-status-badge"></div>
+    <div id="simpleSchedule" style="margin-top:12px"><div class="timepair"><div><label for="startTime" data-t="startTimeLabel">Start time</label><input id="startTime" type="time" required></div><div><label for="endTime" data-t="endTimeLabel">End time</label><input id="endTime" type="time" required></div></div></div>
     <div id="classesSection" class="hidden"><div class="row justify" style="margin-top:16px"><h3 style="margin:0">Daily class windows</h3><button type="button" class="btn btn-light small" id="addClass" data-t="addClassBtn">+ Add class</button></div><div id="classesList"></div><p class="hint">Up to 25 classes, with no overlapping times.</p></div>
    </div>
    <div class="card wide">
