@@ -70,6 +70,16 @@ th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.
 .pulse-dot.bad{background:#ef4444;box-shadow:0 0 10px #ef4444;animation:none}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.85)}}
 @keyframes popIn{from{opacity:0;transform:translateY(-8px) scale(.96)}to{opacity:1;transform:none}}
+
+.site-footer{max-width:980px;margin:0 auto;padding:0 16px 32px}
+.footer-inner{border:1px solid var(--line);border-radius:18px;background:var(--card);padding:20px 22px;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center}
+.footer-meta{color:var(--muted);font-size:.81rem;margin-top:6px}
+.footer-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.social{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);font-weight:600;font-size:.78rem;color:var(--text);text-decoration:none;transition:.2s}
+.social:hover{background:rgba(79,70,229,.1);border-color:var(--pri);color:var(--pri)}
+.admin-link{background:var(--pri);color:white;border-color:var(--pri);letter-spacing:.45px}
+.admin-link:hover{background:var(--pri2);color:white}
+@media(max-width:650px){.footer-inner{align-items:stretch}.footer-links{width:100%}.footer-links>a{flex:1}}
 </style>
 </head>
 <body>
@@ -119,21 +129,58 @@ th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.
     <a class="link" id="view" target="_blank" rel="noopener" hidden data-t="view"></a>
   </section>
 </main>
-
+<footer class="site-footer"><div class="footer-inner">
+  <div><strong>Smart Attendance</strong><div class="footer-meta">© <span id="copyrightYear"></span> · Developed by Fazley Rabbi</div></div>
+  <nav class="footer-links" aria-label="Social links and administration">
+    <a class="social" href="https://www.linkedin.com/in/fazleyrabbi1067/" target="_blank" rel="noopener noreferrer">LinkedIn ↗</a>
+    <a class="social" href="https://github.com/rabbi1067" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+    <a class="social" href="https://x.com/FazleRabbi56251" target="_blank" rel="noopener noreferrer">X ↗</a>
+    <a class="social" href="https://www.facebook.com/fazleyrabbi1067/" target="_blank" rel="noopener noreferrer">Facebook ↗</a>
+    <a class="social admin-link" href="admin.html">🔐 ADMINISTRATOR</a>
+  </nav>
+</div></footer>
 <script src="config.js"></script>
+<script src="config-runtime.js"></script>
 <script>
-/* ====== CONFIG: paste your links here after deploying Apps Script ====== */
-const CONFIG = {
-  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxh6GVxU4WhKqGyALl5IexU8sFFyATK4dzIPC_zVex0U5E1rLRt6p3vKJPflvkXcJyN/exec",   // Apps Script Web App URL (ends with /exec). Empty = demo mode
-  SHEET_URL: "https://docs.google.com/spreadsheets/d/1SWVflizfr5ro1tXGnDuXSb1_f0QWHs4-rLjKy4khgP4/edit?gid=0#gid=0"     // Public (view-only) Google Sheet link
+/* Public UI never receives the Apps Script URL or its gateway secret. */
+const API_BASE = String(window.ATTENDANCE_API_BASE || '').replace(/\/$/, '');
+const CONFIG = { SHEET_URL: '', configured: false };
+let remoteSchedule = null, scheduleReady = false;
+const getScheduleConfig = () => remoteSchedule || SCHEDULE_CONFIG;
+const apiRequest = async (path, options = {}) => {
+  const response = await fetchT(API_BASE + '/api' + path, {
+    ...options,
+    headers: {'Content-Type': 'application/json', ...(options.headers || {})}
+  }, 30000);
+  const data = await response.json();
+  if(!response.ok || data.ok === false) {
+    const err = new Error(data.message || data.error || 'Request failed');
+    err.code = data.error; throw err;
+  }
+  return data;
 };
-
-// config.js থেকে SCHEDULE_CONFIG বা TIMER_CONFIG লোড হবে:
-const getScheduleConfig = () => {
-  if (typeof SCHEDULE_CONFIG !== "undefined") return SCHEDULE_CONFIG;
-  if (typeof TIMER_CONFIG !== "undefined") return TIMER_CONFIG;
-  return { ENABLED: false };
-};
+async function refreshConfiguration() {
+  try {
+    const cfg = await apiRequest('/public/config');
+    CONFIG.configured = !!cfg.configured;
+    CONFIG.SHEET_URL = cfg.sheetUrl || '';
+    remoteSchedule = cfg.schedule || SCHEDULE_CONFIG;
+    scheduleReady = true;
+    const link = $('view');
+    link.hidden = !CONFIG.SHEET_URL;
+    if (CONFIG.SHEET_URL) link.href = CONFIG.SHEET_URL;
+    $('demo').hidden = CONFIG.configured;
+    if (!CONFIG.configured) $('demo').textContent = lang==='bn' ? 'সিস্টেম এখনো কনফিগার করা হয়নি। অ্যাডমিনের সাথে যোগাযোগ করুন।' : 'Attendance is not configured yet. Please contact the administrator.';
+    updateTimer();
+    if (CONFIG.configured) load(true);
+  } catch(e) {
+    scheduleReady = false;
+    CONFIG.configured = false;
+    $('demo').hidden = false;
+    $('demo').textContent = 'Cannot connect to the attendance server. Please try again later.';
+    updateTimer();
+  }
+}
 
 const T = {
  en:{title:"Smart Attendance",formTitle:"Mark your attendance",name:"Name",namePh:"Your full name",id:"Student ID",idHint:"13 digits, numbers only",email:"Email",opt:"(optional)",submit:"Submit Attendance ✓",today:"Today’s Attendance",time:"Time",view:"View all records →",demo:"Demo mode: data is not saved. Add your Apps Script URL to go live.",
@@ -147,7 +194,12 @@ let lang = "en", rows = [];
 try{ lang = localStorage.getItem("lang") || "en"; }catch(e){}
 const $ = id => document.getElementById(id);
 const p2 = n => String(n).padStart(2,"0");
-const todayStr = () => { const d=new Date(); return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); };
+const dhakaNow = () => {
+  const parts = new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+  const o = Object.fromEntries(parts.map(p=>[p.type,p.value]));
+  return new Date(+o.year,+o.month-1,+o.day,+o.hour,+o.minute,+o.second);
+};
+const todayStr = () => { const d=dhakaNow(); return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); };
 
 const getCacheKey = (c) => "att_rows_" + todayStr() + (c ? "_" + String(c).replace(/\s+/g,"_") : "");
 function loadLocalRows(c){
@@ -195,7 +247,7 @@ function formatTime(val){
 
 function parseTimeToday(tStr) {
   if (!tStr) return null;
-  const d = new Date();
+  const d = dhakaNow();
   const str = String(tStr).trim();
   const m12 = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
   if (!m12) return null;
@@ -244,6 +296,13 @@ function setCountdownUI(state, htmlContent) {
 }
 
 function updateTimer() {
+  if (!scheduleReady || !CONFIG.configured) {
+    timerState = {allowed:false,cls:''};
+    $('name').disabled = $('sid').disabled = $('email').disabled = $('go').disabled = true;
+    $('go').textContent = scheduleReady ? 'Not configured' : 'Connecting…';
+    setCountdownUI('hide');
+    return;
+  }
   const badge = $("classBadge");
   const cfg = getScheduleConfig();
 
@@ -263,7 +322,7 @@ function updateTimer() {
   // 2. If USE_CLASSES is true, run multi-class schedule
   if (cfg.USE_CLASSES && Array.isArray(cfg.CLASSES) && cfg.CLASSES.length > 0) {
     const classList = cfg.CLASSES;
-    const now = new Date();
+    const now = dhakaNow();
     let activeClass = null, activeEnd = null;
     let nextClass = null, nextStart = null;
 
@@ -345,7 +404,7 @@ function updateTimer() {
     load(true);
   }
 
-  const now = new Date();
+  const now = dhakaNow();
   const start = parseTimeToday(cfg.START_TIME || "10:00 PM");
   const end = parseTimeToday(cfg.END_TIME || "11:00 PM");
   if (!start || !end) {
@@ -389,10 +448,12 @@ function applyLang(){
   document.querySelectorAll("[data-t]").forEach(e => e.textContent = T[lang][e.dataset.t]);
   document.querySelectorAll("[data-p]").forEach(e => e.placeholder = T[lang][e.dataset.p]);
   $("lang").textContent = lang==="en" ? "বাংলা" : "English";
-  document.title = T[lang].title; tick(); render(); updateTimer();
+  document.title = T[lang].title;
+  if(scheduleReady && !CONFIG.configured) $('demo').textContent = lang==='bn' ? 'সিস্টেম এখনো কনফিগার করা হয়নি। অ্যাডমিনের সাথে যোগাযোগ করুন।' : 'Attendance is not configured yet. Please contact the administrator.';
+  tick(); render(); updateTimer();
 }
 function tick(){
-  const d = new Date();
+  const d = dhakaNow();
   $("date").textContent = d.toLocaleDateString(loc(),{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   $("clock").textContent = d.toLocaleTimeString(loc(),{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true});
   updateTimer();
@@ -422,7 +483,7 @@ function barDone(){bar.style.width="100%";barTimer=setTimeout(()=>{bar.style.opa
 function fetchT(url,opt,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms||12000);return fetch(url,Object.assign({signal:c.signal},opt)).finally(()=>clearTimeout(t));}
 
 async function load(force){
-  if(!CONFIG.SCRIPT_URL||loading) return;
+  if(!scheduleReady || !CONFIG.configured || loading) return;
   if(!force && Date.now()-lastLoad<2500) return;
   loading=true; lastLoad=Date.now();
   const syncBtn = $("syncBtn");
@@ -430,9 +491,7 @@ async function load(force){
 
   const clsParam = timerState.cls ? ("&cls=" + encodeURIComponent(timerState.cls)) : "";
   try{
-    const url = CONFIG.SCRIPT_URL + "?date=" + todayStr() + clsParam + (force ? "&force=1" : "") + "&_t=" + Date.now();
-    const r = await fetchT(url);
-    const j = await r.json();
+    const j = await apiRequest('/public/rows?cls=' + encodeURIComponent(timerState.cls || ''));
     if(j.ok && Array.isArray(j.rows)){
       saveRows(j.rows, timerState.cls);
       failCount = 0;
@@ -463,6 +522,7 @@ $("sid").addEventListener("input",e=>{
 
 $("go").addEventListener("click", async ()=>{
   if(busy) return;
+  if(!scheduleReady || !CONFIG.configured) return toast('Attendance service is not ready.', 'warn');
   const cfg = getScheduleConfig();
   if(cfg && cfg.ENABLED && !timerState.allowed){
     return toast(T[lang].closed, "warn");
@@ -476,52 +536,33 @@ $("go").addEventListener("click", async ()=>{
   const btn=$("go");
   barStart();
 
-  const formattedNow = formatTime(timeStr());
-  const curCls = timerState.cls || "";
-  const payload={date:todayStr(),cls:curCls,name,id,email,time:formattedNow};
-  const newRow={name, id, idm:mask(id), time:formattedNow};
-
-  // ⚡ INSTANT INSERTION (< 0.2s): Table updates immediately, form clears, toast pops up
-  rows.push(newRow);
-  saveRows(rows, curCls);
-  clearForm();
-  toast(t.ok,"ok");
-
+  const curCls = timerState.cls || '';
+  const payload = { name, id, email };
   btn.disabled = true;
-  btn.textContent = (lang === "bn" ? "✓ জমা হয়েছে" : "✓ Submitted");
-
-  try{
-    if(CONFIG.SCRIPT_URL){
-      const r=await fetchT(CONFIG.SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)},15000);
-      const j=await r.json();
-      if(!j.ok){
-        // Rollback optimistic row if rejected by server
-        rows = rows.filter(r => r.id !== id && r.idm !== mask(id));
-        saveRows(rows, curCls);
-        if(j.error==="dup"){
-          $("sid").classList.add("err");
-          toast(t.dup,"warn");
-        } else if(j.error==="rate"){
-          toast(t.rate,"warn");
-        } else if(j.error==="busy"){
-          toast(t.busy,"warn");
-        } else if(j.error==="bad_id"){
-          $("sid").classList.add("err");
-          toast(t.badId,"err");
-        } else {
-          toast(t.srv,"err");
-        }
-      }
+  btn.innerHTML = '<span class="spin"></span>' + t.wait;
+  try {
+    const j = await apiRequest('/public/attendance', {method:'POST', body:JSON.stringify(payload)});
+    if (j.ok) {
+      clearForm();
+      toast(t.ok, 'ok');
+      if(email && j.emailStatus==='sent') toast(lang==='bn'?'কনফার্মেশন ইমেইল পাঠানো হয়েছে।':'Confirmation email sent.', 'ok');
+      if(email && j.emailStatus==='failed') toast(lang==='bn'?'হাজিরা সেভ হয়েছে, কিন্তু ইমেইল পাঠানো যায়নি।':'Attendance saved, but the confirmation email could not be sent.', 'warn');
+      if(loading) setTimeout(() => load(true), 1200);
+      else await load(true);
     }
-  }catch(e){
-    toast(t.net,"err");
+  } catch(e) {
+    if(e.code === 'dup') toast(t.dup,'warn');
+    else if(e.code === 'rate') toast(t.rate,'warn');
+    else if(e.code === 'busy' || e.code === 'too_many_attempts') toast(t.busy,'warn');
+    else if(e.code === 'closed') toast(t.closed,'warn');
+    else if(e.code === 'bad_id') toast(t.badId,'err');
+    else if(e.code === 'bad_name') toast(t.badName,'err');
+    else if(e.code === 'bad_email') toast(t.badEmail,'err');
+    else toast(e.message || t.net,'err');
   } finally {
     barDone();
-    setTimeout(()=>{
-      btn.disabled = false;
-      btn.textContent = T[lang].submit;
-      busy = false;
-    }, 600);
+    busy = false;
+    updateTimer();
   }
 });
 function clearForm(){ ["name","sid","email"].forEach(k=>$(k).value=""); $("cnt").textContent="0/13"; }
@@ -538,11 +579,11 @@ $("lang").addEventListener("click",()=>{ lang = lang==="en"?"bn":"en"; try{local
 
 let saved = null; try{ saved = localStorage.getItem("theme"); }catch(e){}
 setTheme(saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
-if(CONFIG.SHEET_URL){ $("view").href = CONFIG.SHEET_URL; $("view").hidden = false; }
-$("demo").hidden = !!CONFIG.SCRIPT_URL;
+$('copyrightYear').textContent = new Date().getFullYear();
 applyLang();
 render();
-load();
+refreshConfiguration();
+setInterval(refreshConfiguration, 60000);
 </script>
 </body>
 </html>

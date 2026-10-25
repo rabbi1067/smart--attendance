@@ -1,0 +1,22 @@
+server:
+  port: ${PORT:8080}
+spring:
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+app:
+  admin-email: ${ADMIN_EMAIL:}
+  admin-password: ${ADMIN_PASSWORD:}
+  admin-users-json: ${ADMIN_USERS_JSON:[]}
+  site-owner: ${SITE_OWNER_EMAIL:${ADMIN_EMAIL:}}
+  jwt-secret: ${JWT_SECRET:}
+  frontend-origins: ${FRONTEND_ORIGINS:}
+  mail-encryption-key: ${MAIL_ENCRYPTION_KEY:}

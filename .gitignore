@@ -1,0 +1,10 @@
+# Local build artifacts and credentials
+frontend/dist/
+frontend/node_modules/
+backend/target/
+.env
+.env.*
+!.env.example
+*.log
+.idea/
+.DS_Store
