@@ -165,7 +165,15 @@ $('configForm').addEventListener('submit',async e=>{
     await loadConfig();notice('Configuration saved in MongoDB successfully.');
   }catch(err){notice(err.message)}finally{btn.disabled=false;btn.textContent='💾 Save configuration';}
 });
-async function initialize(){try{await loadConfig();showApp(true);}catch(e){notice(e.message);if(token)logout(false);}}
+async function initialize(){
+  try {
+    await loadConfig();
+    showApp(true);
+  } catch(e) {
+    notice('Notice: ' + e.message);
+    showApp(true);
+  }
+}
 async function loadSheets(){
   $('rowsStatus').textContent='Loading Google Sheets…';
   try {

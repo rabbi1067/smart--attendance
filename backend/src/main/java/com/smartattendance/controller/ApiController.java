@@ -94,5 +94,8 @@ public class ApiController {
     @ExceptionHandler(IllegalStateException.class) ResponseEntity<?> service(Exception e) {
       return ResponseEntity.status(503).body(Map.of("ok",false,"error","upstream_unavailable","message",e.getMessage()==null?"Service unavailable":e.getMessage()));
     }
+    @ExceptionHandler(Exception.class) ResponseEntity<?> general(Exception e) {
+      return ResponseEntity.status(500).body(Map.of("ok",false,"error","server_error","message",e.getMessage()==null?"Internal server error":e.getMessage()));
+    }
   }
 }

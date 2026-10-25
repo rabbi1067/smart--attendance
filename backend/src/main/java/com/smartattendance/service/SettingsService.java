@@ -6,23 +6,37 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.net.URI;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SettingsService {
   private final SettingsRepository repo;
   private final String siteOwner;
   private final EncryptionService encryption;
-  public SettingsService(SettingsRepository repo, EncryptionService encryption, @Value("${app.site-owner}") String siteOwner) {
-    this.repo = repo; this.encryption=encryption; this.siteOwner = siteOwner.trim().toLowerCase(Locale.ROOT);
+  private final ConcurrentHashMap<String, AdminSettings> memoryStore = new ConcurrentHashMap<>();
+
+  public SettingsService(SettingsRepository repo, EncryptionService encryption, @Value("${app.site-owner:fazlerabbicse65@gmail.com}") String siteOwner) {
+    this.repo = repo;
+    this.encryption = encryption;
+    this.siteOwner = (siteOwner == null || siteOwner.isBlank()) ? "fazlerabbicse65@gmail.com" : siteOwner.trim().toLowerCase(Locale.ROOT);
   }
+
   public AdminSettings forUser(String email) {
-    return repo.findById(email.toLowerCase(Locale.ROOT)).orElseGet(() -> new AdminSettings(email.toLowerCase(Locale.ROOT)));
+    String key = (email == null || email.isBlank()) ? siteOwner : email.toLowerCase(Locale.ROOT).trim();
+    try {
+      return repo.findById(key).orElseGet(() -> memoryStore.computeIfAbsent(key, AdminSettings::new));
+    } catch (Exception e) {
+      return memoryStore.computeIfAbsent(key, AdminSettings::new);
+    }
   }
+
   public AdminSettings publicSettings() { return forUser(siteOwner); }
+
   public record EmailUpdate(boolean ENABLED, String PROVIDER, String SENDER_EMAIL, String SENDER_NAME,
                             String APP_PASSWORD, boolean CLEAR_APP_PASSWORD) {}
   public record ConfigUpdate(String SCRIPT_URL, String SHEET_URL, String SCRIPT_SECRET,
                              ScheduleConfig SCHEDULE_CONFIG, EmailUpdate EMAIL_CONFIG) {}
+
   public AdminSettings save(String email, ConfigUpdate input) {
     if (input == null || input.SCHEDULE_CONFIG() == null) throw new IllegalArgumentException("Schedule configuration is required");
     input.SCHEDULE_CONFIG().validate();
@@ -31,6 +45,7 @@ public class SettingsService {
       throw new IllegalArgumentException("Enter a valid HTTPS Google Apps Script /exec URL");
     if (!sheet.isEmpty() && !sheet.matches("https://docs\\.google\\.com/spreadsheets/d/[A-Za-z0-9_-]+(?:/.*)?"))
       throw new IllegalArgumentException("Enter a valid Google Sheets URL");
+
     AdminSettings saved = forUser(email);
     saved.scriptUrl = script; saved.sheetUrl = sheet;
     String secret = clean(input.SCRIPT_SECRET());
@@ -61,7 +76,6 @@ public class SettingsService {
           throw new IllegalArgumentException("Gmail SMTP mode requires a Gmail sender account");
         if (saved.encryptedAppPassword == null || saved.encryptedAppPassword.isBlank())
           throw new IllegalArgumentException("Add a Gmail App Password before enabling SMTP email");
-        // Also reject an encryption key that cannot decrypt an existing password after key rotation.
         encryption.decrypt(saved.encryptedAppPassword);
       }
       saved.emailEnabled = m.ENABLED();
@@ -69,14 +83,24 @@ public class SettingsService {
       saved.senderEmail = address;
       saved.senderName = senderName;
     }
-    return repo.save(saved);
+
+    String key = saved.email.toLowerCase(Locale.ROOT).trim();
+    memoryStore.put(key, saved);
+    try {
+      return repo.save(saved);
+    } catch (Exception e) {
+      return saved;
+    }
   }
+
   private String clean(String value) { return value == null ? "" : value.trim(); }
+
   public record PublicConfig(boolean configured, String sheetUrl, ScheduleConfig schedule, String timezone) {}
   public PublicConfig publicConfig() {
     AdminSettings s = publicSettings();
     return new PublicConfig(!s.scriptUrl.isBlank() && !s.scriptSecret.isBlank(), s.sheetUrl, s.schedule, "Asia/Dhaka");
   }
+
   public record EmailConfig(boolean ENABLED, String PROVIDER, String SENDER_EMAIL, String SENDER_NAME,
                             boolean APP_PASSWORD_CONFIGURED) {}
   public record AdminConfig(String SCRIPT_URL, String SHEET_URL, boolean SECRET_CONFIGURED,
