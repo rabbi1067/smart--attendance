@@ -133,32 +133,70 @@ function escapeHtml_(val) {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function sendReceipt_(to, person, studentId, date, cls, displayName, isTest) {
-  const recipient=String(to||'').trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient) || recipient.length>150) return 'failed';
-  const name=escapeHtml_(String(person||'Student').slice(0,80));
-  const masked=studentId && String(studentId).length>=8 ? escapeHtml_(String(studentId).slice(0,4)+'•••••'+String(studentId).slice(-4)) : '—';
-  const dateHtml=escapeHtml_(date);
-  const classHtml=escapeHtml_(cls||'General Attendance');
-  const title=isTest?'Test email delivered':'Attendance confirmed';
-  const description=isTest ? 'Your email notification settings are working correctly.' : 'Your attendance has been successfully recorded. Here is your confirmation summary.';
-  const html='<div style="margin:0;padding:36px 14px;background:#f3f5fb;font-family:Arial,Helvetica,sans-serif;color:#1c2944">'
-    +'<div style="max-width:540px;margin:auto;background:#fff;border:1px solid #e4e9f3;border-radius:20px;overflow:hidden">'
-    +'<div style="background:#4f46e5;padding:28px 32px;color:#fff"><div style="font-size:13px;letter-spacing:2px;opacity:.9">SMART ATTENDANCE</div><h1 style="font-size:23px;margin:12px 0 0">'+title+'</h1></div>'
-    +'<div style="padding:28px 32px"><div style="font-size:28px;margin-bottom:12px">✓</div><p style="font-size:17px;font-weight:bold">Hello, '+name+'</p>'
-    +'<p style="font-size:14px;color:#627089;line-height:1.7">'+description+'</p>'
-    +'<div style="background:#f7f8ff;border:1px solid #edf0fa;border-radius:14px;padding:18px 22px">'
-    +'<div style="margin-bottom:14px"><span style="color:#748199">DATE</span><br><b>'+dateHtml+'</b></div>'
-    +'<div style="margin-bottom:14px"><span style="color:#748199">CLASS / SESSION</span><br><b>'+classHtml+'</b></div>'
-    +'<div><span style="color:#748199">STUDENT ID</span><br><b>'+masked+'</b></div></div>'
-    +'<p style="font-size:12px;color:#8993a8;margin-top:22px">Automatic notification · Please do not reply</p></div></div>'
-    +'<p style="text-align:center;font-size:12px;color:#8993a8">Smart Attendance • Digital attendance records</p></div>';
+  const recipient = String(to || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient) || recipient.length > 150) return 'failed';
+  const name = escapeHtml_(String(person || 'Student').slice(0, 80));
+  const masked = studentId && String(studentId).length >= 8 ? escapeHtml_(String(studentId).slice(0, 4) + '•••••' + String(studentId).slice(-4)) : '—';
+  const dateHtml = escapeHtml_(date);
+  const classHtml = escapeHtml_(cls || 'General Attendance');
+  const title = isTest ? 'Test Email Delivered' : 'Attendance Confirmed';
+  const desc = isTest
+    ? 'Your email notification settings are configured and operating properly. Test message verified.'
+    : 'Your attendance record has been successfully recorded in the digital registry. Below is your official receipt summary.';
+
+  const html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">'
+    + '<title>Smart Attendance</title></head>'
+    + '<body style="margin:0;padding:28px 12px;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;-webkit-font-smoothing:antialiased;">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;margin:0 auto;background-color:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);border:1px solid #e2e8f0;">'
+    + '<tr><td style="background:linear-gradient(135deg, #090e1a 0%, #1e1b4b 100%);padding:30px 26px;text-align:left;">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td>'
+    + '<span style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#38bdf8;text-transform:uppercase;">SMART ATTENDANCE PORTAL</span>'
+    + '<h1 style="margin:8px 0 0;font-size:23px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">' + title + '</h1>'
+    + '</td><td align="right" style="vertical-align:middle;">'
+    + '<span style="display:inline-block;padding:6px 12px;background:rgba(52,211,153,0.18);border:1px solid rgba(52,211,153,0.35);border-radius:99px;color:#34d399;font-size:11px;font-weight:700;letter-spacing:0.5px;">✓ VERIFIED</span>'
+    + '</td></tr></table></td></tr>'
+    + '<tr><td style="padding:28px 26px;">'
+    + '<p style="margin:0 0 6px;font-size:18px;font-weight:700;color:#0f172a;">Hello, ' + name + '</p>'
+    + '<p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#64748b;">' + desc + '</p>'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:24px;">'
+    + '<tr><td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;"><div style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;">DATE</div><div style="font-size:14px;font-weight:700;color:#0f172a;margin-top:2px;">' + dateHtml + '</div></td></tr>'
+    + '<tr><td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;"><div style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;">SESSION / CLASS</div><div style="font-size:14px;font-weight:700;color:#0f172a;margin-top:2px;">' + classHtml + '</div></td></tr>'
+    + '<tr><td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;"><div style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;">STUDENT ID</div><div style="font-size:14px;font-weight:700;color:#0f172a;margin-top:2px;font-family:monospace;">' + masked + '</div></td></tr>'
+    + '<tr><td style="padding:14px 18px;"><div style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;">RECORD STATUS</div><div style="font-size:13px;font-weight:700;color:#10b981;margin-top:2px;">Recorded &amp; Confirmed</div></td></tr>'
+    + '</table>'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#080d1a;border-radius:14px;padding:20px;color:#ffffff;margin-top:16px;">'
+    + '<tr><td><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#38bdf8;text-transform:uppercase;margin-bottom:3px;">SYSTEM DEVELOPER</div>'
+    + '<div style="font-size:16px;font-weight:800;color:#ffffff;margin-bottom:5px;">Fazley <span style="color:#38bdf8;">.</span> Rabbi</div>'
+    + '<p style="margin:0 0 14px;font-size:12px;line-height:1.5;color:#94a3b8;">Thoughtful code. Practical research. Meaningful work.</p>'
+    + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td>'
+    + '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
+    + '<td style="padding-right:6px;padding-bottom:6px;"><a href="https://www.linkedin.com/in/fazleyrabbi1067/" target="_blank" rel="noopener" style="display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;">LinkedIn ↗</a></td>'
+    + '<td style="padding-right:6px;padding-bottom:6px;"><a href="https://github.com/rabbi1067" target="_blank" rel="noopener" style="display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;">GitHub ↗</a></td>'
+    + '<td style="padding-right:6px;padding-bottom:6px;"><a href="https://x.com/FazleRabbi56251" target="_blank" rel="noopener" style="display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;">X (Twitter) ↗</a></td>'
+    + '<td style="padding-bottom:6px;"><a href="https://www.facebook.com/fazleyrabbi1067/" target="_blank" rel="noopener" style="display:inline-block;padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:#ffffff;text-decoration:none;font-size:11px;font-weight:600;">Facebook ↗</a></td>'
+    + '</tr></table></td></tr>'
+    + '<tr><td style="padding-top:4px;"><a href="mailto:fazlerabbicse65@gmail.com" style="color:#38bdf8;font-size:12px;text-decoration:none;font-weight:600;">fazlerabbicse65@gmail.com ↗</a></td></tr>'
+    + '</table></td></tr></table>'
+    + '<p style="margin:20px 0 0;font-size:11px;color:#94a3b8;line-height:1.5;text-align:center;">Automatic notification · Please do not reply to this email</p>'
+    + '</td></tr>'
+    + '<tr><td style="background-color:#f8fafc;padding:14px 26px;text-align:center;border-top:1px solid #e2e8f0;">'
+    + '<span style="font-size:11px;color:#64748b;">© 2026 Fazley Rabbi · Smart Attendance · All rights reserved</span>'
+    + '</td></tr></table></body></html>';
+
   const subject = isTest ? 'Smart Attendance • Email Test' : 'Attendance Confirmed • Smart Attendance';
   try {
-    MailApp.sendEmail({to:recipient,subject:subject,
-      body:'Hello '+person+'\n'+description+'\nDate: '+date+'\nClass: '+(cls||'General Attendance')+'\nStudent ID: '+masked,
-      htmlBody:html, name:String(displayName||'Smart Attendance').replace(/[\r\n]/g,'').slice(0,55)});
+    MailApp.sendEmail({
+      to: recipient,
+      subject: subject,
+      body: 'Hello ' + person + '\n' + desc + '\nDate: ' + date + '\nClass: ' + (cls || 'General Attendance') + '\nStudent ID: ' + masked,
+      htmlBody: html,
+      name: String(displayName || 'Smart Attendance').replace(/[\r\n]/g, '').slice(0, 55)
+    });
     return 'sent';
-  }catch(err){ console.error('Email delivery error'); return 'failed'; }
+  } catch(err) {
+    console.error('Email delivery error');
+    return 'failed';
+  }
 }
 
 function doPost(e) {

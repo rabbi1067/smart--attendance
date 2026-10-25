@@ -69,6 +69,13 @@ body {
 }
 
 /* Hero Section */
+
+.page-viewport {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .hero {
   background: linear-gradient(135deg, #090e1a 0%, #151a30 50%, #1e1b4b 100%);
   color: #fff;
@@ -127,18 +134,7 @@ body {
 .brand-highlight {
   color: #38bdf8;
 }
-.brand-tag {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 2px 7px;
-  border-radius: 6px;
-  text-transform: uppercase;
-  margin-left: 6px;
-  color: #e2e8f0;
-}
+
 
 .tools {
   display: flex;
@@ -244,9 +240,11 @@ body {
 
 /* Main Content Grid */
 .main {
-  max-width: 1040px;
-  margin: -50px auto 55px;
-  padding: 0 18px;
+  flex: 1;
+  max-width: 1060px;
+  width: 100%;
+  margin: -48px auto 60px;
+  padding: 0 20px;
   display: grid;
   grid-template-columns: 390px minmax(0, 1fr);
   gap: 24px;
@@ -697,12 +695,57 @@ tbody tr:hover { background: var(--pri-light); }
 .back-top-btn:hover {
   color: #e2e8f0;
 }
+
+/* Responsive Screen Refinements */
+@media (max-width: 900px) {
+  .main {
+    grid-template-columns: 1fr;
+    margin: -36px auto 45px;
+    gap: 20px;
+    padding: 0 16px;
+  }
+  .hero {
+    padding: 20px 16px 65px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding: 16px 14px 55px;
+  }
+  .brand-title {
+    font-size: 1.12rem;
+  }
+  .main {
+    margin: -28px auto 35px;
+    padding: 0 12px;
+  }
+  .card {
+    padding: 20px 16px;
+  }
+  .date {
+    font-size: 1.15rem;
+  }
+  .clock {
+    font-size: 2.2rem;
+  }
+  .connect-grid {
+    grid-template-columns: 1fr;
+  }
+  .footer-bottom-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+}
+
 </style>
 </head>
 <body>
 <div id="bar"></div>
 <div id="toasts" aria-live="polite"></div>
 
+<div class="page-viewport">
 <!-- HERO HEADER -->
 <header class="hero" id="top">
   <div class="wrap">
@@ -722,7 +765,6 @@ tbody tr:hover { background: var(--pri-light); }
         </div>
         <div class="brand-title">
           <span>Smart<span class="brand-highlight">Attendance</span></span>
-          <span class="brand-tag">v3.0</span>
         </div>
       </a>
       <div class="tools">
@@ -805,6 +847,7 @@ tbody tr:hover { background: var(--pri-light); }
     </a>
   </section>
 </main>
+</div>
 
 <!-- EXACT PORTFOLIO FOOTER (FAZLEY . RABBI) -->
 <footer class="site-footer">
@@ -838,17 +881,10 @@ tbody tr:hover { background: var(--pri-light); }
       <div>
         <div class="footer-heading">LET'S CONNECT</div>
         <div class="connect-grid">
-          <a href="https://codeforces.com/profile/FazleRabbi" target="_blank" rel="noopener noreferrer" class="connect-card">
+          <a href="https://www.linkedin.com/in/fazleyrabbi1067/" target="_blank" rel="noopener noreferrer" class="connect-card">
             <div class="connect-left">
-              <span class="badge-icon">CF</span>
-              <span>Codeforces</span>
-            </div>
-            <span class="arrow-up">↗</span>
-          </a>
-          <a href="https://www.codechef.com/users/fazlerabbi" target="_blank" rel="noopener noreferrer" class="connect-card">
-            <div class="connect-left">
-              <span class="badge-icon">CC</span>
-              <span>CodeChef</span>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 8.76c.92 0 1.67-.75 1.67-1.67a1.67 1.67 0 0 0-3.34 0c0 .92.75 1.67 1.67 1.67m1.39 9.74v-8.37H5.07v8.37h2.78Z"/></svg>
+              <span>LinkedIn</span>
             </div>
             <span class="arrow-up">↗</span>
           </a>
@@ -859,10 +895,17 @@ tbody tr:hover { background: var(--pri-light); }
             </div>
             <span class="arrow-up">↗</span>
           </a>
-          <a href="https://www.linkedin.com/in/fazleyrabbi1067/" target="_blank" rel="noopener noreferrer" class="connect-card">
+          <a href="https://x.com/FazleRabbi56251" target="_blank" rel="noopener noreferrer" class="connect-card">
             <div class="connect-left">
-              <span class="badge-icon">in</span>
-              <span>LinkedIn</span>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              <span>X (Twitter)</span>
+            </div>
+            <span class="arrow-up">↗</span>
+          </a>
+          <a href="https://www.facebook.com/fazleyrabbi1067/" target="_blank" rel="noopener noreferrer" class="connect-card">
+            <div class="connect-left">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              <span>Facebook</span>
             </div>
             <span class="arrow-up">↗</span>
           </a>
@@ -943,10 +986,10 @@ async function refreshConfiguration() {
 }
 
 const T = {
- en:{title:"Smart Attendance",formTitle:"Mark your attendance",name:"Name",namePh:"Your full name",id:"Student ID",idHint:"13 digits, numbers only",email:"Email",opt:"(optional)",submit:"Submit Attendance ✓",today:"Today’s Attendance",time:"Time",view:"View all records",demo:"Demo mode: data is not saved. Add your Apps Script URL to go live.",
+ en:{title:"Smart Attendance",formTitle:"Mark your attendance",name:"Name",namePh:"Your full name",id:"Student ID",idHint:"13 digits, numbers only",email:"Email",opt:"(optional)",submit:"Submit Attendance ✓",today:"Today’s Attendance",time:"Time",view:"View all records",demo:"System Notice: Setup required. Please contact administrator.",
   ok:"Present recorded successfully!",badId:"Invalid ID: it must be exactly 13 digits.",badName:"Please enter your name.",badEmail:"Invalid email address.",dup:"This ID has already been marked for this class.",net:"Network error. Please try again.",rate:"Too many attempts. Please wait a few seconds.",busy:"Server is busy. Please try again in a moment.",wait:"Submitting…",srv:"Something went wrong. Please try again.",dark:"🌙",light:"☀️",
   closed:"Attendance is closed.",timeRemaining:"Time remaining",startsIn:"Starts in",closedBtn:"Closed",nextClass:"Next class",allDone:"All classes completed for today"},
- bn:{title:"স্মার্ট এটেন্ডেন্স",formTitle:"আপনার হাজিরা দিন",name:"নাম",namePh:"আপনার পুরো নাম",id:"স্টুডেন্ট আইডি",idHint:"১৩ ডিজিট, শুধু সংখ্যা",email:"ইমেইল",opt:"(ঐচ্ছিক)",submit:"হাজিরা জমা দিন ✓",today:"আজকের হাজিরা",time:"সময়",view:"সব রেকর্ড দেখুন",demo:"ডেমো মোড: ডেটা সেভ হচ্ছে না। লাইভ করতে Apps Script URL বসান।",
+ bn:{title:"স্মার্ট এটেন্ডেন্স",formTitle:"আপনার হাজিরা দিন",name:"নাম",namePh:"আপনার পুরো নাম",id:"স্টুডেন্ট আইডি",idHint:"১৩ ডিজিট, শুধু সংখ্যা",email:"ইমেইল",opt:"(ঐচ্ছিক)",submit:"হাজিরা জমা দিন ✓",today:"আজকের হাজিরা",time:"সময়",view:"সব রেকর্ড দেখুন",demo:"সিস্টেম নোটিশ: কনফিগারেশন প্রয়োজন। প্রশাসকের সাথে যোগাযোগ করুন।",
   ok:"উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে!",badId:"ভুল আইডি: অবশ্যই ১৩ ডিজিট হতে হবে।",badName:"অনুগ্রহ করে আপনার নাম লিখুন।",badEmail:"ইমেইল ঠিকানা সঠিক নয়।",dup:"এই আইডি দিয়ে এই ক্লাসে ইতিমধ্যে হাজিরা দেওয়া হয়েছে।",net:"নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।",rate:"অনেকবার চেষ্টা হয়েছে। কয়েক সেকেন্ড অপেক্ষা করুন।",busy:"সার্ভার ব্যস্ত। একটু পরে আবার চেষ্টা করুন।",wait:"জমা হচ্ছে…",srv:"কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",dark:"🌙",light:"☀️",
   closed:"হাজিরা নেওয়া বন্ধ আছে।",timeRemaining:"সময় বাকি",startsIn:"শুরু হতে বাকি",closedBtn:"বন্ধ আছে",nextClass:"পরবর্তী ক্লাস",allDone:"আজকের সব ক্লাস সম্পন্ন হয়েছে"}
 };

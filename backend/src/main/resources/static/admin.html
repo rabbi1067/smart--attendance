@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Administrator • Smart Attendance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#f5f7fd;--card:#fff;--text:#17213b;--muted:#78849b;--line:#e3e8f2;--pri:#5145e6;--priLight:#efedff;--ok:#15803d;--bad:#dc2626;--shadow:0 12px 38px rgba(34,44,75,.07)}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,'Hind Siliguri',sans-serif;min-height:100vh}
+    a{color:inherit;text-decoration:none}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .hidden{display:none!important}
+    .topbar{background:#fff;border-bottom:1px solid var(--line);padding:16px clamp(18px,4vw,46px);display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{font-weight:800;letter-spacing:-.5px;font-size:1.07rem}
+    .muted{color:var(--muted)}
+    .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .chip{background:var(--priLight);color:var(--pri);border-radius:99px;font-size:.76rem;font-weight:700;padding:9px 12px}
+    .btn{background:var(--pri);color:white;border:0;border-radius:11px;padding:11px 16px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:opacity .2s}
+    .btn:hover{opacity:.85}.btn:disabled{opacity:.5;cursor:wait}
+    .btn-light{background:var(--priLight);color:var(--pri)}
+    .btn-white{background:white;color:var(--text);border:1px solid var(--line)}
+    .btn-danger{background:#fee2e2;color:#b91c1c}
+    .small{font-size:.78rem;padding:9px 12px}
+    .container{max-width:1220px;margin:26px auto;padding:0 20px 55px}
+    .intro{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+    h1,h2,h3,p{margin-top:0}
+    h1{font-size:clamp(1.5rem,3vw,2rem);letter-spacing:-.05em;margin-bottom:7px}
+    h2{font-size:1.08rem;margin-bottom:7px}
+    h3{font-size:.94rem}
+    .tabs{display:flex;gap:8px;border-bottom:1px solid var(--line);margin-bottom:24px;overflow:auto}
+    .tab{border:0;background:transparent;color:var(--muted);padding:14px 19px;font-weight:700;white-space:nowrap;border-bottom:3px solid transparent}
+    .tab.active{color:var(--pri);border-bottom-color:var(--pri)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .card{padding:24px;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);min-width:0}
+    .wide{grid-column:1/-1}
+    label{display:block;margin:16px 0 7px;font-size:.85rem;font-weight:700}
+    input:not([type=checkbox]),select{width:100%;border:1px solid #d7dfef;border-radius:11px;padding:12px 13px;color:var(--text);outline:none;background:#fff;min-width:0}
+    input:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--priLight)}
+    .hint{font-size:.76rem;color:var(--muted);line-height:1.7;margin:8px 0 12px}
+    .switchrow{display:flex;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:11px;margin-top:12px}
+    .switchrow input{accent-color:var(--pri);width:18px;height:18px}
+    .timepair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .justify{justify-content:space-between}
+    .class-row{display:grid;grid-template-columns:minmax(130px,1.4fr) minmax(114px,1fr) minmax(114px,1fr) auto;align-items:end;gap:9px;padding:12px 0;border-bottom:1px solid var(--line)}
+    .class-row label{margin:0 0 5px;font-size:.74rem;color:var(--muted)}
+    .class-row .btn{padding:12px}
+    .login-page{min-height:calc(100vh - 67px);display:flex;align-items:center;justify-content:center;padding:35px 16px}
+    .login-card{width:min(100%,445px);background:#fff;padding:40px;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+    .lock{display:grid;place-items:center;width:54px;height:54px;border-radius:16px;background:var(--priLight);font-size:1.45rem;margin-bottom:22px}
+    .login-card h1{font-size:1.56rem;letter-spacing:-.6px}
+    .login-card .btn{margin-top:20px;width:100%;padding:14px}
+    .status{display:inline-block;border-radius:99px;padding:5px 10px;font-size:.74rem;background:#ecfdf5;color:var(--ok);font-weight:700}
+    .status.off{background:#fff7ed;color:#c2410c}
+    .table-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:16px 0}
+    .table-scroll{max-height:530px;overflow:auto;border:1px solid var(--line);border-radius:13px}
+    table{width:100%;border-collapse:collapse;font-size:.83rem}
+    th,td{padding:12px 13px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+    th{position:sticky;top:0;background:#f8faff;color:#596780;font-size:.78rem;z-index:1}
+    tbody tr:hover{background:#fafbff}
+    .empty{color:var(--muted);text-align:center;padding:42px 20px}
+    .modal-shade{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(12,20,37,.53);padding:15px;overflow:auto}
+    .modal{background:var(--card);padding:28px;border-radius:19px;width:min(100%,600px);max-height:90vh;overflow-y:auto;box-shadow:0 20px 70px rgba(0,0,0,.2)}
+    .modal.wide-modal{width:min(100%,680px)}
+    .modal-head{display:flex;justify-content:space-between;gap:14px;align-items:center}
+    .modal-fields{display:grid;grid-template-columns:1fr 1fr;gap:0 13px}
+    .modal-fields label{font-size:.8rem}
+    .modal-fields input{font-size:.88rem}
+    .alert{padding:12px 14px;margin:12px 0;border-radius:12px;background:#fef2f2;color:#b91c1c;font-size:.88rem}
+    .mail-hero{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+    .mail-icon{height:52px;width:52px;border-radius:15px;background:#eeedff;display:grid;place-items:center;font-size:23px;flex:none}
+    .mail-hero h2{margin:0 0 4px}
+    .mail-eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--pri);font-weight:800}
+    .mail-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .mail-status{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+    .provider-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:13px}
+    .provider-option{display:flex;gap:10px;align-items:flex-start;padding:15px;border:1px solid var(--line);border-radius:12px;cursor:pointer}
+    .provider-option:has(input:checked){border-color:var(--pri);background:#f7f6ff;box-shadow:0 0 0 1px var(--pri)}
+    .provider-option input{accent-color:var(--pri);margin-top:3px}
+    .provider-option strong{font-size:.85rem}.provider-option small{color:var(--muted);font-size:.73rem;display:block;line-height:1.55;margin-top:3px}
+    .preview{border:1px solid #e5e9f2;border-radius:15px;overflow:hidden;background:white;margin-top:10px;box-shadow:0 12px 25px rgba(35,50,90,.05)}
+    .preview-head{background:#4f46e5;color:white;padding:21px 23px}.preview-head small{display:block;letter-spacing:1.8px;font-size:.67rem}.preview-head strong{display:block;margin-top:9px;font-size:19px}
+    .preview-body{padding:21px 23px;font-size:.86rem}.preview-body p{color:#65718b;line-height:1.75}.preview-data{background:#f7f8ff;border-radius:12px;padding:14px 17px}
+    .preview-data div{margin:7px 0}.preview-data b{display:inline-block;width:112px;color:#66728a}
+    .tip{background:#f4f3ff;border-radius:12px;padding:13px;color:#4f46e5;font-size:.84rem;line-height:1.6}
+    #toast{position:fixed;bottom:22px;right:24px;background:#17213b;color:#fff;padding:14px 21px;border-radius:13px;max-width:380px;box-shadow:var(--shadow);z-index:100;font-size:.9rem}
+    @media(max-width:750px){.provider-choices,.mail-grid{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.timepair{grid-template-columns:1fr 1fr}.card{padding:19px}.class-row{grid-template-columns:1fr 1fr}.class-row>div:first-child{grid-column:1/-1}.login-card{padding:26px}.modal-fields{grid-template-columns:1fr}.topbar{padding:14px 16px}}
+  </style>
+</head>
+<body>
+<header class="topbar">
+ <a class="brand" href="index.html" style="display:flex;align-items:center;gap:10px;">
+   <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+     <rect width="32" height="32" rx="8" fill="url(#adminBrandGrad)"/>
+     <path d="M9 16.5L13.5 21L23 11.5" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+     <defs>
+       <linearGradient id="adminBrandGrad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+         <stop stop-color="#4F46E5"/>
+         <stop offset="1" stop-color="#7C3AED"/>
+       </linearGradient>
+     </defs>
+   </svg>
+   <span>Smart Attendance <span class="muted" style="font-weight:400;font-size:.9rem">/ Admin</span></span>
+ </a>
+ <div class="top-actions"><span id="account" class="chip hidden"></span><a href="index.html" class="btn btn-white small">← Public site</a><button id="logout" class="btn btn-danger small hidden">Logout</button></div>
+</header>
+<section id="loginView" class="login-page">
+ <form id="loginForm" class="login-card">
+  <div class="lock">🔐</div><h1>Administrator sign in</h1>
+  <p class="muted">Access is restricted to administrator accounts configured on the backend.</p>
+  <div id="loginError" role="alert" class="alert hidden"></div>
+  <label for="loginEmail">Administrator email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="admin@example.com" required maxlength="150">
+  <label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+  <button id="loginBtn" class="btn" type="submit">Sign in securely →</button>
+  <p class="hint" style="text-align:center;margin-top:15px">No account? Contact the site owner. Public registration is disabled.</p>
+ </form>
+</section>
+<section id="dashboard" class="container hidden">
+ <div class="intro"><div><h1>Administrator Dashboard</h1><p class="muted">Manage your Google Sheets connection, attendance schedule, email confirmations and records.</p></div><span id="ownerStatus" class="status off">Checking workspace…</span></div>
+ <div class="tabs"><button class="tab active" data-tab="settings">⚙️ General Settings</button><button class="tab" data-tab="records">📊 Attendance Records</button></div>
+ <section id="settingsPanel">
+  <form id="configForm" class="grid">
+   <div class="card"><h2>Google Sheets Integration</h2><p class="hint">Stored privately in MongoDB for this administrator. Nothing here is embedded in the student website.</p>
+    <label for="scriptUrl">Apps Script Web App URL</label><input id="scriptUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+    <label for="sheetUrl">Google Sheet URL</label><input id="sheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/.../edit" autocomplete="off">
+    <label for="scriptSecret">Apps Script gateway secret</label>
+    <div class="row" style="flex-wrap:nowrap"><input id="scriptSecret" type="password" minlength="32" maxlength="256" placeholder="32+ characters; blank keeps saved secret" autocomplete="new-password"><button id="generateSecret" type="button" class="btn btn-light small">Generate</button></div>
+    <p id="secretStatus" class="hint"></p>
+    <div class="tip">In Google Apps Script → Project Settings → Script Properties, add <strong>GATEWAY_SECRET</strong> with the same secret. Deploy the updated <strong>Code.gs</strong> before testing.</div>
+   </div>
+   <div class="card"><h2>Attendance Schedule</h2><p class="hint">Asia/Dhaka timezone · server validates the open window on every submission.</p>
+    <label class="switchrow"><input type="checkbox" id="scheduleEnabled"><span><strong>Enable attendance timer</strong><br><span class="hint">Off means 24-hour attendance</span></span></label>
+    <label class="switchrow"><input type="checkbox" id="useClasses"><span><strong>Multiple class schedules</strong><br><span class="hint">Maintain independent date/class attendance tabs</span></span></label>
+    <div id="simpleSchedule"><div class="timepair"><div><label for="startTime">Start time</label><input id="startTime" type="time" required></div><div><label for="endTime">End time</label><input id="endTime" type="time" required></div></div></div>
+    <div id="classesSection" class="hidden"><div class="row justify" style="margin-top:16px"><h3 style="margin:0">Daily class windows</h3><button type="button" class="btn btn-light small" id="addClass">+ Add class</button></div><div id="classesList"></div><p class="hint">Up to 25 classes, with no overlapping times.</p></div>
+   </div>
+   <div class="card wide">
+    <div class="mail-hero"><span class="mail-icon">✉️</span><div><div class="mail-eyebrow">Messaging &amp; notifications</div><h2>Student Confirmation Emails</h2><p class="hint" style="margin:3px 0 0">Send a beautifully formatted receipt after a successful attendance submission.</p></div></div>
+    <label class="switchrow" style="margin-bottom:14px"><input type="checkbox" id="mailEnabled"><span><strong>Enable automatic email notifications</strong><br><span class="hint">OFF = no emails are sent to students or anyone else automatically.</span></span></label>
+    <div id="mailEnabledFields">
+      <span class="mail-eyebrow">Choose delivery method</span>
+      <div class="provider-choices" role="radiogroup" aria-label="Email delivery method">
+        <label class="provider-option"><input type="radio" name="mailProvider" value="APPS_SCRIPT" checked><span><strong>Google Apps Script</strong><small>Recommended · Works with Render Free. Sends from the Google account that deployed Apps Script. No App Password needed.</small></span></label>
+        <label class="provider-option"><input type="radio" name="mailProvider" value="SMTP"><span><strong>Gmail SMTP</strong><small>Gmail + App Password · Requires paid Render service; SMTP ports are blocked on Render Free.</small></span></label>
+      </div>
+      <div class="mail-grid" style="margin-top:10px">
+        <div>
+          <label for="senderName">Sender display name</label><input id="senderName" minlength="2" maxlength="55" placeholder="Smart Attendance" value="Smart Attendance">
+          <div id="smtpFields" class="hidden">
+            <label for="senderEmail">Sender Gmail address</label><input id="senderEmail" type="email" maxlength="150" autocomplete="off" placeholder="myaddress@gmail.com">
+            <label for="appPassword">Google App Password</label><input id="appPassword" type="password" minlength="16" maxlength="25" autocomplete="new-password" placeholder="16 characters · blank keeps saved password">
+            <div class="mail-status"><span id="passwordStatus" class="status off">No App Password saved</span><label style="margin:0;font-size:.76rem;font-weight:500"><input id="clearAppPassword" type="checkbox"> Clear saved password</label></div>
+            <p class="hint">Create an App Password from Google Account → Security → App passwords. Never use your normal Gmail password.</p>
+          </div>
+          <div id="scriptMailHint" class="tip" style="margin-top:16px">Email is sent securely by Google Apps Script after Sheet submission. Enable the MailApp permission when updating <strong>Code.gs</strong>. The sender will be the Google account owning the Apps Script deployment.</div>
+          <div class="row" style="margin-top:19px"><button id="testNotification" type="button" class="btn btn-light small">✉ Send test to my admin email</button><span class="hint">Save settings first, then test.</span></div>
+        </div>
+        <div>
+          <label style="margin-top:6px">Student email preview</label>
+          <div class="preview" aria-label="Example attendance confirmation email">
+            <div class="preview-head"><small>SMART ATTENDANCE</small><strong>✓ Attendance confirmed</strong></div>
+            <div class="preview-body"><strong>Hello, Student</strong><p>Your attendance has been successfully recorded. Here is your confirmation summary.</p>
+              <div class="preview-data"><div><b>DATE</b> <span id="mailPreviewDate">Attendance date</span></div><div><b>CLASS</b> Bangla Class</div><div><b>STUDENT ID</b> 2023•••••0686</div></div>
+              <p style="font-size:.7rem;margin:15px 0 0">Automatic notification · Please do not reply</p>
+            </div>
+          </div>
+          <p class="hint">Student ID is masked in email. Notification is attempted only after Google Sheets confirms attendance. Email delivery failure never deletes a saved attendance record.</p>
+        </div>
+      </div>
+    </div>
+   </div>
+   <div class="wide row" style="justify-content:flex-end"><button id="saveConfig" class="btn" type="submit">💾 Save configuration</button></div>
+  </form>
+ </section>
+ <section id="recordsPanel" class="hidden">
+   <div class="card">
+    <div class="row justify"><div><h2>Google Sheet Records</h2><p class="hint">All date and class tabs from your connected spreadsheet.</p></div><div class="row"><a id="openGoogleSheet" href="#" class="btn btn-white small hidden" target="_blank" rel="noopener noreferrer">Open in Google Sheets ↗</a><button id="reloadSheets" class="btn btn-light small">↻ Refresh</button></div></div>
+    <div class="table-tools"><div style="flex:1;max-width:410px"><label for="sheetSelect" style="margin-top:0">Select sheet / class tab</label><select id="sheetSelect"><option value="">Choose a tab</option></select></div><div><label for="searchRows" style="margin-top:0">Search records</label><input id="searchRows" placeholder="Name, ID, email, date…"></div><div style="align-self:end"><button class="btn" id="addRecord" disabled>+ Add record</button></div></div>
+    <div class="row justify"><p class="hint" id="rowsStatus">Select a sheet to view records.</p><span class="status" id="rowCount">0 records</span></div>
+    <div class="table-scroll"><table><thead id="recordHead"></thead><tbody id="recordBody"><tr><td class="empty">No sheet selected.</td></tr></tbody></table></div>
+   </div>
+ </section>
+</section>
+<div id="editModal" class="modal-shade hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+ <form id="recordForm" class="modal wide-modal"><div class="modal-head"><h2 id="modalTitle">Edit record</h2><button type="button" class="btn btn-white small" id="closeModal">✕</button></div>
+  <p class="hint" id="modalSheet"></p><div id="modalFields" class="modal-fields"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:25px"><button type="button" class="btn btn-white" id="cancelModal">Cancel</button><button id="saveRecord" class="btn" type="submit">Save record</button></div>
+ </form>
+</div>
+<div id="confirmModal" class="modal-shade hidden" role="alertdialog" aria-modal="true">
+ <div class="modal"><h2>Delete this attendance record?</h2><p class="muted">This action permanently removes the selected row from Google Sheets.</p>
+ <div class="row" style="justify-content:flex-end"><button id="cancelDelete" class="btn btn-white">Cancel</button><button id="confirmDelete" class="btn btn-danger">Delete permanently</button></div></div>
+</div>
+<div id="toast" class="hidden" role="status" aria-live="polite"></div>
+<script src="config-runtime.js"></script><script src="admin.js" defer></script>
+</body>
+</html>
