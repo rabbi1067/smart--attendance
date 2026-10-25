@@ -120,11 +120,18 @@
     .preview-data div{margin:7px 0}.preview-data b{display:inline-block;width:112px;color:var(--muted)}
     .tip{background:var(--priLight);border-radius:12px;padding:13px;color:var(--pri);font-size:.84rem;line-height:1.6}
     #toast{position:fixed;bottom:22px;right:24px;background:#17213b;color:#fff;padding:14px 21px;border-radius:13px;max-width:380px;box-shadow:var(--shadow);z-index:100;font-size:.9rem}
-    @media(max-width:750px){.provider-choices,.mail-grid{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.timepair{grid-template-columns:1fr 1fr}.card{padding:19px}.class-row{grid-template-columns:1fr 1fr}.class-row>div:first-child{grid-column:1/-1}.login-card{padding:26px}.modal-fields{grid-template-columns:1fr}.topbar{padding:14px 16px}}
+    @media(max-width:750px){.provider-choices,.mail-grid{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.timepair{grid-template-columns:1fr 1fr}.card{padding:19px}.class-row{grid-template-columns:1fr 1fr}.class-row>div:first-child{grid-column:1/-1}.login-card{padding:26px}.modal-fields{grid-template-columns:1fr}.topbar{padding:14px 16px}.search-box-wrap{max-width:100%}}
     .password-wrapper{position:relative;display:flex;align-items:center}
     .password-wrapper input{padding-right:44px!important}
     .password-toggle{position:absolute;right:10px;background:transparent;border:0;padding:6px;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;border-radius:8px;transition:color .2s,background .2s}
     .password-toggle:hover{color:var(--pri);background:var(--priLight)}
+    .search-box-wrap{position:relative;flex:1;min-width:240px;max-width:380px}
+    .search-input-wrapper{position:relative;display:flex;align-items:center}
+    .search-input-wrapper input{padding-left:36px!important;padding-right:36px!important;width:100%}
+    .search-input-wrapper .search-icon{position:absolute;left:11px;font-size:.85rem;opacity:.55;pointer-events:none}
+    .search-clear-btn{position:absolute;right:8px;width:24px;height:24px;background:var(--line);color:var(--muted);border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .18s ease;padding:0;line-height:1}
+    .search-clear-btn:hover{background:#ef4444;color:#fff;transform:scale(1.08)}
+    .search-match{background:rgba(245,158,11,.28);color:inherit;font-weight:700;border-radius:3px;padding:1px 3px}
 
   </style>
 </head>
@@ -232,7 +239,14 @@
  <section id="recordsPanel" class="hidden">
    <div class="card">
     <div class="row justify"><div><h2 data-t="recordsTitle">Google Sheet Records</h2><p class="hint">All date and class tabs from your connected spreadsheet.</p></div><div class="row"><a id="openGoogleSheet" href="#" class="btn btn-white small hidden" target="_blank" rel="noopener noreferrer"><span data-t="openSheetLink">Open in Google Sheets ↗</span></a><button id="reloadSheets" class="btn btn-light small" data-t="reloadSheetsBtn">↻ Refresh</button></div></div>
-    <div class="table-tools"><div style="flex:1;max-width:410px"><label for="sheetSelect" style="margin-top:0">Select sheet / class tab</label><select id="sheetSelect"><option value="">Choose a tab</option></select></div><div><label for="searchRows" style="margin-top:0">Search records</label><input id="searchRows" placeholder="Name, ID, email, date…" data-p="searchPh"></div><div style="align-self:end"><button class="btn" id="addRecord" disabled data-t="addRecordBtn">+ Add record</button></div></div>
+    <div class="table-tools"><div style="flex:1;max-width:410px"><label for="sheetSelect" style="margin-top:0" data-t="selectSheetLabel">Select sheet / class tab</label><select id="sheetSelect"><option value="">Choose a tab</option></select></div><div class="search-box-wrap">
+        <label for="searchRows" style="margin-top:0" data-t="searchRecordsLabel">Search records</label>
+        <div class="search-input-wrapper">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input id="searchRows" placeholder="Name, ID, email, date…" data-p="searchPh" autocomplete="off" spellcheck="false">
+          <button type="button" id="clearSearch" class="search-clear-btn hidden" aria-label="Clear search" title="Clear search">✕</button>
+        </div>
+      </div><div style="align-self:end"><button class="btn" id="addRecord" disabled data-t="addRecordBtn">+ Add record</button></div></div>
     <div class="row justify"><p class="hint" id="rowsStatus">Select a sheet to view records.</p><span class="status" id="rowCount">0 records</span></div>
     <div class="table-scroll"><table><thead id="recordHead"></thead><tbody id="recordBody"><tr><td class="empty">No sheet selected.</td></tr></tbody></table></div>
    </div>

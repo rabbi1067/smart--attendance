@@ -187,7 +187,73 @@ async function loadSheets(){
 }
 $('reloadSheets').addEventListener('click',loadSheets);
 $('sheetSelect').addEventListener('change',loadRows);
-$('searchRows').addEventListener('input',drawTable);
+function updateSearchClearBtn() {
+  const sInput = $('searchRows');
+  const clearBtn = $('clearSearch');
+  if (!clearBtn || !sInput) return;
+  if (sInput.value.trim().length > 0) {
+    clearBtn.classList.remove('hidden');
+  } else {
+    clearBtn.classList.add('hidden');
+  }
+}
+
+const searchInput = $('searchRows');
+const clearSearchBtn = $('clearSearch');
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    updateSearchClearBtn();
+    drawTable();
+  });
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && searchInput.value) {
+      searchInput.value = '';
+      updateSearchClearBtn();
+      drawTable();
+    }
+  });
+}
+if (clearSearchBtn) {
+  clearSearchBtn.addEventListener('click', () => {
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.focus();
+    }
+    updateSearchClearBtn();
+    drawTable();
+  });
+}
+
+function highlightMatch(text, tokens) {
+  if (!tokens || !tokens.length || text === null || text === undefined) {
+    return document.createTextNode(String(text ?? ''));
+  }
+  const str = String(text ?? '');
+  const escaped = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean).join('|');
+  if (!escaped) return document.createTextNode(str);
+  try {
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    const span = document.createElement('span');
+    let lastIndex = 0;
+    str.replace(regex, (match, p1, offset) => {
+      if (offset > lastIndex) {
+        span.appendChild(document.createTextNode(str.slice(lastIndex, offset)));
+      }
+      const mark = document.createElement('mark');
+      mark.className = 'search-match';
+      mark.textContent = match;
+      span.appendChild(mark);
+      lastIndex = offset + match.length;
+      return match;
+    });
+    if (lastIndex < str.length) {
+      span.appendChild(document.createTextNode(str.slice(lastIndex)));
+    }
+    return span;
+  } catch(e) {
+    return document.createTextNode(str);
+  }
+}
 async function loadRows(){
   const name=$('sheetSelect').value;sheetData=null;
   $('addRecord').disabled=!name;
@@ -203,18 +269,42 @@ function drawTable(){
   const headers=sheetData.headers||[],all=sheetData.rows||[];
   const tr=document.createElement('tr');tr.append(mk('th','Row'));
   for(const h of headers) tr.append(mk('th',h));tr.append(mk('th','Actions'));head.append(tr);
-  const query=$('searchRows').value.trim().toLowerCase();
-  const filtered=all.filter(row=>!query||row.values.some(v=>String(v).toLowerCase().includes(query)));
+  updateSearchClearBtn();
+  const query=$('searchRows')?$('searchRows').value.trim():'';
+  const tokens=query.toLowerCase().split(/\s+/).filter(Boolean);
+  const filtered=all.filter(row=>{
+    if(!tokens.length) return true;
+    const combined=(row.rowIndex+' '+(row.values||[]).join(' ')).toLowerCase();
+    return tokens.every(token=>combined.includes(token));
+  });
+
   for(const row of filtered){
-    const line=document.createElement('tr');line.append(mk('td',row.rowIndex));
-    for(const v of row.values)line.append(mk('td',v));
+    const line=document.createElement('tr');
+    const tdRow=document.createElement('td');tdRow.appendChild(highlightMatch(row.rowIndex,tokens));line.append(tdRow);
+    for(const v of row.values){
+      const td=document.createElement('td');
+      td.appendChild(highlightMatch(v,tokens));
+      line.append(td);
+    }
     const actions=document.createElement('td');
     const edit=mk('button','Edit');edit.className='btn btn-light small';edit.style.marginRight='8px';edit.addEventListener('click',()=>editRow(row));
     const del=mk('button','Delete');del.className='btn btn-danger small';del.addEventListener('click',()=>deleteRow(row));
     actions.append(edit,del);line.append(actions);body.append(line);
   }
-  if(!filtered.length){const line=document.createElement('tr'),cell=mk('td',all.length?'No matching records.':'This sheet has no records yet.');cell.colSpan=headers.length+2;cell.className='empty';line.append(cell);body.append(line);}
-  $('rowCount').textContent=`${filtered.length} / ${all.length} records`;
+  if(!filtered.length){
+    const line=document.createElement('tr'),cell=document.createElement('td');
+    if(all.length>0 && query){
+      cell.textContent=currentLang==='bn'?`"${query}" এর জন্য কোনো রেকর্ড পাওয়া যায়নি।`:`No matching records found for "${query}".`;
+    }else{
+      cell.textContent=all.length?'No matching records.':'This sheet has no records yet.';
+    }
+    cell.colSpan=headers.length+2;cell.className='empty';line.append(cell);body.append(line);
+  }
+  if(query){
+    $('rowCount').textContent=currentLang==='bn'?`${filtered.length} / ${all.length} টি মিল রয়েছে`:`${filtered.length} of ${all.length} matching`;
+  }else{
+    $('rowCount').textContent=currentLang==='bn'?`${all.length} টি রেকর্ড`:`${all.length} records`;
+  }
   $('rowsStatus').textContent=`Viewing: ${sheetData.sheet}`;
 }
 function editRow(row){openEditor(row);}
@@ -322,6 +412,9 @@ const T_ADMIN = {
     studentEmailPreview: "Student email preview",
     saveConfigBtn: "💾 Save configuration",
     recordsTitle: "Google Sheet Records",
+    selectSheetLabel: "Select sheet / class tab",
+    searchRecordsLabel: "Search records",
+    clearSearchTitle: "Clear search",
     searchPh: "Name, ID, email, date…",
     addRecordBtn: "+ Add record",
     reloadSheetsBtn: "↻ Refresh",
@@ -370,6 +463,9 @@ const T_ADMIN = {
     studentEmailPreview: "ইমেইল নোটিফিকেশন প্রিভিউ",
     saveConfigBtn: "💾 কনফিগারেশন সংরক্ষণ করুন",
     recordsTitle: "গুগল শিট রেকর্ডস",
+    selectSheetLabel: "শিট / ক্লাসের ট্যাব নির্বাচন করুন",
+    searchRecordsLabel: "রেকর্ড খুঁজুন",
+    clearSearchTitle: "সার্চ মুছুন",
     searchPh: "নাম, আইডি, ইমেইল, তারিখ দিয়ে খুঁজুন…",
     addRecordBtn: "+ নতুন রেকর্ড যোগ করুন",
     reloadSheetsBtn: "↻ রিফ্রেশ",
@@ -397,6 +493,8 @@ function applyAdminLang() {
   });
   const langText = $('adminLangText');
   if (langText) langText.textContent = currentLang === 'en' ? 'বাংলা' : 'English';
+  const clearBtn = $('clearSearch');
+  if (clearBtn && dict.clearSearchTitle) clearBtn.title = dict.clearSearchTitle;
   document.title = dict.adminTitle;
 }
 
@@ -413,6 +511,7 @@ if (adminLangBtn) {
     currentLang = currentLang === 'en' ? 'bn' : 'en';
     try { localStorage.setItem('lang', currentLang); } catch(e) {}
     applyAdminLang();
+    if (sheetData) drawTable();
   });
 }
 
