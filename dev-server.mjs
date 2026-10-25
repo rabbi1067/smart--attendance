@@ -12,7 +12,7 @@ const DIST_DIR = path.join(__dirname, 'frontend', 'dist');
 function ensureBuild() {
   const root = path.join(__dirname, 'frontend');
   fs.mkdirSync(DIST_DIR, { recursive: true });
-  for (const f of ['index.html', 'admin.html', 'admin.js', 'config.js']) {
+  for (const f of ['index.html', 'admin.html', 'admin.js', 'config.js', 'favicon.svg', 'favicon.ico', 'favicon.png', 'apple-touch-icon.png']) {
     const src = path.join(root, f);
     if (fs.existsSync(src)) {
       fs.copyFileSync(src, path.join(DIST_DIR, f));
