@@ -259,14 +259,14 @@
  </div>
 </header>
 <section id="loginView" class="login-page">
- <form id="loginForm" class="login-card">
+ <form id="loginForm" class="login-card" autocomplete="off">
   <div class="lock">🔐</div><h1 data-t="loginTitle">Administrator sign in</h1>
   <p class="muted" data-t="loginSubtitle">Access is restricted to administrator accounts configured on the backend.</p>
   <div id="loginError" role="alert" class="alert hidden"></div>
-  <label for="loginEmail" data-t="loginEmailLabel">Administrator email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="admin@example.com" data-p="loginEmailPh" required maxlength="150">
+  <label for="loginEmail" data-t="loginEmailLabel">Administrator email</label><input id="loginEmail" type="email" autocomplete="off" placeholder="admin@example.com" data-p="loginEmailPh" required maxlength="150">
   <label for="loginPassword" data-t="loginPasswordLabel">Password</label>
    <div class="password-wrapper">
-    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter your password" data-p="loginPasswordPh" required>
+    <input id="loginPassword" type="password" autocomplete="new-password" placeholder="Enter your password" data-p="loginPasswordPh" required>
     <button type="button" id="toggleLoginPassword" class="password-toggle" aria-label="Show password" title="Show password">
       <svg id="eyeIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
       <svg id="eyeSlashIcon" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>

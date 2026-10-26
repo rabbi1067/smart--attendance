@@ -33,27 +33,50 @@ function showApp(show) {
   $('logout').classList.toggle('hidden', !show);
   $('account').classList.toggle('hidden', !show);
   $('account').textContent = userEmail;
+  if (!show) {
+    if ($('loginPassword')) $('loginPassword').value = '';
+    if ($('loginEmail')) $('loginEmail').value = '';
+    if ($('loginForm')) $('loginForm').reset();
+  }
 }
 function logout(showMessage=true) {
-  token = ''; userEmail='';
-  sessionStorage.removeItem('admin_token');sessionStorage.removeItem('admin_email');
+  token = '';
+  userEmail = '';
+  try {
+    sessionStorage.clear();
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_email');
+    localStorage.removeItem('token');
+  } catch(e) {}
+  if ($('loginForm')) $('loginForm').reset();
+  if ($('loginEmail')) $('loginEmail').value = '';
+  if ($('loginPassword')) $('loginPassword').value = '';
   showApp(false);
-  $('loginPassword').value = '';
-  if (showMessage) notice('Signed out.');
+  if (showMessage) {
+    notice(currentLang === 'bn' ? 'সফলভাবে সাইন আউট করা হয়েছে।' : 'Signed out successfully.');
+  }
 }
 $('logout').addEventListener('click',()=>logout());
 $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault(); $('loginError').classList.add('hidden');
-  const btn=$('loginBtn');btn.disabled=true;btn.textContent='Signing in…';
+  const emailInput = $('loginEmail').value.trim();
+  const passwordInput = $('loginPassword').value.trim();
+  if (!emailInput || !passwordInput) {
+    $('loginError').textContent = currentLang === 'bn' ? 'ইমেইল এবং পাসওয়ার্ড আবশ্যক।' : 'Email and password are required.';
+    $('loginError').classList.remove('hidden');
+    return;
+  }
+  const btn=$('loginBtn');btn.disabled=true;btn.textContent=currentLang==='bn'?'সাইন ইন করা হচ্ছে…':'Signing in…';
   try {
-    const data=await request('/admin/auth/login',{method:'POST',protectedRoute:false,body:{email:$('loginEmail').value.trim(),password:$('loginPassword').value.trim()}});
+    const data=await request('/admin/auth/login',{method:'POST',protectedRoute:false,body:{email:emailInput,password:passwordInput}});
     token=data.token;userEmail=data.email;
     sessionStorage.setItem('admin_token',token);sessionStorage.setItem('admin_email',userEmail);
-    $('loginPassword').value=''; await initialize();
+    $('loginPassword').value='';
+    await initialize();
   }catch(err){
-    $('loginError').textContent = /account_not_found|credentials|401/.test(err.message) ? 'Account not found or incorrect email/password.' : err.message;
+    $('loginError').textContent = /account_not_found|credentials|401/.test(err.message) ? (currentLang==='bn'?'অ্যাকাউন্ট বা পাসওয়ার্ড সঠিক নয়।':'Account not found or incorrect email/password.') : err.message;
     $('loginError').classList.remove('hidden'); notice($('loginError').textContent);
-  } finally {btn.disabled=false;btn.textContent='Sign in securely →';}
+  } finally {btn.disabled=false;btn.textContent=currentLang==='bn'?'নিরাপদে সাইন ইন করুন →':'Sign in securely →';}
 });
 for(const button of document.querySelectorAll('[data-tab]')) button.addEventListener('click',async()=>{
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b===button));
@@ -408,8 +431,7 @@ async function initialize(){
     await loadConfig();
     showApp(true);
   } catch(e) {
-    notice('Notice: ' + e.message);
-    showApp(true);
+    logout(false);
   }
 }
 async function loadSheets(){
@@ -1008,13 +1030,13 @@ let currentExportMode = 'date';
 
 async function downloadCsv(params) {
   if (csvDropdownMenu) csvDropdownMenu.classList.add('hidden');
-  const token = localStorage.getItem('token') || '';
+  const authToken = token || sessionStorage.getItem('admin_token') || '';
   const qs = new URLSearchParams(params).toString();
   notice(currentLang === 'bn' ? 'CSV ফাইল প্রস্তুত হচ্ছে…' : 'Preparing CSV download…');
   try {
     const res = await fetch((window.ATTENDANCE_API_BASE || '') + '/api/admin/sheets/export/csv?' + qs, {
       headers: {
-        'Authorization': 'Bearer ' + token
+        'Authorization': 'Bearer ' + authToken
       }
     });
     if (!res.ok) throw new Error('Failed to generate CSV (HTTP ' + res.status + ')');
