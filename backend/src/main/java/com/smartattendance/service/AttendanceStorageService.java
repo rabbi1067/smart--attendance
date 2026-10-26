@@ -2,6 +2,8 @@ package com.smartattendance.service;
 
 import com.smartattendance.model.AttendanceEntry;
 import com.smartattendance.repo.AttendanceRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -12,6 +14,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class AttendanceStorageService {
+  private static final Logger log = LoggerFactory.getLogger(AttendanceStorageService.class);
   private final AttendanceRepository repo;
   private final CopyOnWriteArrayList<AttendanceEntry> memoryRecords = new CopyOnWriteArrayList<>();
   private final Set<String> submittedTodayKeys = ConcurrentHashMap.newKeySet();
@@ -26,8 +29,9 @@ public class AttendanceStorageService {
         String key = makeKey(e.date, e.className, e.studentId);
         submittedTodayKeys.add(key);
       }
-    } catch (Exception ignored) {
-      // Offline fallback: will operate using memoryRecords
+      log.info("MongoDB warmup successful: loaded {} attendance entries.", existing.size());
+    } catch (Exception e) {
+      log.error("MongoDB warmup connection failed: {}. Operating in resilient memory mode.", e.getMessage());
     }
   }
 
@@ -83,7 +87,10 @@ public class AttendanceStorageService {
     // Persist to MongoDB
     try {
       entry = repo.save(entry);
-    } catch (Exception ignored) {}
+      log.info("Persisted attendance record to MongoDB successfully: studentId={}, name={}", cleanId, entry.name);
+    } catch (Exception e) {
+      log.error("Failed to persist attendance record to MongoDB: {}. Check credentials and Network Access.", e.getMessage());
+    }
 
     memoryRecords.add(entry);
     submittedTodayKeys.add(key);
