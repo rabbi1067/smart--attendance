@@ -100,11 +100,21 @@ function mailUi() {
 $('mailEnabled').addEventListener('change',mailUi);
 for(const radio of document.querySelectorAll('input[name="mailProvider"]'))radio.addEventListener('change',mailUi);
 $('testNotification').addEventListener('click', async()=>{
-  const button=$('testNotification');button.disabled=true;button.textContent='Sending test…';
+  const button=$('testNotification');button.disabled=true;
+  button.textContent=lang==='bn'?'টেস্ট পাঠানো হচ্ছে…':'Sending test…';
   try{
     const data=await request('/admin/notifications/test',{method:'POST'});
-    notice(data.emailStatus==='sent'?'Test email sent to your administrator email address.':'Test email failed. Check sender settings, Apps Script authorization or SMTP hosting restrictions.');
-  }catch(e){notice(e.message)}finally{button.textContent='✉ Send test to my admin email';mailUi();}
+    if(data.emailStatus==='sent'){
+      notice(data.message || (lang==='bn'?'অ্যাডমিন ইমেইলে টেস্ট ইমেইল সফলভাবে পাঠানো হয়েছে।':'Test email sent to your administrator email address.'));
+    } else {
+      notice(data.message || (lang==='bn'?'টেস্ট ইমেইল পাঠানো যায়নি। সেটিংস ও অনুমতি পরীক্ষা করুন।':'Test email failed. Check sender settings, Apps Script authorization or SMTP hosting restrictions.'));
+    }
+  }catch(e){
+    notice((lang==='bn'?'ইমেইল পাঠাতে ব্যর্থ: ':'Failed to send test email: ')+(e.message||'network'));
+  }finally{
+    button.textContent=lang==='bn'?'✉ টেস্ট ইমেইল পাঠান':'✉ Send test email';
+    mailUi();
+  }
 });
 function updateScheduleSections() {
   $('classesSection').classList.toggle('hidden',!$('useClasses').checked);
@@ -774,6 +784,13 @@ const T_ADMIN = {
     addClassBtn: "+ Add class",
     emailCardTitle: "Student Confirmation Emails",
     enableEmail: "Enable automatic email notifications",
+    providerScript: "Google Apps Script",
+    providerScriptHint: "Recommended · Works with Render Free. Sends from the Google account that deployed Apps Script. No App Password needed.",
+    providerSmtp: "Gmail SMTP",
+    providerSmtpHint: "Gmail + App Password · Requires VPS or paid Render service; SMTP ports (587) are blocked on Render Free.",
+    smtpRenderWarnTitle: "⚠️ Render Free Server Alert",
+    smtpRenderWarnDesc: "Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select Google Apps Script delivery method above (which sends over HTTPS and works 100% reliably).",
+    scriptMailHintText: "Email is sent securely by Google Apps Script over HTTPS. Recommended for Render Free. Make sure to authorize MailApp permissions when updating Code.gs. The sender will be the Google account owning the Apps Script deployment.",
     senderNameLabel: "Sender display name",
     senderEmailLabel: "Sender Gmail address",
     appPasswordLabel: "Google App Password",
@@ -840,6 +857,13 @@ const T_ADMIN = {
     addClassBtn: "+ ক্লাস যোগ করুন",
     emailCardTitle: "শিক্ষার্থীদের কনফার্মেশন ইমেইল",
     enableEmail: "স্বয়ংক্রিয় ইমেইল নোটিফিকেশন চালু করুন",
+    providerScript: "গুগল অ্যাপস স্ক্রিপ্ট (Google Apps Script)",
+    providerScriptHint: "সুপারিশকৃত · Render Free-তে ১০০% কাজ করে। Apps Script থেকে HTTPS দিয়ে ইমেইল পাঠানো হয়। App Password লাগে না।",
+    providerSmtp: "জিমেইল এসএমটিপি (Gmail SMTP)",
+    providerSmtpHint: "Gmail + App Password · VPS বা পেইড রেন্ডার প্রয়োজন; Render Free-তে SMTP পোর্ট ৫৮৭ বন্ধ থাকে।",
+    smtpRenderWarnTitle: "⚠️ রেন্ডার ফ্রি সার্ভার সতর্কতা",
+    smtpRenderWarnDesc: "Render Free টিয়ারে আউটবাউন্ড SMTP পোর্ট ৫৮৭ ব্লক থাকে। Render Free-তে Gmail SMTP কাজ করবে না। অনুগ্রহ করে ওপরে \"Google Apps Script\" ডেলিভারি মেথড নির্বাচন করুন (যা HTTPS দিয়ে ১০০% সফলভাবে ইমেইল পাঠায়)।",
+    scriptMailHintText: "গুগল অ্যাপস স্ক্রিপ্টের মাধ্যমে HTTPS দিয়ে নিরাপদে ইমেইল পাঠানো হয়। Render Free-র জন্য সেরা ও শতভাগ কার্যকর পদ্ধতি।",
     senderNameLabel: "প্রেরকের নাম",
     senderEmailLabel: "প্রেরকের জিমেইল ঠিকানা",
     appPasswordLabel: "গুগল অ্যাপ পাসওয়ার্ড",

@@ -204,10 +204,32 @@ function sendReceipt_(to, person, studentId, date, cls, displayName, isTest) {
       htmlBody: html,
       name: String(displayName || 'Smart Attendance').replace(/[\r\n]/g, '').slice(0, 55)
     });
-    return 'sent';
+    return { status: 'sent', error: '' };
   } catch(err) {
-    console.error('Email delivery error');
-    return 'failed';
+    const msg = String(err && err.message ? err.message : err);
+    console.error('Email delivery error: ' + msg);
+    return { status: 'failed', error: msg };
+  }
+}
+
+/**
+ * Run this function once in Apps Script Editor (click "Run" / "চালান") to grant Google Mail permissions.
+ * You will see an 'Authorization required' popup — click 'Review Permissions' -> 'Advanced' -> 'Go to Smart Attendance (unsafe)' -> 'Allow'.
+ */
+function testMailAuthorization() {
+  const user = Session.getActiveUser();
+  const email = user ? user.getEmail() : '';
+  Logger.log('Active Apps Script user: ' + email);
+  if (email) {
+    MailApp.sendEmail({
+      to: email,
+      subject: 'Smart Attendance • Email Authorization Verified',
+      body: 'Congratulations! Google Apps Script now has full authorization to send student attendance confirmation emails.\n\nSender Google Account: ' + email,
+      name: 'Smart Attendance'
+    });
+    Logger.log('Verification test email successfully sent to ' + email);
+  } else {
+    Logger.log('MailApp permission granted.');
   }
 }
 
@@ -222,8 +244,17 @@ function doPost(e) {
     if (d.action === 'adminTestMail') {
       const email=String(d.email||'').trim();
       if (email.length>150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json_({ok:false,error:'bad_email'});
-      const status=sendReceipt_(email,'Rabbi','',today_(),'Email settings test',d.senderName,true);
-      return json_({ok:true,emailStatus:status});
+      const res=sendReceipt_(email,'Administrator','',today_(),'Email settings test',d.senderName,true);
+      return json_({ok:true,emailStatus:res.status,error:res.error});
+    }
+    if (d.action === 'sendReceipt') {
+      const email=String(d.email||'').trim();
+      if (email.length>150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json_({ok:false,error:'bad_email'});
+      const name=String(d.name||'').trim();
+      const id=String(d.id||'').trim();
+      const cls=String(d.cls||'').trim();
+      const res=sendReceipt_(email,name,id,today_(),cls,d.senderName,false);
+      return json_({ok:true,emailStatus:res.status,error:res.error});
     }
     if (String(d.action||'').startsWith('admin')) return json_(adminMutation_(ss,d));
     if (d.action) return json_({ok:false,error:'unknown_action'});
@@ -251,9 +282,14 @@ function doPost(e) {
     sh.appendRow(data);
     sh.getRange(sh.getLastRow(), c.id).setNumberFormat('@');
     cache.put(rateKey,'1',RATE_SECONDS);
-    const mailStatus=(d.mailEnabled===true && email) ?
-      sendReceipt_(email,name,id,date,cls,d.senderName,false) : 'disabled';
-    return json_({ok:true,sheet:sheetName,emailStatus:mailStatus});
+    let mailStatus = 'disabled';
+    let mailError = '';
+    if (d.mailEnabled===true && email) {
+      const res = sendReceipt_(email,name,id,date,cls,d.senderName,false);
+      mailStatus = res.status;
+      mailError = res.error;
+    }
+    return json_({ok:true,sheet:sheetName,emailStatus:mailStatus,emailError:mailError});
   } catch(err) {return json_({ok:false,error:'server',message:String(err.message||err)});}
   finally {lock.releaseLock();}
 }

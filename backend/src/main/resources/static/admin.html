@@ -330,19 +330,23 @@
     <div id="mailEnabledFields">
       <span class="mail-eyebrow">Choose delivery method</span>
       <div class="provider-choices" role="radiogroup" aria-label="Email delivery method">
-        <label class="provider-option"><input type="radio" name="mailProvider" value="APPS_SCRIPT" checked><span><strong>Google Apps Script</strong><small>Recommended · Works with Render Free. Sends from the Google account that deployed Apps Script. No App Password needed.</small></span></label>
-        <label class="provider-option"><input type="radio" name="mailProvider" value="SMTP"><span><strong>Gmail SMTP</strong><small>Gmail + App Password · Requires paid Render service; SMTP ports are blocked on Render Free.</small></span></label>
+        <label class="provider-option"><input type="radio" name="mailProvider" value="APPS_SCRIPT" checked><span><strong data-t="providerScript">Google Apps Script</strong><small data-t="providerScriptHint">Recommended · Works with Render Free. Sends from the Google account that deployed Apps Script. No App Password needed.</small></span></label>
+        <label class="provider-option"><input type="radio" name="mailProvider" value="SMTP"><span><strong data-t="providerSmtp">Gmail SMTP</strong><small data-t="providerSmtpHint">Gmail + App Password · Requires VPS or paid Render service; SMTP ports are blocked on Render Free.</small></span></label>
       </div>
       <div class="mail-grid" style="margin-top:10px">
         <div>
           <label for="senderName" data-t="senderNameLabel">Sender display name</label><input id="senderName" minlength="2" maxlength="55" placeholder="Smart Attendance" value="Smart Attendance">
           <div id="smtpFields" class="hidden">
+            <div class="smtp-render-warn" style="margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#b91c1c;font-size:.8rem;line-height:1.5;">
+              <strong data-t="smtpRenderWarnTitle">⚠️ Render Free Server Alert</strong><br>
+              <span data-t="smtpRenderWarnDesc">Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select <strong>Google Apps Script</strong> delivery method above (which sends over HTTPS and works 100% reliably).</span>
+            </div>
             <label for="senderEmail" data-t="senderEmailLabel">Sender Gmail address</label><input id="senderEmail" type="email" maxlength="150" autocomplete="off" placeholder="myaddress@gmail.com">
             <label for="appPassword" data-t="appPasswordLabel">Google App Password</label><input id="appPassword" type="password" minlength="16" maxlength="25" autocomplete="new-password" placeholder="16 characters · blank keeps saved password">
             <div class="mail-status"><span id="passwordStatus" class="status off">No App Password saved</span><label style="margin:0;font-size:.76rem;font-weight:500"><input id="clearAppPassword" type="checkbox"> Clear saved password</label></div>
             <p class="hint">Create an App Password from Google Account → Security → App passwords. Never use your normal Gmail password.</p>
           </div>
-          <div id="scriptMailHint" class="tip" style="margin-top:16px">Email is sent securely by Google Apps Script after Sheet submission. Enable the MailApp permission when updating <strong>Code.gs</strong>. The sender will be the Google account owning the Apps Script deployment.</div>
+          <div id="scriptMailHint" class="tip" style="margin-top:16px"><span data-t="scriptMailHintText">Email is sent securely by Google Apps Script over HTTPS. Recommended for Render Free. Make sure to authorize MailApp permissions when updating <strong>Code.gs</strong>. The sender will be the Google account owning the Apps Script deployment.</span></div>
           <div class="row" style="margin-top:19px"><button id="testNotification" type="button" class="btn btn-light small" data-t="testEmailBtn">✉ Send test email</button><span class="hint" data-t="testEmailHint">Save settings first, then test.</span></div>
         </div>
         <div>

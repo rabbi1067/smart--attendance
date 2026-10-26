@@ -3,6 +3,8 @@ package com.smartattendance.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.smartattendance.model.AdminSettings;
 import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -15,33 +17,128 @@ import java.util.Properties;
 
 @Service
 public class NotificationService {
+  private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
   private final EncryptionService crypto;
   private final AppsScriptClient script;
-  private static final ZoneId TIMEZONE=ZoneId.of("Asia/Dhaka");
-  public NotificationService(EncryptionService crypto, AppsScriptClient script){this.crypto=crypto;this.script=script;}
-  public boolean usingScript(AdminSettings s){return s.emailEnabled && !"SMTP".equalsIgnoreCase(s.emailProvider);}
+  private static final ZoneId TIMEZONE = ZoneId.of("Asia/Dhaka");
+
+  public NotificationService(EncryptionService crypto, AppsScriptClient script) {
+    this.crypto = crypto;
+    this.script = script;
+  }
+
+  public boolean usingScript(AdminSettings s) {
+    return s.emailEnabled && !"SMTP".equalsIgnoreCase(s.emailProvider);
+  }
+
   public String receiptStatus(AdminSettings s, String recipient, String studentName, String id,
                               String className, JsonNode savedResult) {
-    if(recipient==null||recipient.isBlank())return "no_address";
-    if(!s.emailEnabled)return "disabled";
-    if(usingScript(s))return savedResult.path("emailStatus").asText("failed");
-    try {
-      String date=DateTimeFormatter.ofPattern("d MMMM yyyy",Locale.ENGLISH).format(ZonedDateTime.now(TIMEZONE));
-      sendSmtp(s,recipient,studentName,id,date,className,false);
-      return "sent";
-    }catch(Exception e){return "failed";} // attendance remains saved even if email fails
-  }
-  public Map<String,Object> test(AdminSettings s,String adminEmail) {
-    if(!s.emailEnabled) throw new IllegalArgumentException("Enable email notifications and save settings before sending a test");
-    if(usingScript(s)) {
-      JsonNode result=script.post(s,Map.of("action","adminTestMail","email",adminEmail,
-          "senderName",safeSender(s)));
-      return Map.of("ok",result.path("ok").asBoolean(false),"emailStatus",result.path("emailStatus").asText("failed"));
+    if (recipient == null || recipient.isBlank()) return "no_address";
+    if (!s.emailEnabled) return "disabled";
+
+    if (usingScript(s)) {
+      if (savedResult != null && savedResult.has("emailStatus")) {
+        return savedResult.path("emailStatus").asText("failed");
+      }
+      if (s.hasGoogleSheets()) {
+        try {
+          JsonNode fallback = script.post(s, Map.of(
+              "action", "sendReceipt",
+              "name", studentName,
+              "id", id,
+              "email", recipient,
+              "cls", className != null && !className.isBlank() ? className : "General Attendance",
+              "senderName", safeSender(s)
+          ));
+          if (fallback != null && "sent".equalsIgnoreCase(fallback.path("emailStatus").asText())) {
+            return "sent";
+          }
+        } catch (Exception e) {
+          log.warn("Apps Script receipt send failed: {}", e.getMessage());
+        }
+      }
+      return "failed";
     }
+
+    // SMTP delivery with automatic Apps Script fallback if blocked by hosting
     try {
-      sendSmtp(s,adminEmail,"Rabbi","—","Preview", "Test Email",true);
-      return Map.of("ok",true,"emailStatus","sent");
-    } catch (Exception e) {return Map.of("ok",true,"emailStatus","failed","message","SMTP delivery failed. Check Gmail App Password and hosting restrictions.");}
+      String date = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH).format(ZonedDateTime.now(TIMEZONE));
+      sendSmtp(s, recipient, studentName, id, date, className, false);
+      return "sent";
+    } catch (Exception e) {
+      log.warn("SMTP send failed ({}): {}. Checking for Apps Script fallback...", e.getClass().getSimpleName(), e.getMessage());
+      if (s.hasGoogleSheets()) {
+        try {
+          JsonNode fallback = script.post(s, Map.of(
+              "action", "sendReceipt",
+              "name", studentName,
+              "id", id,
+              "email", recipient,
+              "cls", className != null && !className.isBlank() ? className : "General Attendance",
+              "senderName", safeSender(s)
+          ));
+          if (fallback != null && "sent".equalsIgnoreCase(fallback.path("emailStatus").asText())) {
+            log.info("Email delivered successfully via Apps Script fallback!");
+            return "sent";
+          }
+        } catch (Exception ex) {
+          log.warn("Apps Script fallback also failed: {}", ex.getMessage());
+        }
+      }
+      return "failed";
+    }
+  }
+
+  public Map<String, Object> test(AdminSettings s, String adminEmail) {
+    if (!s.emailEnabled) {
+      throw new IllegalArgumentException("Enable email notifications and save settings before sending a test");
+    }
+
+    if (usingScript(s)) {
+      if (!s.hasGoogleSheets()) {
+        return Map.of("ok", false, "emailStatus", "failed", "message",
+            "Google Apps Script Web App URL and Secret must be configured in Settings first.");
+      }
+      try {
+        JsonNode result = script.post(s, Map.of(
+            "action", "adminTestMail",
+            "email", adminEmail,
+            "senderName", safeSender(s)
+        ));
+        String status = result != null ? result.path("emailStatus").asText("failed") : "failed";
+        String err = result != null ? result.path("error").asText("") : "";
+        if ("sent".equalsIgnoreCase(status)) {
+          return Map.of("ok", true, "emailStatus", "sent", "message",
+              "Test email successfully sent via Google Apps Script to " + adminEmail);
+        } else {
+          String msg = "Google Apps Script delivery failed.";
+          if (!err.isBlank()) msg += " (" + err + ")";
+          msg += " Make sure you ran testMailAuthorization() in Apps Script to grant MailApp permissions.";
+          return Map.of("ok", false, "emailStatus", "failed", "message", msg);
+        }
+      } catch (Exception e) {
+        return Map.of("ok", false, "emailStatus", "failed", "message",
+            "Apps Script connection failed: " + e.getMessage());
+      }
+    }
+
+    // SMTP mode
+    try {
+      sendSmtp(s, adminEmail, "Admin", "—", "Preview", "Test Email", true);
+      return Map.of("ok", true, "emailStatus", "sent", "message",
+          "Test email successfully sent via Gmail SMTP to " + adminEmail);
+    } catch (Exception e) {
+      log.warn("SMTP test failed: {}", e.getMessage());
+      String err = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+      String detail = "SMTP failed: " + err;
+      String lower = err.toLowerCase(Locale.ROOT);
+      if (lower.contains("timeout") || lower.contains("connect") || lower.contains("refused") || lower.contains("587")) {
+        detail = "SMTP Port 587 connection timed out (Render Free blocks all outbound SMTP ports). Please select 'Google Apps Script' delivery method (which works 100% over HTTPS).";
+      } else if (lower.contains("authentication") || lower.contains("535") || lower.contains("badcredentials") || lower.contains("username and password not accepted")) {
+        detail = "Gmail authentication failed. Verify your 16-character Google App Password (not your normal Gmail password).";
+      }
+      return Map.of("ok", false, "emailStatus", "failed", "message", detail);
+    }
   }
   public String safeSender(AdminSettings s){return s.senderName == null||s.senderName.isBlank()?"Smart Attendance":s.senderName;}
   public void sendSmtp(AdminSettings s,String recipient,String name,String studentId,String date,String className,boolean test) throws Exception {
