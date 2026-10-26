@@ -3,7 +3,7 @@ server:
 spring:
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb+srv://fazlerabbii2000_db_user:uqsyAKRsmgVnX8h1@project.tmthj14.mongodb.net/smart_attendance?retryWrites=true&w=majority}
+      uri: ${MONGODB_URI:mongodb+srv://my_project:CWvi0ILdtQD4terQ@project.tmthj14.mongodb.net/smart_attendance?retryWrites=true&w=majority}
   jackson:
     deserialization:
       fail-on-unknown-properties: true
