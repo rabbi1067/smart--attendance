@@ -71,6 +71,23 @@ public class ApiController {
     );
   }
 
+  @GetMapping("/public/db-status")
+  public Object dbStatus() {
+    Map<String, Object> res = new LinkedHashMap<>();
+    try {
+      long c = attendanceStorage.mongoCount();
+      res.put("ok", true);
+      res.put("connected", true);
+      res.put("mongoCount", c);
+    } catch (Exception e) {
+      res.put("ok", false);
+      res.put("connected", false);
+      res.put("error", e.getClass().getSimpleName() + ": " + e.getMessage());
+    }
+    res.put("memoryCount", attendanceStorage.getMemoryCount());
+    return res;
+  }
+
   public record Attendance(
       @NotBlank @Size(min = 2, max = 80) String name,
       @NotBlank @Pattern(regexp = "[0-9]{13}") String id,

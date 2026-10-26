@@ -132,6 +132,14 @@ public class AttendanceStorageService {
     return result;
   }
 
+  public long mongoCount() {
+    return repo.count();
+  }
+
+  public int getMemoryCount() {
+    return memoryRecords.size();
+  }
+
   public Map<String, Object> getAdminSheets() {
     List<AttendanceEntry> all;
     try {
