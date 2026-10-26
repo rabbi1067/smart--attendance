@@ -146,8 +146,10 @@ function escapeHtml_(val) {
 }
 function sendReceipt_(to, person, studentId, date, cls, displayName, isTest) {
   const recipient = String(to || '').trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient) || recipient.length > 150) return 'failed';
-  const name = escapeHtml_(String(person || 'Rabbi').trim().slice(0, 80));
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient) || recipient.length > 150) {
+    return { status: 'failed', error: 'invalid_recipient_email' };
+  }
+  const name = escapeHtml_(String(person || 'Student').trim().slice(0, 80));
   const masked = studentId && String(studentId).length >= 8 ? escapeHtml_(String(studentId).slice(0, 4) + '•••••' + String(studentId).slice(-4)) : '—';
   const dateHtml = escapeHtml_(date);
   const classHtml = escapeHtml_(cls || 'General Attendance');
@@ -196,15 +198,26 @@ function sendReceipt_(to, person, studentId, date, cls, displayName, isTest) {
     + '</td></tr></table></body></html>';
 
   const subject = isTest ? 'Smart Attendance • Email Test' : 'Attendance Confirmed • Smart Attendance';
+  const plain = (isTest ? 'Test notification' : 'Attendance confirmation') + '\nHello ' + name + ',\n' + desc + '\nDate: ' + dateHtml + '\nClass: ' + classHtml + '\nStudent ID: ' + masked + '\nThis is an automated confirmation.';
+  const senderTitle = String(displayName || 'Smart Attendance').replace(/[\r\n]/g, '').slice(0, 55);
+
   try {
-    MailApp.sendEmail({
-      to: recipient,
-      subject: subject,
-      body: 'Hello ' + person + '\n' + desc + '\nDate: ' + date + '\nClass: ' + (cls || 'General Attendance') + '\nStudent ID: ' + masked,
-      htmlBody: html,
-      name: String(displayName || 'Smart Attendance').replace(/[\r\n]/g, '').slice(0, 55)
-    });
-    return { status: 'sent', error: '' };
+    try {
+      GmailApp.sendEmail(recipient, subject, plain, {
+        htmlBody: html,
+        name: senderTitle
+      });
+      return { status: 'sent', error: '' };
+    } catch(gErr) {
+      MailApp.sendEmail({
+        to: recipient,
+        subject: subject,
+        body: plain,
+        htmlBody: html,
+        name: senderTitle
+      });
+      return { status: 'sent', error: '' };
+    }
   } catch(err) {
     const msg = String(err && err.message ? err.message : err);
     console.error('Email delivery error: ' + msg);
@@ -221,15 +234,20 @@ function testMailAuthorization() {
   const email = user ? user.getEmail() : '';
   Logger.log('Active Apps Script user: ' + email);
   if (email) {
-    MailApp.sendEmail({
-      to: email,
-      subject: 'Smart Attendance • Email Authorization Verified',
-      body: 'Congratulations! Google Apps Script now has full authorization to send student attendance confirmation emails.\n\nSender Google Account: ' + email,
-      name: 'Smart Attendance'
-    });
-    Logger.log('Verification test email successfully sent to ' + email);
+    try {
+      GmailApp.sendEmail(email, 'Smart Attendance • Email Authorization Verified', 'Congratulations! Google Apps Script now has full authorization to send student attendance confirmation emails.\n\nSender Google Account: ' + email, { name: 'Smart Attendance' });
+      Logger.log('GmailApp test email successfully sent to ' + email);
+    } catch(e) {
+      MailApp.sendEmail({
+        to: email,
+        subject: 'Smart Attendance • Email Authorization Verified',
+        body: 'Congratulations! Google Apps Script now has full authorization to send student attendance confirmation emails.\n\nSender Google Account: ' + email,
+        name: 'Smart Attendance'
+      });
+      Logger.log('MailApp test email sent to ' + email);
+    }
   } else {
-    Logger.log('MailApp permission granted.');
+    Logger.log('MailApp/GmailApp permission granted.');
   }
 }
 

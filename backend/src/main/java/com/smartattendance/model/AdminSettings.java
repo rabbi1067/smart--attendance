@@ -10,7 +10,7 @@ public class AdminSettings {
   public String sheetUrl = "";
   public String scriptSecret = "";
   public ScheduleConfig schedule = ScheduleConfig.defaults();
-  // Transport options: APPS_SCRIPT, RESEND, BREVO work on Render Free (HTTPS); SMTP requires unblocked egress.
+  // Transport options: APPS_SCRIPT (100% Free Google), EMAILJS (100% Free Frontend/Backend API), SMTP (Gmail App Password)
   public boolean emailEnabled = false;
   public String emailProvider = "APPS_SCRIPT";
   public String senderEmail = "";
@@ -19,6 +19,11 @@ public class AdminSettings {
   public String encryptedAppPassword = "";
   public String resendApiKey = "";
   public String brevoApiKey = "";
+  // 100% Free EmailJS configuration
+  public String emailJsServiceId = "";
+  public String emailJsTemplateId = "";
+  public String emailJsPublicKey = "";
+
   public AdminSettings() {}
   public AdminSettings(String id) { this.id = id; }
   public boolean hasGoogleSheets() {

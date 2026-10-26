@@ -1424,6 +1424,11 @@ async function refreshConfiguration() {
     const cfg = await apiRequest('/public/config');
     CONFIG.configured = !!cfg.configured;
     CONFIG.SHEET_URL = cfg.sheetUrl || '';
+    CONFIG.emailEnabled = !!cfg.emailEnabled;
+    CONFIG.emailProvider = cfg.emailProvider || 'APPS_SCRIPT';
+    CONFIG.emailJsServiceId = cfg.emailJsServiceId || '';
+    CONFIG.emailJsTemplateId = cfg.emailJsTemplateId || '';
+    CONFIG.emailJsPublicKey = cfg.emailJsPublicKey || '';
     remoteSchedule = cfg.schedule || SCHEDULE_CONFIG;
     scheduleReady = true;
     const openBtn = $('openRecordsModal');
@@ -2285,7 +2290,29 @@ $("go").addEventListener("click", async () => {
 
       clearForm();
       toast(t.ok, "ok");
-      if (email && j.emailStatus === "sent") {
+
+      if (email && CONFIG.emailEnabled && CONFIG.emailProvider === 'EMAILJS' && CONFIG.emailJsPublicKey && CONFIG.emailJsServiceId && CONFIG.emailJsTemplateId) {
+        fetch('https://api.emailjs.com/api/v1.0/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service_id: CONFIG.emailJsServiceId,
+            template_id: CONFIG.emailJsTemplateId,
+            user_id: CONFIG.emailJsPublicKey,
+            template_params: {
+              to_email: email,
+              to_name: name,
+              student_id: mask(id),
+              class_name: curCls || 'General Attendance',
+              date: new Date().toISOString().slice(0, 10),
+              time: timeStr(),
+              sender_name: 'Smart Attendance'
+            }
+          })
+        }).then(r => {
+          if (r.ok) toast(lang === "bn" ? "কনফার্মেশন ইমেইল পাঠানো হয়েছে।" : "Confirmation email sent.", "ok");
+        }).catch(err => console.warn('Frontend EmailJS dispatch notice:', err));
+      } else if (email && j.emailStatus === "sent") {
         toast(lang === "bn" ? "কনফার্মেশন ইমেইল পাঠানো হয়েছে।" : "Confirmation email sent.", "ok");
       } else if (email && j.emailStatus === "failed") {
         toast(lang === "bn" ? "হাজিরা সেভ হয়েছে, কিন্তু ইমেইল পাঠানো যায়নি।" : "Attendance saved, but confirmation email could not be sent.", "warn");

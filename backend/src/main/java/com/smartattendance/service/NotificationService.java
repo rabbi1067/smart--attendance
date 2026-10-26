@@ -14,6 +14,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -32,7 +33,7 @@ public class NotificationService {
     this.crypto = crypto;
     this.script = script;
     this.mapper = new ObjectMapper();
-    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
   }
 
   public boolean usingScript(AdminSettings s) {
@@ -47,32 +48,22 @@ public class NotificationService {
     String provider = s.emailProvider != null ? s.emailProvider.toUpperCase(Locale.ROOT) : "APPS_SCRIPT";
     String date = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH).format(ZonedDateTime.now(TIMEZONE));
 
-    // 1. Resend API (HTTPS - 100% works on Render Free)
-    if ("RESEND".equals(provider)) {
+    // 1. 100% Free EmailJS API (HTTPS, no server port block, browser/server supported)
+    if ("EMAILJS".equals(provider)) {
       try {
-        sendResend(s, recipient, studentName, id, date, className, false);
+        sendEmailJs(s, recipient, studentName, id, date, className, false);
         return "sent";
       } catch (Exception e) {
-        log.warn("Resend email failed: {}", e.getMessage());
+        log.warn("EmailJS receipt send failed: {}", e.getMessage());
         return "failed";
       }
     }
 
-    // 2. Brevo API (HTTPS - 100% works on Render Free)
-    if ("BREVO".equals(provider)) {
-      try {
-        sendBrevo(s, recipient, studentName, id, date, className, false);
-        return "sent";
-      } catch (Exception e) {
-        log.warn("Brevo email failed: {}", e.getMessage());
-        return "failed";
-      }
-    }
-
-    // 3. Google Apps Script (HTTPS - works on Render Free)
+    // 2. 100% Free Google Apps Script (Sends directly from Gmail account)
     if ("APPS_SCRIPT".equals(provider)) {
       if (savedResult != null && savedResult.has("emailStatus")) {
-        return savedResult.path("emailStatus").asText("failed");
+        String st = savedResult.path("emailStatus").asText("failed");
+        if ("sent".equalsIgnoreCase(st)) return "sent";
       }
       if (s.hasGoogleSheets()) {
         try {
@@ -94,17 +85,36 @@ public class NotificationService {
       return "failed";
     }
 
-    // 4. SMTP mode with automatic fallbacks
+    // 3. Resend API
+    if ("RESEND".equals(provider)) {
+      try {
+        sendResend(s, recipient, studentName, id, date, className, false);
+        return "sent";
+      } catch (Exception e) {
+        log.warn("Resend email failed: {}", e.getMessage());
+        return "failed";
+      }
+    }
+
+    // 4. Brevo API
+    if ("BREVO".equals(provider)) {
+      try {
+        sendBrevo(s, recipient, studentName, id, date, className, false);
+        return "sent";
+      } catch (Exception e) {
+        log.warn("Brevo email failed: {}", e.getMessage());
+        return "failed";
+      }
+    }
+
+    // 5. SMTP mode with automatic fallbacks
     try {
       sendSmtp(s, recipient, studentName, id, date, className, false);
       return "sent";
     } catch (Exception e) {
       log.warn("SMTP send failed ({}): {}. Attempting fallbacks...", e.getClass().getSimpleName(), e.getMessage());
-      if (s.resendApiKey != null && !s.resendApiKey.isBlank()) {
-        try { sendResend(s, recipient, studentName, id, date, className, false); return "sent"; } catch(Exception ignored) {}
-      }
-      if (s.brevoApiKey != null && !s.brevoApiKey.isBlank()) {
-        try { sendBrevo(s, recipient, studentName, id, date, className, false); return "sent"; } catch(Exception ignored) {}
+      if (s.emailJsPublicKey != null && !s.emailJsPublicKey.isBlank()) {
+        try { sendEmailJs(s, recipient, studentName, id, date, className, false); return "sent"; } catch(Exception ignored) {}
       }
       if (s.hasGoogleSheets()) {
         try {
@@ -135,24 +145,17 @@ public class NotificationService {
 
     String provider = s.emailProvider != null ? s.emailProvider.toUpperCase(Locale.ROOT) : "APPS_SCRIPT";
 
-    if ("RESEND".equals(provider)) {
+    // EmailJS Test
+    if ("EMAILJS".equals(provider)) {
       try {
-        sendResend(s, adminEmail, "Admin", "—", "Preview", "Test Email", true);
-        return Map.of("ok", true, "emailStatus", "sent", "message", "Test email sent successfully via Resend API to " + adminEmail);
+        sendEmailJs(s, adminEmail, "Admin", "—", "Preview", "Test Email", true);
+        return Map.of("ok", true, "emailStatus", "sent", "message", "Test email sent successfully via EmailJS API to " + adminEmail);
       } catch (Exception e) {
-        return Map.of("ok", false, "emailStatus", "failed", "message", "Resend API error: " + e.getMessage());
+        return Map.of("ok", false, "emailStatus", "failed", "message", "EmailJS API error: " + e.getMessage());
       }
     }
 
-    if ("BREVO".equals(provider)) {
-      try {
-        sendBrevo(s, adminEmail, "Admin", "—", "Preview", "Test Email", true);
-        return Map.of("ok", true, "emailStatus", "sent", "message", "Test email sent successfully via Brevo API to " + adminEmail);
-      } catch (Exception e) {
-        return Map.of("ok", false, "emailStatus", "failed", "message", "Brevo API error: " + e.getMessage());
-      }
-    }
-
+    // Google Apps Script Test
     if ("APPS_SCRIPT".equals(provider)) {
       if (!s.hasGoogleSheets()) {
         return Map.of("ok", false, "emailStatus", "failed", "message",
@@ -172,12 +175,32 @@ public class NotificationService {
         } else {
           String msg = "Google Apps Script delivery failed.";
           if (!err.isBlank()) msg += " (" + err + ")";
-          msg += " Make sure you ran testMailAuthorization() in Apps Script to grant MailApp permissions.";
+          msg += " Make sure you pasted the updated Code.gs into Apps Script and ran testMailAuthorization() once to grant permissions.";
           return Map.of("ok", false, "emailStatus", "failed", "message", msg);
         }
       } catch (Exception e) {
         return Map.of("ok", false, "emailStatus", "failed", "message",
             "Apps Script connection failed: " + e.getMessage());
+      }
+    }
+
+    // Resend Test
+    if ("RESEND".equals(provider)) {
+      try {
+        sendResend(s, adminEmail, "Admin", "—", "Preview", "Test Email", true);
+        return Map.of("ok", true, "emailStatus", "sent", "message", "Test email sent successfully via Resend API to " + adminEmail);
+      } catch (Exception e) {
+        return Map.of("ok", false, "emailStatus", "failed", "message", "Resend API error: " + e.getMessage());
+      }
+    }
+
+    // Brevo Test
+    if ("BREVO".equals(provider)) {
+      try {
+        sendBrevo(s, adminEmail, "Admin", "—", "Preview", "Test Email", true);
+        return Map.of("ok", true, "emailStatus", "sent", "message", "Test email sent successfully via Brevo API to " + adminEmail);
+      } catch (Exception e) {
+        return Map.of("ok", false, "emailStatus", "failed", "message", "Brevo API error: " + e.getMessage());
       }
     }
 
@@ -192,11 +215,45 @@ public class NotificationService {
       String detail = "SMTP failed: " + err;
       String lower = err.toLowerCase(Locale.ROOT);
       if (lower.contains("timeout") || lower.contains("connect") || lower.contains("refused") || lower.contains("587")) {
-        detail = "Render Free blocks SMTP port 587. Please select 'Resend API' or 'Brevo API' (100% works over HTTPS) or upgrade to paid Render/deploy to Railway.";
+        detail = "Render Free blocks SMTP port 587. Please select 'Google Apps Script' or 'EmailJS API' (100% free HTTPS, works on Render Free).";
       } else if (lower.contains("authentication") || lower.contains("535") || lower.contains("badcredentials") || lower.contains("username and password not accepted")) {
         detail = "Gmail authentication failed. Verify your 16-character Google App Password (not your normal Gmail password).";
       }
       return Map.of("ok", false, "emailStatus", "failed", "message", detail);
+    }
+  }
+
+  public void sendEmailJs(AdminSettings s, String recipient, String name, String studentId, String date, String className, boolean test) throws Exception {
+    String serviceId = s.emailJsServiceId != null ? s.emailJsServiceId.trim() : "";
+    String templateId = s.emailJsTemplateId != null ? s.emailJsTemplateId.trim() : "";
+    String publicKey = s.emailJsPublicKey != null ? s.emailJsPublicKey.trim() : "";
+    if (serviceId.isEmpty() || templateId.isEmpty() || publicKey.isEmpty()) {
+      throw new IllegalStateException("EmailJS Service ID, Template ID, and Public Key are all required");
+    }
+    String masked = studentId == null || studentId.length() < 8 ? "—" : studentId.substring(0, 4) + "•••••" + studentId.substring(studentId.length() - 4);
+    String timeNow = LocalTime.now(TIMEZONE).format(DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH));
+    Map<String, Object> body = Map.of(
+        "service_id", serviceId,
+        "template_id", templateId,
+        "user_id", publicKey,
+        "template_params", Map.of(
+            "to_email", recipient,
+            "to_name", name == null ? "" : name,
+            "student_id", masked,
+            "class_name", className == null || className.isBlank() ? "General Attendance" : className,
+            "date", date == null ? "" : date,
+            "time", timeNow,
+            "sender_name", safeSender(s)
+        )
+    );
+    HttpRequest req = HttpRequest.newBuilder(URI.create("https://api.emailjs.com/api/v1.0/email/send"))
+        .timeout(Duration.ofSeconds(15))
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
+        .build();
+    HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+    if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
+      throw new IllegalStateException("EmailJS error (HTTP " + resp.statusCode() + "): " + resp.body());
     }
   }
 

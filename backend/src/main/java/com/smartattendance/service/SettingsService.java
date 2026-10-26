@@ -52,7 +52,8 @@ public class SettingsService {
 
   public record EmailUpdate(boolean ENABLED, String PROVIDER, String SENDER_EMAIL, String SENDER_NAME,
                             String APP_PASSWORD, boolean CLEAR_APP_PASSWORD,
-                            String RESEND_API_KEY, String BREVO_API_KEY) {}
+                            String RESEND_API_KEY, String BREVO_API_KEY,
+                            String EMAILJS_SERVICE_ID, String EMAILJS_TEMPLATE_ID, String EMAILJS_PUBLIC_KEY) {}
   public record ConfigUpdate(String SCRIPT_URL, String SHEET_URL, String SCRIPT_SECRET,
                              ScheduleConfig SCHEDULE_CONFIG, EmailUpdate EMAIL_CONFIG) {}
 
@@ -75,26 +76,35 @@ public class SettingsService {
     saved.schedule = input.SCHEDULE_CONFIG();
     if (input.EMAIL_CONFIG() != null) {
       EmailUpdate m = input.EMAIL_CONFIG();
-      String provider=clean(m.PROVIDER()).toUpperCase(Locale.ROOT);
-      if (!Set.of("APPS_SCRIPT","SMTP","RESEND","BREVO").contains(provider)) throw new IllegalArgumentException("Invalid email provider");
-      String address=clean(m.SENDER_EMAIL()).toLowerCase(Locale.ROOT);
-      String senderName=clean(m.SENDER_NAME());
+      String provider = clean(m.PROVIDER()).toUpperCase(Locale.ROOT);
+      if (!Set.of("APPS_SCRIPT", "EMAILJS", "SMTP", "RESEND", "BREVO").contains(provider)) {
+        throw new IllegalArgumentException("Invalid email provider");
+      }
+      String address = clean(m.SENDER_EMAIL()).toLowerCase(Locale.ROOT);
+      String senderName = clean(m.SENDER_NAME());
       if (!address.isEmpty() && !address.matches("(?i)^[A-Z0-9._%+\\-]+@[A-Z0-9.\\-]+\\.[A-Z]{2,}$"))
         throw new IllegalArgumentException("Invalid sender email address");
-      if (senderName.length() < 2 || senderName.length()>55 || senderName.matches(".*[\\r\\n].*"))
+      if (senderName.length() < 2 || senderName.length() > 55 || senderName.matches(".*[\\r\\n].*"))
         throw new IllegalArgumentException("Sender display name must contain 2–55 characters");
+
+      String emailJsService = clean(m.EMAILJS_SERVICE_ID());
+      if (!emailJsService.isEmpty()) saved.emailJsServiceId = emailJsService;
+      String emailJsTemplate = clean(m.EMAILJS_TEMPLATE_ID());
+      if (!emailJsTemplate.isEmpty()) saved.emailJsTemplateId = emailJsTemplate;
+      String emailJsPublic = clean(m.EMAILJS_PUBLIC_KEY());
+      if (!emailJsPublic.isEmpty()) saved.emailJsPublicKey = emailJsPublic;
 
       String resendKey = clean(m.RESEND_API_KEY());
       if (!resendKey.isEmpty()) saved.resendApiKey = resendKey;
       String brevoKey = clean(m.BREVO_API_KEY());
       if (!brevoKey.isEmpty()) saved.brevoApiKey = brevoKey;
 
-      if (m.CLEAR_APP_PASSWORD()) saved.encryptedAppPassword="";
-      String password=clean(m.APP_PASSWORD()).replace(" ", "");
+      if (m.CLEAR_APP_PASSWORD()) saved.encryptedAppPassword = "";
+      String password = clean(m.APP_PASSWORD()).replace(" ", "");
       if (!password.isEmpty()) {
         if (!password.matches("[a-zA-Z0-9]{16}"))
           throw new IllegalArgumentException("Gmail App Password must be 16 characters (spaces optional)");
-        saved.encryptedAppPassword=encryption.encrypt(password);
+        saved.encryptedAppPassword = encryption.encrypt(password);
       }
       if (m.ENABLED() && "SMTP".equals(provider)) {
         if (!address.endsWith("@gmail.com") && !address.endsWith("@googlemail.com"))
@@ -103,13 +113,9 @@ public class SettingsService {
           throw new IllegalArgumentException("Add a Gmail App Password before enabling SMTP email");
         encryption.decrypt(saved.encryptedAppPassword);
       }
-      if (m.ENABLED() && "RESEND".equals(provider)) {
-        if (saved.resendApiKey == null || saved.resendApiKey.isBlank())
-          throw new IllegalArgumentException("Enter a Resend API key before enabling Resend email");
-      }
-      if (m.ENABLED() && "BREVO".equals(provider)) {
-        if (saved.brevoApiKey == null || saved.brevoApiKey.isBlank())
-          throw new IllegalArgumentException("Enter a Brevo API key before enabling Brevo email");
+      if (m.ENABLED() && "EMAILJS".equals(provider)) {
+        if (saved.emailJsServiceId.isBlank() || saved.emailJsTemplateId.isBlank() || saved.emailJsPublicKey.isBlank())
+          throw new IllegalArgumentException("Enter EmailJS Service ID, Template ID, and Public Key before enabling EmailJS email");
       }
 
       saved.emailEnabled = m.ENABLED();
@@ -146,29 +152,42 @@ public class SettingsService {
     to.encryptedAppPassword = from.encryptedAppPassword;
     to.resendApiKey = from.resendApiKey;
     to.brevoApiKey = from.brevoApiKey;
+    to.emailJsServiceId = from.emailJsServiceId;
+    to.emailJsTemplateId = from.emailJsTemplateId;
+    to.emailJsPublicKey = from.emailJsPublicKey;
   }
 
   private String clean(String value) { return value == null ? "" : value.trim(); }
 
-  public record PublicConfig(boolean configured, String sheetUrl, ScheduleConfig schedule, String timezone) {}
+  public record PublicConfig(boolean configured, String sheetUrl, ScheduleConfig schedule, String timezone,
+                             boolean emailEnabled, String emailProvider,
+                             String emailJsServiceId, String emailJsTemplateId, String emailJsPublicKey) {}
   public PublicConfig publicConfig() {
     AdminSettings s = publicSettings();
-    return new PublicConfig(true, s.sheetUrl, s.schedule, "Asia/Dhaka");
+    return new PublicConfig(true, s.sheetUrl, s.schedule, "Asia/Dhaka",
+        s.emailEnabled, s.emailProvider,
+        s.emailJsServiceId != null ? s.emailJsServiceId : "",
+        s.emailJsTemplateId != null ? s.emailJsTemplateId : "",
+        s.emailJsPublicKey != null ? s.emailJsPublicKey : "");
   }
 
   public record EmailConfig(boolean ENABLED, String PROVIDER, String SENDER_EMAIL, String SENDER_NAME,
-                            boolean APP_PASSWORD_CONFIGURED, String RESEND_API_KEY, String BREVO_API_KEY) {}
+                            boolean APP_PASSWORD_CONFIGURED, String RESEND_API_KEY, String BREVO_API_KEY,
+                            String EMAILJS_SERVICE_ID, String EMAILJS_TEMPLATE_ID, String EMAILJS_PUBLIC_KEY) {}
   public record AdminConfig(String SCRIPT_URL, String SHEET_URL, boolean SECRET_CONFIGURED,
                             ScheduleConfig SCHEDULE_CONFIG, EmailConfig EMAIL_CONFIG,
                             String owner, boolean liveSiteOwner) {}
   public AdminConfig adminConfig(String email) {
     AdminSettings s = forUser(email);
-    return new AdminConfig(s.scriptUrl, s.sheetUrl, s.scriptSecret!=null && !s.scriptSecret.isBlank(), s.schedule,
-      new EmailConfig(s.emailEnabled, s.emailProvider==null?"APPS_SCRIPT":s.emailProvider,
-                      s.senderEmail==null?"":s.senderEmail,
-                      s.senderName==null?"Smart Attendance":s.senderName,
-                      s.encryptedAppPassword!=null&&!s.encryptedAppPassword.isBlank(),
-                      s.resendApiKey, s.brevoApiKey),
+    return new AdminConfig(s.scriptUrl, s.sheetUrl, s.scriptSecret != null && !s.scriptSecret.isBlank(), s.schedule,
+      new EmailConfig(s.emailEnabled, s.emailProvider == null ? "APPS_SCRIPT" : s.emailProvider,
+                      s.senderEmail == null ? "" : s.senderEmail,
+                      s.senderName == null ? "Smart Attendance" : s.senderName,
+                      s.encryptedAppPassword != null && !s.encryptedAppPassword.isBlank(),
+                      s.resendApiKey, s.brevoApiKey,
+                      s.emailJsServiceId == null ? "" : s.emailJsServiceId,
+                      s.emailJsTemplateId == null ? "" : s.emailJsTemplateId,
+                      s.emailJsPublicKey == null ? "" : s.emailJsPublicKey),
       email, email.equalsIgnoreCase(siteOwner));
   }
 }

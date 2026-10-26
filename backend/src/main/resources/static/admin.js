@@ -115,10 +115,10 @@ function mailUi() {
   $('mailPreviewDate').textContent=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Dhaka',day:'numeric',month:'long',year:'numeric'}).format(new Date());
   const on=$('mailEnabled').checked;
   $('mailEnabledFields').style.opacity=on?'1':'0.58';
-  const provider=document.querySelector('input[name="mailProvider"]:checked').value;
+  const checkedRadio = document.querySelector('input[name="mailProvider"]:checked');
+  const provider = checkedRadio ? checkedRadio.value : 'APPS_SCRIPT';
   $('smtpFields').classList.toggle('hidden',provider!=='SMTP');
-  if ($('brevoFields')) $('brevoFields').classList.toggle('hidden',provider!=='BREVO');
-  if ($('resendFields')) $('resendFields').classList.toggle('hidden',provider!=='RESEND');
+  if ($('emailJsFields')) $('emailJsFields').classList.toggle('hidden',provider!=='EMAILJS');
   $('scriptMailHint').classList.toggle('hidden',provider!=='APPS_SCRIPT');
   $('testNotification').disabled=!on;
 }
@@ -126,18 +126,53 @@ $('mailEnabled').addEventListener('change',mailUi);
 for(const radio of document.querySelectorAll('input[name="mailProvider"]'))radio.addEventListener('change',mailUi);
 $('testNotification').addEventListener('click', async()=>{
   const button=$('testNotification');button.disabled=true;
-  button.textContent=lang==='bn'?'টেস্ট পাঠানো হচ্ছে…':'Sending test…';
+  button.textContent=currentLang==='bn'?'টেস্ট পাঠানো হচ্ছে…':'Sending test…';
   try{
+    const checkedRadio = document.querySelector('input[name="mailProvider"]:checked');
+    const activeProvider = checkedRadio ? checkedRadio.value : 'APPS_SCRIPT';
+    if (activeProvider === 'EMAILJS' && $('emailJsPublicKey') && $('emailJsPublicKey').value.trim()) {
+      const pubKey = $('emailJsPublicKey').value.trim();
+      const srvId = $('emailJsServiceId').value.trim();
+      const tmplId = $('emailJsTemplateId').value.trim();
+      if (!pubKey || !srvId || !tmplId) {
+        throw new Error(currentLang === 'bn' ? 'EmailJS Public Key, Service ID এবং Template ID পূরণ করুন।' : 'Please enter EmailJS Public Key, Service ID, and Template ID.');
+      }
+      const testRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_id: srvId,
+          template_id: tmplId,
+          user_id: pubKey,
+          template_params: {
+            to_email: userEmail || $('senderEmail').value.trim(),
+            to_name: 'Admin Test',
+            student_id: 'TEST•••••0001',
+            class_name: 'Test Class',
+            date: new Date().toISOString().slice(0, 10),
+            time: '10:00 AM',
+            sender_name: $('senderName').value.trim() || 'Smart Attendance'
+          }
+        })
+      });
+      if (!testRes.ok) {
+        const txt = await testRes.text();
+        throw new Error('EmailJS Error: ' + txt);
+      }
+      notice(currentLang === 'bn' ? '✓ EmailJS দিয়ে ব্রাউজার থেকে টেস্ট ইমেইল সফলভাবে পাঠানো হয়েছে!' : '✓ Test email sent directly from browser via EmailJS successfully!');
+      return;
+    }
+
     const data=await request('/admin/notifications/test',{method:'POST'});
     if(data.emailStatus==='sent'){
-      notice(data.message || (lang==='bn'?'অ্যাডমিন ইমেইলে টেস্ট ইমেইল সফলভাবে পাঠানো হয়েছে।':'Test email sent to your administrator email address.'));
+      notice(data.message || (currentLang==='bn'?'অ্যাডমিন ইমেইলে টেস্ট ইমেইল সফলভাবে পাঠানো হয়েছে।':'Test email sent to your administrator email address.'));
     } else {
-      notice(data.message || (lang==='bn'?'টেস্ট ইমেইল পাঠানো যায়নি। সেটিংস ও অনুমতি পরীক্ষা করুন।':'Test email failed. Check sender settings, Apps Script authorization or SMTP hosting restrictions.'));
+      notice(data.message || (currentLang==='bn'?'টেস্ট ইমেইল পাঠানো যায়নি। সেটিংস ও অনুমতি পরীক্ষা করুন।':'Test email failed. Check sender settings, Apps Script authorization or SMTP hosting restrictions.'));
     }
   }catch(e){
-    notice((lang==='bn'?'ইমেইল পাঠাতে ব্যর্থ: ':'Failed to send test email: ')+(e.message||'network'));
+    notice((currentLang==='bn'?'ইমেইল পাঠাতে ব্যর্থ: ':'Failed to send test email: ')+(e.message||'network'));
   }finally{
-    button.textContent=lang==='bn'?'✉ টেস্ট ইমেইল পাঠান':'✉ Send test email';
+    button.textContent=currentLang==='bn'?'✉ টেস্ট ইমেইল পাঠান':'✉ Send test email';
     mailUi();
   }
 });
@@ -384,47 +419,53 @@ async function loadConfig() {
   classState=(sch.CLASSES||[]).map(c=>({...c}));drawClasses();updateScheduleSections();updateScheduleBadge();
   const m=cfg.EMAIL_CONFIG||{};
   $('mailEnabled').checked=!!m.ENABLED;
-  const provider=['SMTP','RESEND','BREVO','APPS_SCRIPT'].includes(m.PROVIDER)?m.PROVIDER:'APPS_SCRIPT';
+  const provider=['SMTP','EMAILJS','APPS_SCRIPT','RESEND','BREVO'].includes(m.PROVIDER)?m.PROVIDER:'APPS_SCRIPT';
   const targetRadio = document.querySelector(`input[name="mailProvider"][value="${provider}"]`);
   if (targetRadio) targetRadio.checked = true;
   $('senderEmail').value=m.SENDER_EMAIL||'';
-  if ($('brevoSenderEmail')) $('brevoSenderEmail').value=m.SENDER_EMAIL||'';
-  if ($('resendSenderEmail')) $('resendSenderEmail').value=m.SENDER_EMAIL||'';
   $('senderName').value=m.SENDER_NAME||'Smart Attendance';
   $('appPassword').value='';$('clearAppPassword').checked=false;
-  if ($('brevoApiKey')) $('brevoApiKey').value=m.BREVO_API_KEY||'';
-  if ($('resendApiKey')) $('resendApiKey').value=m.RESEND_API_KEY||'';
+  if ($('emailJsPublicKey')) $('emailJsPublicKey').value=m.EMAILJS_PUBLIC_KEY||'';
+  if ($('emailJsServiceId')) $('emailJsServiceId').value=m.EMAILJS_SERVICE_ID||'';
+  if ($('emailJsTemplateId')) $('emailJsTemplateId').value=m.EMAILJS_TEMPLATE_ID||'';
   $('passwordStatus').textContent=m.APP_PASSWORD_CONFIGURED?'✓ App Password stored securely':'No App Password saved';
   $('passwordStatus').classList.toggle('off',!m.APP_PASSWORD_CONFIGURED);
   mailUi();
 }
 $('configForm').addEventListener('submit',async e=>{
-  e.preventDefault();const btn=$('saveConfig');btn.disabled=true;btn.textContent='Saving…';
+  e.preventDefault();const btn=$('saveConfig');btn.disabled=true;btn.textContent=currentLang==='bn'?'সংরক্ষণ করা হচ্ছে…':'Saving…';
   try {
-    const activeProvider = document.querySelector('input[name="mailProvider"]:checked').value;
-    let senderAddress = $('senderEmail').value.trim();
-    if (activeProvider === 'BREVO' && $('brevoSenderEmail') && $('brevoSenderEmail').value.trim()) {
-      senderAddress = $('brevoSenderEmail').value.trim();
-    } else if (activeProvider === 'RESEND' && $('resendSenderEmail') && $('resendSenderEmail').value.trim()) {
-      senderAddress = $('resendSenderEmail').value.trim();
-    }
-    const data={SCRIPT_URL:$('scriptUrl').value.trim(),SHEET_URL:$('sheetUrl').value.trim(),SCRIPT_SECRET:$('scriptSecret').value.trim(),SCHEDULE_CONFIG:{
-      ENABLED:$('scheduleEnabled').checked,USE_CLASSES:$('useClasses').checked,
-      START_TIME:to12($('startTime').value),END_TIME:to12($('endTime').value),
-      CLASSES:classState.map(c=>({name:c.name.trim(),start:c.start,end:c.end}))
-    },EMAIL_CONFIG:{
-      ENABLED:$('mailEnabled').checked,
-      PROVIDER:activeProvider,
-      SENDER_EMAIL:senderAddress,
-      SENDER_NAME:$('senderName').value.trim(),
-      APP_PASSWORD:$('appPassword').value.replace(/\s+/g,''),
-      CLEAR_APP_PASSWORD:$('clearAppPassword').checked,
-      RESEND_API_KEY:$('resendApiKey') ? $('resendApiKey').value.trim() : '',
-      BREVO_API_KEY:$('brevoApiKey') ? $('brevoApiKey').value.trim() : ''
-    }};
+    const checkedRadio = document.querySelector('input[name="mailProvider"]:checked');
+    const activeProvider = checkedRadio ? checkedRadio.value : 'APPS_SCRIPT';
+    const data={
+      SCRIPT_URL:$('scriptUrl').value.trim(),
+      SHEET_URL:$('sheetUrl').value.trim(),
+      SCRIPT_SECRET:$('scriptSecret').value.trim(),
+      SCHEDULE_CONFIG:{
+        ENABLED:$('scheduleEnabled').checked,
+        USE_CLASSES:$('useClasses').checked,
+        START_TIME:to12($('startTime').value),
+        END_TIME:to12($('endTime').value),
+        CLASSES:classState.map(c=>({name:c.name.trim(),start:c.start,end:c.end}))
+      },
+      EMAIL_CONFIG:{
+        ENABLED:$('mailEnabled').checked,
+        PROVIDER:activeProvider,
+        SENDER_EMAIL:$('senderEmail').value.trim(),
+        SENDER_NAME:$('senderName').value.trim(),
+        APP_PASSWORD:$('appPassword').value.replace(/\s+/g,''),
+        CLEAR_APP_PASSWORD:$('clearAppPassword').checked,
+        RESEND_API_KEY:'',
+        BREVO_API_KEY:'',
+        EMAILJS_SERVICE_ID:$('emailJsServiceId') ? $('emailJsServiceId').value.trim() : '',
+        EMAILJS_TEMPLATE_ID:$('emailJsTemplateId') ? $('emailJsTemplateId').value.trim() : '',
+        EMAILJS_PUBLIC_KEY:$('emailJsPublicKey') ? $('emailJsPublicKey').value.trim() : ''
+      }
+    };
     await request('/admin/config',{method:'PUT',body:data});
-    await loadConfig();notice(lang==='bn'?'কনফিগারেশন সফলভাবে সেভ হয়েছে।':'Configuration saved in MongoDB successfully.');
-  }catch(err){notice(err.message)}finally{btn.disabled=false;btn.textContent='💾 Save configuration';}
+    await loadConfig();
+    notice(currentLang==='bn'?'কনফিগারেশন সফলভাবে সেভ হয়েছে।':'Configuration saved in MongoDB successfully.');
+  }catch(err){notice(err.message)}finally{btn.disabled=false;btn.textContent=currentLang==='bn'?'💾 কনফিগারেশন সংরক্ষণ করুন':'💾 Save configuration';}
 });
 async function initialize(){
   try {
@@ -822,19 +863,21 @@ const T_ADMIN = {
     addClassBtn: "+ Add class",
     emailCardTitle: "Student Confirmation Emails",
     enableEmail: "Enable automatic email notifications",
-    providerBrevo: "Brevo API (HTTPS)",
-    providerBrevoHint: "Recommended · 300 free emails/day. Works 100% on Render Free. No port blocking.",
-    providerResend: "Resend API (HTTPS)",
-    providerResendHint: "Recommended · 3,000 free emails/month. Works 100% on Render Free. No port blocking.",
-    providerScript: "Google Apps Script",
-    providerScriptHint: "Works with Render Free. Sends from your Google account via Apps Script. No password needed.",
+    providerScript: "Google Apps Script (100% Free Google)",
+    providerScriptHint: "100% Free · Sends from your Google account via Apps Script. No password or credit card needed. Works on Render Free.",
+    providerEmailJs: "EmailJS API (100% Free Frontend & Backend API)",
+    providerEmailJsHint: "100% Free · 200 free emails/month forever. Works from browser and server. Zero port blocking.",
     providerSmtp: "Gmail SMTP",
     providerSmtpHint: "Gmail + App Password · Requires VPS or paid Render; port 587 is blocked on Render Free.",
     smtpRenderWarnTitle: "⚠️ Render Free Server Alert",
-    smtpRenderWarnDesc: "Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select Brevo API, Resend API, or Google Apps Script (all send via HTTPS and work 100% reliably).",
-    scriptMailHintText: "Email is sent securely by Google Apps Script over HTTPS. Recommended for Render Free. Make sure to authorize MailApp permissions when updating Code.gs. The sender will be the Google account owning the Apps Script deployment.",
-    brevoApiKeyLabel: "Brevo API Key (xkeysib-...)",
-    resendApiKeyLabel: "Resend API Key (re_...)",
+    smtpRenderWarnDesc: "Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select Google Apps Script or EmailJS API (both send via HTTPS and work 100% reliably).",
+    scriptMailGuideTitle: "📌 Google Apps Script Activation Steps:",
+    scriptMailHintText: "100% Free via Google Apps Script (HTTPS). Steps to activate: 1) In Google Sheets open Extensions > Apps Script and paste the updated Code.gs. 2) Select function 'testMailAuthorization', click 'Run' and click 'Allow' to grant Gmail permission. 3) Deploy as Web app (Execute as: Me, Access: Anyone) and save URL & Secret here.",
+    emailJsHelpTitle: "💡 100% Free Frontend & Backend Email:",
+    emailJsHelpDesc: "Create a free account at emailjs.com (no credit card needed). Add your Gmail service, create an email template, and paste the 3 keys below.",
+    emailJsPublicKeyLabel: "EmailJS Public Key (User ID)",
+    emailJsServiceIdLabel: "EmailJS Service ID",
+    emailJsTemplateIdLabel: "EmailJS Template ID",
     senderNameLabel: "Sender display name",
     senderEmailLabel: "Sender Gmail address",
     appPasswordLabel: "Google App Password",
@@ -901,19 +944,21 @@ const T_ADMIN = {
     addClassBtn: "+ ক্লাস যোগ করুন",
     emailCardTitle: "শিক্ষার্থীদের কনফার্মেশন ইমেইল",
     enableEmail: "স্বয়ংক্রিয় ইমেইল নোটিফিকেশন চালু করুন",
-    providerBrevo: "ব্রেভো এপিআই (Brevo API - HTTPS)",
-    providerBrevoHint: "সেরা পছন্দ · প্রতিদিন ৩০০টি ফ্রি ইমেইল। Render Free-তে ১০০% কাজ করে। কোনো পোর্ট ব্লক নেই।",
-    providerResend: "রিসেন্ড এপিআই (Resend API - HTTPS)",
-    providerResendHint: "সেরা পছন্দ · প্রতি মাসে ৩,০০০টি ফ্রি ইমেইল। Render Free-তে ১০০% কাজ করে। কোনো পোর্ট ব্লক নেই।",
-    providerScript: "গুগল অ্যাপস স্ক্রিপ্ট (Google Apps Script)",
-    providerScriptHint: "Render Free-তে ১০০% কাজ করে। Apps Script থেকে HTTPS দিয়ে ইমেইল পাঠানো হয়। App Password লাগে না।",
+    providerScript: "গুগল অ্যাপস স্ক্রিপ্ট (১০০% ফ্রি গুগল মেথড)",
+    providerScriptHint: "১০০% ফ্রি · আপনার গুগল অ্যাকাউন্ট দিয়ে Apps Script এর মাধ্যমে পাঠানো হয়। কোনো পাসওয়ার্ড বা ক্রেডিট কার্ড লাগে না।",
+    providerEmailJs: "EmailJS API (১০০% ফ্রি ফ্রন্টএন্ড ও ব্যাকএন্ড API)",
+    providerEmailJsHint: "১০০% ফ্রি · প্রতি মাসে ২০০টি ফ্রি ইমেইল। ব্রাউজার ও সার্ভার থেকে সরাসরি জিমেইল দিয়ে পাঠানো হয়। কোনো পোর্ট ব্লক নেই।",
     providerSmtp: "জিমেইল এসএমটিপি (Gmail SMTP)",
     providerSmtpHint: "Gmail + App Password · VPS বা পেইড রেন্ডার প্রয়োজন; Render Free-তে SMTP পোর্ট ৫৮৭ বন্ধ থাকে।",
     smtpRenderWarnTitle: "⚠️ রেন্ডার ফ্রি সার্ভার সতর্কতা",
-    smtpRenderWarnDesc: "Render Free টিয়ারে আউটবাউন্ড SMTP পোর্ট ৫৮৭ ব্লক থাকে। Render Free-তে Gmail SMTP কাজ করবে না। অনুগ্রহ করে Brevo API, Resend API বা Google Apps Script ডেলিভারি মেথড নির্বাচন করুন (যা HTTPS দিয়ে ১০০% সফলভাবে ইমেইল পাঠায়)।",
-    scriptMailHintText: "গুগল অ্যাপস স্ক্রিপ্টের মাধ্যমে HTTPS দিয়ে নিরাপদে ইমেইল পাঠানো হয়। Render Free-র জন্য সেরা ও শতভাগ কার্যকর পদ্ধতি।",
-    brevoApiKeyLabel: "Brevo এপিআই কি (xkeysib-...)",
-    resendApiKeyLabel: "Resend এপিআই কি (re_...)",
+    smtpRenderWarnDesc: "Render Free টিয়ারে আউটবাউন্ড SMTP পোর্ট ৫৮৭ ব্লক থাকে। Render Free-তে Gmail SMTP কাজ করবে না। অনুগ্রহ করে Google Apps Script বা EmailJS API ডেলিভারি মেথড নির্বাচন করুন (উভয়ই HTTPS দিয়ে ১০০% সফলভাবে কাজ করে)।",
+    scriptMailGuideTitle: "📌 Google Apps Script চালু করার নিয়ম:",
+    scriptMailHintText: "গুগল অ্যাপস স্ক্রিপ্ট (HTTPS) দিয়ে ১০০% ফ্রিতে ইমেইল পাঠানো হয়। যেভাবে চালু করবেন: ১. গুগল শিটে Extensions > Apps Script-এ গিয়ে নতুন Code.gs পেস্ট করুন। ২. ফাংশন ড্রপডাউন থেকে 'testMailAuthorization' সিলেক্ট করে 'Run' (চালান) বাটনে ক্লিক করুন এবং 'Allow' দিয়ে জিমেইল পারমিশন দিয়ে দিন। ৩. এরপর Deploy > Manage deployments বা New deployment থেকে Web app (Execute as: Me, Who has access: Anyone) করে URL ও Secret এখানে সেভ করুন।",
+    emailJsHelpTitle: "💡 ১০০% ফ্রি ফ্রন্টএন্ড ও ব্যাকএন্ড ইমেইল এপিআই:",
+    emailJsHelpDesc: "emailjs.com এ সম্পূর্ণ বিনামূল্যে অ্যাকাউন্ট তৈরি করুন (কোনো ক্রেডিট কার্ড লাগে না)। জিমেইল কানেক্ট করুন, টেমপ্লেট বানান এবং নিচের ৩টি কি প্রদান করুন।",
+    emailJsPublicKeyLabel: "EmailJS পাবলিক কি (User ID)",
+    emailJsServiceIdLabel: "EmailJS সার্ভিস আইডি (যেমন: service_xxxx)",
+    emailJsTemplateIdLabel: "EmailJS টেমপ্লেট আইডি (যেমন: template_xxxx)",
     senderNameLabel: "প্রেরকের নাম",
     senderEmailLabel: "প্রেরকের জিমেইল ঠিকানা",
     appPasswordLabel: "গুগল অ্যাপ পাসওয়ার্ড",

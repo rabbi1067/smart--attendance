@@ -330,33 +330,33 @@
     <div id="mailEnabledFields">
       <span class="mail-eyebrow">Choose delivery method</span>
       <div class="provider-choices" role="radiogroup" aria-label="Email delivery method">
-        <label class="provider-option"><input type="radio" name="mailProvider" value="BREVO"><span><strong data-t="providerBrevo">Brevo API (HTTPS)</strong><small data-t="providerBrevoHint">Recommended · 300 free emails/day. Works 100% on Render Free. No port blocking.</small></span></label>
-        <label class="provider-option"><input type="radio" name="mailProvider" value="RESEND"><span><strong data-t="providerResend">Resend API (HTTPS)</strong><small data-t="providerResendHint">Recommended · 3,000 free emails/month. Works 100% on Render Free. No port blocking.</small></span></label>
-        <label class="provider-option"><input type="radio" name="mailProvider" value="APPS_SCRIPT" checked><span><strong data-t="providerScript">Google Apps Script</strong><small data-t="providerScriptHint">Works with Render Free. Sends from your Google account via Apps Script. No password needed.</small></span></label>
+        <label class="provider-option"><input type="radio" name="mailProvider" value="APPS_SCRIPT" checked><span><strong data-t="providerScript">Google Apps Script (100% Free Google)</strong><small data-t="providerScriptHint">Works with Render Free. Sends from your Google account via Apps Script. No password needed.</small></span></label>
+        <label class="provider-option"><input type="radio" name="mailProvider" value="EMAILJS"><span><strong data-t="providerEmailJs">EmailJS API (100% Free Frontend &amp; Backend API)</strong><small data-t="providerEmailJsHint">100% Free · 200 emails/month forever. Works from browser and server. Zero port blocking.</small></span></label>
         <label class="provider-option"><input type="radio" name="mailProvider" value="SMTP"><span><strong data-t="providerSmtp">Gmail SMTP</strong><small data-t="providerSmtpHint">Gmail + App Password · Requires VPS or paid Render service; SMTP ports are blocked on Render Free.</small></span></label>
       </div>
       <div class="mail-grid" style="margin-top:10px">
         <div>
           <label for="senderName" data-t="senderNameLabel">Sender display name</label><input id="senderName" minlength="2" maxlength="55" placeholder="Smart Attendance" value="Smart Attendance">
-          <div id="brevoFields" class="hidden">
-            <label for="brevoApiKey" data-t="brevoApiKeyLabel">Brevo API Key (xkeysib-...)</label><input id="brevoApiKey" type="password" maxlength="150" autocomplete="off" placeholder="xkeysib-...">
-            <p class="hint">Free 300 emails/day forever on Brevo (formerly Sendinblue). Get a free key in 30 seconds at <strong>brevo.com</strong> → SMTP &amp; API → API Keys.</p>
-          </div>
-          <div id="resendFields" class="hidden">
-            <label for="resendApiKey" data-t="resendApiKeyLabel">Resend API Key (re_...)</label><input id="resendApiKey" type="password" maxlength="150" autocomplete="off" placeholder="re_...">
-            <p class="hint">Free 3,000 emails/month on Resend. Get a free key in 30 seconds at <strong>resend.com</strong> → API Keys.</p>
+          <div id="emailJsFields" class="hidden">
+            <div class="tip" style="margin-bottom:12px;background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.2);padding:10px 14px;border-radius:10px;font-size:0.83rem;">
+              <strong data-t="emailJsHelpTitle">💡 100% Free Frontend &amp; Backend Email:</strong><br>
+              <span data-t="emailJsHelpDesc">Create a free account at <strong>emailjs.com</strong> (no credit card needed). Add your Gmail service, create a template, and paste the 3 keys below.</span>
+            </div>
+            <label for="emailJsPublicKey" data-t="emailJsPublicKeyLabel">EmailJS Public Key (User ID)</label><input id="emailJsPublicKey" type="text" maxlength="100" autocomplete="off" placeholder="e.g. user_abcdef123456">
+            <label for="emailJsServiceId" data-t="emailJsServiceIdLabel">EmailJS Service ID</label><input id="emailJsServiceId" type="text" maxlength="100" autocomplete="off" placeholder="e.g. service_gmail">
+            <label for="emailJsTemplateId" data-t="emailJsTemplateIdLabel">EmailJS Template ID</label><input id="emailJsTemplateId" type="text" maxlength="100" autocomplete="off" placeholder="e.g. template_attendance">
           </div>
           <div id="smtpFields" class="hidden">
             <div class="smtp-render-warn" style="margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#b91c1c;font-size:.8rem;line-height:1.5;">
               <strong data-t="smtpRenderWarnTitle">⚠️ Render Free Server Alert</strong><br>
-              <span data-t="smtpRenderWarnDesc">Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select <strong>Brevo API</strong>, <strong>Resend API</strong>, or <strong>Google Apps Script</strong> (all send via HTTPS and work 100% reliably).</span>
+              <span data-t="smtpRenderWarnDesc">Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select <strong>Google Apps Script</strong> or <strong>EmailJS API</strong> (both send via HTTPS and work 100% reliably).</span>
             </div>
             <label for="senderEmail" data-t="senderEmailLabel">Sender Gmail address</label><input id="senderEmail" type="email" maxlength="150" autocomplete="off" placeholder="myaddress@gmail.com">
             <label for="appPassword" data-t="appPasswordLabel">Google App Password</label><input id="appPassword" type="password" minlength="16" maxlength="25" autocomplete="new-password" placeholder="16 characters · blank keeps saved password">
             <div class="mail-status"><span id="passwordStatus" class="status off">No App Password saved</span><label style="margin:0;font-size:.76rem;font-weight:500"><input id="clearAppPassword" type="checkbox"> Clear saved password</label></div>
             <p class="hint">Create an App Password from Google Account → Security → App passwords. Never use your normal Gmail password.</p>
           </div>
-          <div id="scriptMailHint" class="tip" style="margin-top:16px"><span data-t="scriptMailHintText">Email is sent securely by Google Apps Script over HTTPS. Recommended for Render Free. Make sure to authorize MailApp permissions when updating <strong>Code.gs</strong>. The sender will be the Google account owning the Apps Script deployment.</span></div>
+          <div id="scriptMailHint" class="tip" style="margin-top:16px"><strong data-t="scriptMailGuideTitle">📌 Google Apps Script চালু করার নিয়ম:</strong><br><span data-t="scriptMailHintText">Email is sent securely by Google Apps Script over HTTPS. Recommended for Render Free. Make sure to authorize MailApp permissions when updating <strong>Code.gs</strong>. The sender will be the Google account owning the Apps Script deployment.</span></div>
           <div class="row" style="margin-top:19px"><button id="testNotification" type="button" class="btn btn-light small" data-t="testEmailBtn">✉ Send test email</button><span class="hint" data-t="testEmailHint">Save settings first, then test.</span></div>
         </div>
         <div>
