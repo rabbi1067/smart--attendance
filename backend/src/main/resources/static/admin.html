@@ -64,10 +64,11 @@
     button,input,select{font:inherit}
     button{cursor:pointer}
     .hidden{display:none!important}
-    .topbar{background:var(--card);border-bottom:1px solid var(--line);padding:16px clamp(18px,4vw,46px);display:flex;align-items:center;justify-content:space-between;gap:16px;transition:background .25s ease,border-color .25s ease}
+    .topbar{background:var(--card);border-bottom:1px solid var(--line);padding:16px clamp(18px,4vw,46px);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;transition:background .25s ease,border-color .25s ease}
     .brand{font-weight:800;letter-spacing:-.5px;font-size:1.07rem;color:var(--text)}
     .muted{color:var(--muted)}
-    .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;max-width:100%}
+    #account{max-width:100%;overflow-wrap:anywhere}
     .chip{background:var(--priLight);color:var(--priText);border:1px solid rgba(99,102,241,0.25);border-radius:99px;font-size:.76rem;font-weight:700;padding:8px 14px;letter-spacing:.2px;display:inline-flex;align-items:center;gap:6px}
     .btn{background:var(--pri);color:#ffffff;border:0;border-radius:11px;padding:11px 18px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s,background .2s,box-shadow .2s;box-shadow:0 2px 6px rgba(79,70,229,0.2)}
     .btn:hover{background:var(--priHover);opacity:.95}
@@ -82,6 +83,21 @@
     .small{font-size:.78rem;padding:9px 13px}
     .container{max-width:1220px;margin:26px auto;padding:0 20px 55px}
     .intro{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+    .intro p{margin-bottom:0;line-height:1.65}
+    .health-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:24px}
+    .health-tile{display:flex;align-items:flex-start;gap:14px;min-width:0;padding:22px 20px;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+    .health-tile>div:last-child{min-width:0;flex:1}
+    .health-icon{display:grid;place-items:center;flex:0 0 42px;height:42px;border:1px solid rgba(99,102,241,.22);border-radius:12px;background:var(--priLight);color:var(--priText)}
+    .health-icon svg{width:22px;height:22px}
+    .health-value{display:flex;align-items:center;gap:9px;min-height:30px;margin:2px 0 6px;font-size:clamp(1.15rem,1.7vw,1.5rem);font-weight:800;line-height:1.3;overflow-wrap:anywhere}
+    .health-label{font-size:.82rem;font-weight:600;line-height:1.5;color:var(--text)}
+    .health-description{margin-top:6px;font-size:.74rem;line-height:1.7;color:var(--muted)}
+    .health-description .btn{margin-top:5px;font-size:.72rem}
+    .db-dot{flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:var(--muted)}
+    .db-dot.ok{background:var(--ok);box-shadow:0 0 0 4px rgba(16,185,129,.12)}
+    .db-dot.fail{background:var(--bad);box-shadow:0 0 0 4px rgba(239,68,68,.12)}
+    @media(max-width:1000px){.health-tile{padding:18px 16px;gap:10px}.health-icon{flex-basis:34px;height:34px;border-radius:10px}.health-icon svg{width:19px;height:19px}}
+    @media(max-width:750px){.health-grid{grid-template-columns:1fr;gap:12px}.health-tile{padding:18px}.health-value{font-size:1.3rem}.health-icon{flex-basis:42px;height:42px}.health-description .btn{margin-top:0}.top-actions{gap:8px}}
     h1,h2,h3,p{margin-top:0}
     h1{font-size:clamp(1.5rem,3vw,2rem);letter-spacing:-.05em;margin-bottom:7px;color:var(--text)}
     h2{font-size:1.12rem;margin-bottom:7px;color:var(--text)}
@@ -279,9 +295,9 @@
 <section id="dashboard" class="container hidden">
  <div class="intro"><div><h1 data-t="dashTitle">Administrator Dashboard</h1><p class="muted" data-t="dashSubtitle">Manage live MongoDB records, attendance schedule, email delivery and the optional Google Sheets mirror.</p></div><span id="ownerStatus" class="status off">Checking workspace…</span></div>
  <div class="health-grid" role="region" aria-label="System status">
-  <div class="health-tile"><div class="health-icon">🗄️</div><div><div class="health-value" id="dbHealth"><span class="db-dot"></span>Checking…</div><div class="health-label">MongoDB Atlas</div><div id="dbHealthDetail" class="health-description">Checking live database connectivity</div></div></div>
-  <div class="health-tile"><div class="health-icon">📋</div><div><div id="recordMetric" class="health-value">—</div><div class="health-label">Persisted attendance records</div><div class="health-description">Only confirmed MongoDB documents count</div></div></div>
-  <div class="health-tile"><div class="health-icon">✉️</div><div><div id="deliveryMetric" class="health-value">—</div><div class="health-label">Student confirmation emails</div><div class="health-description"><span id="lastHealth">Not checked</span> · <button id="refreshHealth" type="button" class="btn btn-white small" style="padding:4px 9px">↻ Refresh</button></div></div></div>
+  <div class="health-tile"><div class="health-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 4 16 4 16 0V5M4 12v7c0 4 16 4 16 0v-7"/></svg></div><div><div class="health-value" id="dbHealth"><span class="db-dot"></span>Checking…</div><div class="health-label">MongoDB Atlas</div><div id="dbHealthDetail" class="health-description">Checking live database connectivity</div></div></div>
+  <div class="health-tile"><div class="health-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="m9 13 2 2 4-4"/></svg></div><div><div id="recordMetric" class="health-value">—</div><div class="health-label">Persisted attendance records</div><div class="health-description">Only confirmed MongoDB documents count</div></div></div>
+  <div class="health-tile"><div class="health-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div><div><div id="deliveryMetric" class="health-value">—</div><div class="health-label">Student confirmation emails</div><div class="health-description"><span id="lastHealth">Not checked</span> · <button id="refreshHealth" type="button" class="btn btn-white small" style="padding:4px 9px">↻ Refresh</button></div></div></div>
  </div>
  <div class="tabs"><button class="tab active" data-tab="settings" data-t="tabSettings">⚙️ General Settings</button><button class="tab" data-tab="records" data-t="tabRecords">📊 Attendance Records</button></div>
  <section id="settingsPanel">
