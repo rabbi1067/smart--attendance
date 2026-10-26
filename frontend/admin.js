@@ -94,7 +94,9 @@ function mailUi() {
   $('mailEnabledFields').style.opacity=on?'1':'0.58';
   const provider=document.querySelector('input[name="mailProvider"]:checked').value;
   $('smtpFields').classList.toggle('hidden',provider!=='SMTP');
-  $('scriptMailHint').classList.toggle('hidden',provider==='SMTP');
+  if ($('brevoFields')) $('brevoFields').classList.toggle('hidden',provider!=='BREVO');
+  if ($('resendFields')) $('resendFields').classList.toggle('hidden',provider!=='RESEND');
+  $('scriptMailHint').classList.toggle('hidden',provider!=='APPS_SCRIPT');
   $('testNotification').disabled=!on;
 }
 $('mailEnabled').addEventListener('change',mailUi);
@@ -359,11 +361,16 @@ async function loadConfig() {
   classState=(sch.CLASSES||[]).map(c=>({...c}));drawClasses();updateScheduleSections();updateScheduleBadge();
   const m=cfg.EMAIL_CONFIG||{};
   $('mailEnabled').checked=!!m.ENABLED;
-  const provider=m.PROVIDER==='SMTP'?'SMTP':'APPS_SCRIPT';
-  document.querySelector(`input[name="mailProvider"][value="${provider}"]`).checked=true;
+  const provider=['SMTP','RESEND','BREVO','APPS_SCRIPT'].includes(m.PROVIDER)?m.PROVIDER:'APPS_SCRIPT';
+  const targetRadio = document.querySelector(`input[name="mailProvider"][value="${provider}"]`);
+  if (targetRadio) targetRadio.checked = true;
   $('senderEmail').value=m.SENDER_EMAIL||'';
+  if ($('brevoSenderEmail')) $('brevoSenderEmail').value=m.SENDER_EMAIL||'';
+  if ($('resendSenderEmail')) $('resendSenderEmail').value=m.SENDER_EMAIL||'';
   $('senderName').value=m.SENDER_NAME||'Smart Attendance';
   $('appPassword').value='';$('clearAppPassword').checked=false;
+  if ($('brevoApiKey')) $('brevoApiKey').value=m.BREVO_API_KEY||'';
+  if ($('resendApiKey')) $('resendApiKey').value=m.RESEND_API_KEY||'';
   $('passwordStatus').textContent=m.APP_PASSWORD_CONFIGURED?'✓ App Password stored securely':'No App Password saved';
   $('passwordStatus').classList.toggle('off',!m.APP_PASSWORD_CONFIGURED);
   mailUi();
@@ -371,20 +378,29 @@ async function loadConfig() {
 $('configForm').addEventListener('submit',async e=>{
   e.preventDefault();const btn=$('saveConfig');btn.disabled=true;btn.textContent='Saving…';
   try {
+    const activeProvider = document.querySelector('input[name="mailProvider"]:checked').value;
+    let senderAddress = $('senderEmail').value.trim();
+    if (activeProvider === 'BREVO' && $('brevoSenderEmail') && $('brevoSenderEmail').value.trim()) {
+      senderAddress = $('brevoSenderEmail').value.trim();
+    } else if (activeProvider === 'RESEND' && $('resendSenderEmail') && $('resendSenderEmail').value.trim()) {
+      senderAddress = $('resendSenderEmail').value.trim();
+    }
     const data={SCRIPT_URL:$('scriptUrl').value.trim(),SHEET_URL:$('sheetUrl').value.trim(),SCRIPT_SECRET:$('scriptSecret').value.trim(),SCHEDULE_CONFIG:{
       ENABLED:$('scheduleEnabled').checked,USE_CLASSES:$('useClasses').checked,
       START_TIME:to12($('startTime').value),END_TIME:to12($('endTime').value),
       CLASSES:classState.map(c=>({name:c.name.trim(),start:c.start,end:c.end}))
     },EMAIL_CONFIG:{
       ENABLED:$('mailEnabled').checked,
-      PROVIDER:document.querySelector('input[name="mailProvider"]:checked').value,
-      SENDER_EMAIL:$('senderEmail').value.trim(),
+      PROVIDER:activeProvider,
+      SENDER_EMAIL:senderAddress,
       SENDER_NAME:$('senderName').value.trim(),
       APP_PASSWORD:$('appPassword').value.replace(/\s+/g,''),
-      CLEAR_APP_PASSWORD:$('clearAppPassword').checked
+      CLEAR_APP_PASSWORD:$('clearAppPassword').checked,
+      RESEND_API_KEY:$('resendApiKey') ? $('resendApiKey').value.trim() : '',
+      BREVO_API_KEY:$('brevoApiKey') ? $('brevoApiKey').value.trim() : ''
     }};
     await request('/admin/config',{method:'PUT',body:data});
-    await loadConfig();notice('Configuration saved in MongoDB successfully.');
+    await loadConfig();notice(lang==='bn'?'কনফিগারেশন সফলভাবে সেভ হয়েছে।':'Configuration saved in MongoDB successfully.');
   }catch(err){notice(err.message)}finally{btn.disabled=false;btn.textContent='💾 Save configuration';}
 });
 async function initialize(){
@@ -784,13 +800,19 @@ const T_ADMIN = {
     addClassBtn: "+ Add class",
     emailCardTitle: "Student Confirmation Emails",
     enableEmail: "Enable automatic email notifications",
+    providerBrevo: "Brevo API (HTTPS)",
+    providerBrevoHint: "Recommended · 300 free emails/day. Works 100% on Render Free. No port blocking.",
+    providerResend: "Resend API (HTTPS)",
+    providerResendHint: "Recommended · 3,000 free emails/month. Works 100% on Render Free. No port blocking.",
     providerScript: "Google Apps Script",
-    providerScriptHint: "Recommended · Works with Render Free. Sends from the Google account that deployed Apps Script. No App Password needed.",
+    providerScriptHint: "Works with Render Free. Sends from your Google account via Apps Script. No password needed.",
     providerSmtp: "Gmail SMTP",
-    providerSmtpHint: "Gmail + App Password · Requires VPS or paid Render service; SMTP ports (587) are blocked on Render Free.",
+    providerSmtpHint: "Gmail + App Password · Requires VPS or paid Render; port 587 is blocked on Render Free.",
     smtpRenderWarnTitle: "⚠️ Render Free Server Alert",
-    smtpRenderWarnDesc: "Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select Google Apps Script delivery method above (which sends over HTTPS and works 100% reliably).",
+    smtpRenderWarnDesc: "Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select Brevo API, Resend API, or Google Apps Script (all send via HTTPS and work 100% reliably).",
     scriptMailHintText: "Email is sent securely by Google Apps Script over HTTPS. Recommended for Render Free. Make sure to authorize MailApp permissions when updating Code.gs. The sender will be the Google account owning the Apps Script deployment.",
+    brevoApiKeyLabel: "Brevo API Key (xkeysib-...)",
+    resendApiKeyLabel: "Resend API Key (re_...)",
     senderNameLabel: "Sender display name",
     senderEmailLabel: "Sender Gmail address",
     appPasswordLabel: "Google App Password",
@@ -857,13 +879,19 @@ const T_ADMIN = {
     addClassBtn: "+ ক্লাস যোগ করুন",
     emailCardTitle: "শিক্ষার্থীদের কনফার্মেশন ইমেইল",
     enableEmail: "স্বয়ংক্রিয় ইমেইল নোটিফিকেশন চালু করুন",
+    providerBrevo: "ব্রেভো এপিআই (Brevo API - HTTPS)",
+    providerBrevoHint: "সেরা পছন্দ · প্রতিদিন ৩০০টি ফ্রি ইমেইল। Render Free-তে ১০০% কাজ করে। কোনো পোর্ট ব্লক নেই।",
+    providerResend: "রিসেন্ড এপিআই (Resend API - HTTPS)",
+    providerResendHint: "সেরা পছন্দ · প্রতি মাসে ৩,০০০টি ফ্রি ইমেইল। Render Free-তে ১০০% কাজ করে। কোনো পোর্ট ব্লক নেই।",
     providerScript: "গুগল অ্যাপস স্ক্রিপ্ট (Google Apps Script)",
-    providerScriptHint: "সুপারিশকৃত · Render Free-তে ১০০% কাজ করে। Apps Script থেকে HTTPS দিয়ে ইমেইল পাঠানো হয়। App Password লাগে না।",
+    providerScriptHint: "Render Free-তে ১০০% কাজ করে। Apps Script থেকে HTTPS দিয়ে ইমেইল পাঠানো হয়। App Password লাগে না।",
     providerSmtp: "জিমেইল এসএমটিপি (Gmail SMTP)",
     providerSmtpHint: "Gmail + App Password · VPS বা পেইড রেন্ডার প্রয়োজন; Render Free-তে SMTP পোর্ট ৫৮৭ বন্ধ থাকে।",
     smtpRenderWarnTitle: "⚠️ রেন্ডার ফ্রি সার্ভার সতর্কতা",
-    smtpRenderWarnDesc: "Render Free টিয়ারে আউটবাউন্ড SMTP পোর্ট ৫৮৭ ব্লক থাকে। Render Free-তে Gmail SMTP কাজ করবে না। অনুগ্রহ করে ওপরে \"Google Apps Script\" ডেলিভারি মেথড নির্বাচন করুন (যা HTTPS দিয়ে ১০০% সফলভাবে ইমেইল পাঠায়)।",
+    smtpRenderWarnDesc: "Render Free টিয়ারে আউটবাউন্ড SMTP পোর্ট ৫৮৭ ব্লক থাকে। Render Free-তে Gmail SMTP কাজ করবে না। অনুগ্রহ করে Brevo API, Resend API বা Google Apps Script ডেলিভারি মেথড নির্বাচন করুন (যা HTTPS দিয়ে ১০০% সফলভাবে ইমেইল পাঠায়)।",
     scriptMailHintText: "গুগল অ্যাপস স্ক্রিপ্টের মাধ্যমে HTTPS দিয়ে নিরাপদে ইমেইল পাঠানো হয়। Render Free-র জন্য সেরা ও শতভাগ কার্যকর পদ্ধতি।",
+    brevoApiKeyLabel: "Brevo এপিআই কি (xkeysib-...)",
+    resendApiKeyLabel: "Resend এপিআই কি (re_...)",
     senderNameLabel: "প্রেরকের নাম",
     senderEmailLabel: "প্রেরকের জিমেইল ঠিকানা",
     appPasswordLabel: "গুগল অ্যাপ পাসওয়ার্ড",

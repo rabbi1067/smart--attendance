@@ -1,6 +1,7 @@
 package com.smartattendance.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartattendance.model.AdminSettings;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
@@ -8,27 +9,34 @@ import org.slf4j.LoggerFactory;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 @Service
 public class NotificationService {
   private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
   private final EncryptionService crypto;
   private final AppsScriptClient script;
+  private final ObjectMapper mapper;
+  private final HttpClient httpClient;
   private static final ZoneId TIMEZONE = ZoneId.of("Asia/Dhaka");
 
-  public NotificationService(EncryptionService crypto, AppsScriptClient script) {
+  public NotificationService(EncryptionService crypto, AppsScriptClient script, ObjectMapper mapper) {
     this.crypto = crypto;
     this.script = script;
+    this.mapper = mapper;
+    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
   }
 
   public boolean usingScript(AdminSettings s) {
-    return s.emailEnabled && !"SMTP".equalsIgnoreCase(s.emailProvider);
+    return s.emailEnabled && "APPS_SCRIPT".equalsIgnoreCase(s.emailProvider);
   }
 
   public String receiptStatus(AdminSettings s, String recipient, String studentName, String id,
@@ -36,7 +44,33 @@ public class NotificationService {
     if (recipient == null || recipient.isBlank()) return "no_address";
     if (!s.emailEnabled) return "disabled";
 
-    if (usingScript(s)) {
+    String provider = s.emailProvider != null ? s.emailProvider.toUpperCase(Locale.ROOT) : "APPS_SCRIPT";
+    String date = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH).format(ZonedDateTime.now(TIMEZONE));
+
+    // 1. Resend API (HTTPS - 100% works on Render Free)
+    if ("RESEND".equals(provider)) {
+      try {
+        sendResend(s, recipient, studentName, id, date, className, false);
+        return "sent";
+      } catch (Exception e) {
+        log.warn("Resend email failed: {}", e.getMessage());
+        return "failed";
+      }
+    }
+
+    // 2. Brevo API (HTTPS - 100% works on Render Free)
+    if ("BREVO".equals(provider)) {
+      try {
+        sendBrevo(s, recipient, studentName, id, date, className, false);
+        return "sent";
+      } catch (Exception e) {
+        log.warn("Brevo email failed: {}", e.getMessage());
+        return "failed";
+      }
+    }
+
+    // 3. Google Apps Script (HTTPS - works on Render Free)
+    if ("APPS_SCRIPT".equals(provider)) {
       if (savedResult != null && savedResult.has("emailStatus")) {
         return savedResult.path("emailStatus").asText("failed");
       }
@@ -60,13 +94,18 @@ public class NotificationService {
       return "failed";
     }
 
-    // SMTP delivery with automatic Apps Script fallback if blocked by hosting
+    // 4. SMTP mode with automatic fallbacks
     try {
-      String date = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH).format(ZonedDateTime.now(TIMEZONE));
       sendSmtp(s, recipient, studentName, id, date, className, false);
       return "sent";
     } catch (Exception e) {
-      log.warn("SMTP send failed ({}): {}. Checking for Apps Script fallback...", e.getClass().getSimpleName(), e.getMessage());
+      log.warn("SMTP send failed ({}): {}. Attempting fallbacks...", e.getClass().getSimpleName(), e.getMessage());
+      if (s.resendApiKey != null && !s.resendApiKey.isBlank()) {
+        try { sendResend(s, recipient, studentName, id, date, className, false); return "sent"; } catch(Exception ignored) {}
+      }
+      if (s.brevoApiKey != null && !s.brevoApiKey.isBlank()) {
+        try { sendBrevo(s, recipient, studentName, id, date, className, false); return "sent"; } catch(Exception ignored) {}
+      }
       if (s.hasGoogleSheets()) {
         try {
           JsonNode fallback = script.post(s, Map.of(
@@ -94,7 +133,27 @@ public class NotificationService {
       throw new IllegalArgumentException("Enable email notifications and save settings before sending a test");
     }
 
-    if (usingScript(s)) {
+    String provider = s.emailProvider != null ? s.emailProvider.toUpperCase(Locale.ROOT) : "APPS_SCRIPT";
+
+    if ("RESEND".equals(provider)) {
+      try {
+        sendResend(s, adminEmail, "Admin", "—", "Preview", "Test Email", true);
+        return Map.of("ok", true, "emailStatus", "sent", "message", "Test email sent successfully via Resend API to " + adminEmail);
+      } catch (Exception e) {
+        return Map.of("ok", false, "emailStatus", "failed", "message", "Resend API error: " + e.getMessage());
+      }
+    }
+
+    if ("BREVO".equals(provider)) {
+      try {
+        sendBrevo(s, adminEmail, "Admin", "—", "Preview", "Test Email", true);
+        return Map.of("ok", true, "emailStatus", "sent", "message", "Test email sent successfully via Brevo API to " + adminEmail);
+      } catch (Exception e) {
+        return Map.of("ok", false, "emailStatus", "failed", "message", "Brevo API error: " + e.getMessage());
+      }
+    }
+
+    if ("APPS_SCRIPT".equals(provider)) {
       if (!s.hasGoogleSheets()) {
         return Map.of("ok", false, "emailStatus", "failed", "message",
             "Google Apps Script Web App URL and Secret must be configured in Settings first.");
@@ -133,13 +192,77 @@ public class NotificationService {
       String detail = "SMTP failed: " + err;
       String lower = err.toLowerCase(Locale.ROOT);
       if (lower.contains("timeout") || lower.contains("connect") || lower.contains("refused") || lower.contains("587")) {
-        detail = "SMTP Port 587 connection timed out (Render Free blocks all outbound SMTP ports). Please select 'Google Apps Script' delivery method (which works 100% over HTTPS).";
+        detail = "Render Free blocks SMTP port 587. Please select 'Resend API' or 'Brevo API' (100% works over HTTPS) or upgrade to paid Render/deploy to Railway.";
       } else if (lower.contains("authentication") || lower.contains("535") || lower.contains("badcredentials") || lower.contains("username and password not accepted")) {
         detail = "Gmail authentication failed. Verify your 16-character Google App Password (not your normal Gmail password).";
       }
       return Map.of("ok", false, "emailStatus", "failed", "message", detail);
     }
   }
+
+  public void sendResend(AdminSettings s, String recipient, String name, String studentId, String date, String className, boolean test) throws Exception {
+    String apiKey = s.resendApiKey != null ? s.resendApiKey.trim() : "";
+    if (apiKey.isEmpty()) throw new IllegalStateException("Resend API key is required");
+    String sender = (s.senderEmail != null && !s.senderEmail.isBlank()) ? s.senderEmail.trim() : "";
+    String from = safeSender(s) + " <onboarding@resend.dev>";
+    if (sender.contains("@") && !sender.endsWith("@gmail.com") && !sender.endsWith("@yahoo.com")) {
+      from = safeSender(s) + " <" + sender + ">";
+    }
+    String dateText = escape(date), display = escape(name), cls = escape(className == null || className.isBlank() ? "General Attendance" : className);
+    String masked = studentId == null || studentId.length() < 8 ? "—" : escape(studentId.substring(0, 4) + "•••••" + studentId.substring(studentId.length() - 4));
+    String subject = test ? "Smart Attendance • Email Test" : "Attendance Confirmed • Smart Attendance";
+    String htmlContent = html(display, dateText, cls, masked, test);
+
+    Map<String, Object> body = Map.of(
+        "from", from,
+        "to", List.of(recipient),
+        "subject", subject,
+        "html", htmlContent
+    );
+
+    HttpRequest req = HttpRequest.newBuilder(URI.create("https://api.resend.com/emails"))
+        .timeout(Duration.ofSeconds(15))
+        .header("Authorization", "Bearer " + apiKey)
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
+        .build();
+
+    HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+    if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
+      throw new IllegalStateException("Resend API error (HTTP " + resp.statusCode() + "): " + resp.body());
+    }
+  }
+
+  public void sendBrevo(AdminSettings s, String recipient, String name, String studentId, String date, String className, boolean test) throws Exception {
+    String apiKey = s.brevoApiKey != null ? s.brevoApiKey.trim() : "";
+    if (apiKey.isEmpty()) throw new IllegalStateException("Brevo API key is required");
+    String senderEmail = (s.senderEmail != null && !s.senderEmail.isBlank()) ? s.senderEmail.trim() : "fazlerabbii2000@gmail.com";
+    String dateText = escape(date), display = escape(name), cls = escape(className == null || className.isBlank() ? "General Attendance" : className);
+    String masked = studentId == null || studentId.length() < 8 ? "—" : escape(studentId.substring(0, 4) + "•••••" + studentId.substring(studentId.length() - 4));
+    String subject = test ? "Smart Attendance • Email Test" : "Attendance Confirmed • Smart Attendance";
+    String htmlContent = html(display, dateText, cls, masked, test);
+
+    Map<String, Object> body = Map.of(
+        "sender", Map.of("name", safeSender(s), "email", senderEmail),
+        "to", List.of(Map.of("email", recipient, "name", name)),
+        "subject", subject,
+        "htmlContent", htmlContent
+    );
+
+    HttpRequest req = HttpRequest.newBuilder(URI.create("https://api.brevo.com/v3/smtp/email"))
+        .timeout(Duration.ofSeconds(15))
+        .header("api-key", apiKey)
+        .header("Content-Type", "application/json")
+        .header("accept", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
+        .build();
+
+    HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+    if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
+      throw new IllegalStateException("Brevo API error (HTTP " + resp.statusCode() + "): " + resp.body());
+    }
+  }
+
   public String safeSender(AdminSettings s){return s.senderName == null||s.senderName.isBlank()?"Smart Attendance":s.senderName;}
   public void sendSmtp(AdminSettings s,String recipient,String name,String studentId,String date,String className,boolean test) throws Exception {
     if(s.encryptedAppPassword==null||s.encryptedAppPassword.isBlank())throw new IllegalStateException("No Gmail App Password");

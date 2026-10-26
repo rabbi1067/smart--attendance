@@ -30,10 +30,29 @@ public class SettingsService {
     }
   }
 
-  public AdminSettings publicSettings() { return forUser(siteOwner); }
+  public AdminSettings publicSettings() {
+    AdminSettings s = forUser(siteOwner);
+    if ((s.scriptUrl != null && !s.scriptUrl.isBlank()) || s.emailEnabled) {
+      return s;
+    }
+    try {
+      for (AdminSettings candidate : repo.findAll()) {
+        if ((candidate.scriptUrl != null && !candidate.scriptUrl.isBlank()) || candidate.emailEnabled) {
+          return candidate;
+        }
+      }
+    } catch (Exception ignored) {}
+    for (AdminSettings candidate : memoryStore.values()) {
+      if ((candidate.scriptUrl != null && !candidate.scriptUrl.isBlank()) || candidate.emailEnabled) {
+        return candidate;
+      }
+    }
+    return s;
+  }
 
   public record EmailUpdate(boolean ENABLED, String PROVIDER, String SENDER_EMAIL, String SENDER_NAME,
-                            String APP_PASSWORD, boolean CLEAR_APP_PASSWORD) {}
+                            String APP_PASSWORD, boolean CLEAR_APP_PASSWORD,
+                            String RESEND_API_KEY, String BREVO_API_KEY) {}
   public record ConfigUpdate(String SCRIPT_URL, String SHEET_URL, String SCRIPT_SECRET,
                              ScheduleConfig SCHEDULE_CONFIG, EmailUpdate EMAIL_CONFIG) {}
 
@@ -57,13 +76,19 @@ public class SettingsService {
     if (input.EMAIL_CONFIG() != null) {
       EmailUpdate m = input.EMAIL_CONFIG();
       String provider=clean(m.PROVIDER()).toUpperCase(Locale.ROOT);
-      if (!Set.of("APPS_SCRIPT","SMTP").contains(provider)) throw new IllegalArgumentException("Invalid email provider");
+      if (!Set.of("APPS_SCRIPT","SMTP","RESEND","BREVO").contains(provider)) throw new IllegalArgumentException("Invalid email provider");
       String address=clean(m.SENDER_EMAIL()).toLowerCase(Locale.ROOT);
       String senderName=clean(m.SENDER_NAME());
       if (!address.isEmpty() && !address.matches("(?i)^[A-Z0-9._%+\\-]+@[A-Z0-9.\\-]+\\.[A-Z]{2,}$"))
         throw new IllegalArgumentException("Invalid sender email address");
       if (senderName.length() < 2 || senderName.length()>55 || senderName.matches(".*[\\r\\n].*"))
         throw new IllegalArgumentException("Sender display name must contain 2–55 characters");
+
+      String resendKey = clean(m.RESEND_API_KEY());
+      if (!resendKey.isEmpty()) saved.resendApiKey = resendKey;
+      String brevoKey = clean(m.BREVO_API_KEY());
+      if (!brevoKey.isEmpty()) saved.brevoApiKey = brevoKey;
+
       if (m.CLEAR_APP_PASSWORD()) saved.encryptedAppPassword="";
       String password=clean(m.APP_PASSWORD()).replace(" ", "");
       if (!password.isEmpty()) {
@@ -78,6 +103,15 @@ public class SettingsService {
           throw new IllegalArgumentException("Add a Gmail App Password before enabling SMTP email");
         encryption.decrypt(saved.encryptedAppPassword);
       }
+      if (m.ENABLED() && "RESEND".equals(provider)) {
+        if (saved.resendApiKey == null || saved.resendApiKey.isBlank())
+          throw new IllegalArgumentException("Enter a Resend API key before enabling Resend email");
+      }
+      if (m.ENABLED() && "BREVO".equals(provider)) {
+        if (saved.brevoApiKey == null || saved.brevoApiKey.isBlank())
+          throw new IllegalArgumentException("Enter a Brevo API key before enabling Brevo email");
+      }
+
       saved.emailEnabled = m.ENABLED();
       saved.emailProvider = provider;
       saved.senderEmail = address;
@@ -86,11 +120,32 @@ public class SettingsService {
 
     String key = (saved.id != null && !saved.id.isBlank() ? saved.id : email).toLowerCase(Locale.ROOT).trim();
     memoryStore.put(key, saved);
+    memoryStore.put(siteOwner, saved);
     try {
-      return repo.save(saved);
+      AdminSettings res = repo.save(saved);
+      if (!siteOwner.equalsIgnoreCase(key)) {
+        AdminSettings ownerCopy = forUser(siteOwner);
+        copySettings(saved, ownerCopy);
+        repo.save(ownerCopy);
+      }
+      return res;
     } catch (Exception e) {
       return saved;
     }
+  }
+
+  private void copySettings(AdminSettings from, AdminSettings to) {
+    to.scriptUrl = from.scriptUrl;
+    to.sheetUrl = from.sheetUrl;
+    to.scriptSecret = from.scriptSecret;
+    to.schedule = from.schedule;
+    to.emailEnabled = from.emailEnabled;
+    to.emailProvider = from.emailProvider;
+    to.senderEmail = from.senderEmail;
+    to.senderName = from.senderName;
+    to.encryptedAppPassword = from.encryptedAppPassword;
+    to.resendApiKey = from.resendApiKey;
+    to.brevoApiKey = from.brevoApiKey;
   }
 
   private String clean(String value) { return value == null ? "" : value.trim(); }
@@ -102,7 +157,7 @@ public class SettingsService {
   }
 
   public record EmailConfig(boolean ENABLED, String PROVIDER, String SENDER_EMAIL, String SENDER_NAME,
-                            boolean APP_PASSWORD_CONFIGURED) {}
+                            boolean APP_PASSWORD_CONFIGURED, String RESEND_API_KEY, String BREVO_API_KEY) {}
   public record AdminConfig(String SCRIPT_URL, String SHEET_URL, boolean SECRET_CONFIGURED,
                             ScheduleConfig SCHEDULE_CONFIG, EmailConfig EMAIL_CONFIG,
                             String owner, boolean liveSiteOwner) {}
@@ -112,7 +167,8 @@ public class SettingsService {
       new EmailConfig(s.emailEnabled, s.emailProvider==null?"APPS_SCRIPT":s.emailProvider,
                       s.senderEmail==null?"":s.senderEmail,
                       s.senderName==null?"Smart Attendance":s.senderName,
-                      s.encryptedAppPassword!=null&&!s.encryptedAppPassword.isBlank()),
+                      s.encryptedAppPassword!=null&&!s.encryptedAppPassword.isBlank(),
+                      s.resendApiKey, s.brevoApiKey),
       email, email.equalsIgnoreCase(siteOwner));
   }
 }
