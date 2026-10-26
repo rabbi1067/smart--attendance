@@ -28,6 +28,10 @@ public class NotificationService {
   private final HttpClient httpClient;
   private static final ZoneId TIMEZONE = ZoneId.of("Asia/Dhaka");
 
+  public NotificationService(EncryptionService crypto, AppsScriptClient script) {
+    this(crypto, script, new ObjectMapper());
+  }
+
   public NotificationService(EncryptionService crypto, AppsScriptClient script, ObjectMapper mapper) {
     this.crypto = crypto;
     this.script = script;
