@@ -49,6 +49,25 @@ A Spring Boot 3.4 / Java 21 attendance system with responsive Bangla/English fro
 
 ### MongoDB Atlas verification
 
+If deployment stops with `MongoSecurityException` and `bad auth : authentication failed`
+(Atlas error 8000), Atlas rejected the configured credentials. The later
+`mongoTemplate`, repository and controller errors come from that failure.
+Use the Atlas **database user**, reset/verify its password, and update **Render →
+Environment → MONGODB_URI** for the same cluster. Percent-encode the username and
+password exactly once; keep `/smart_attendance` as the data database and
+`authSource=admin` for Atlas. For example, a password containing `@` uses `%40`
+in the URI. Do not encode the whole URI or leave `<password>` placeholders or
+surrounding quotes. Use the Atlas-generated authentication options instead of
+forcing `authMechanism=SCRAM-SHA-1`. If the log already says `source='admin'`,
+changing `authSource` alone will not correct a wrong username/password.
+Save the Render environment, redeploy, and verify `/actuator/health` reports `UP`.
+**Pushing code does not replace the credentials stored in Render.** See
+[the Bangla recovery steps](SETUP_BN.md#11-mongodb-atlas-bad-auth-recovery).
+
+The backend prints these recovery steps when authentication prevents startup.
+It still requires successful database authentication and index creation before
+serving attendance requests.
+
 In Data Explorer select database `smart_attendance` and inspect the following **collections**:
 
 - `attendance_records`: appears after a student submits attendance or admin adds a record.
