@@ -10,10 +10,7 @@ public record ScheduleConfig(boolean ENABLED, String START_TIME, String END_TIME
       .parseCaseInsensitive().appendPattern("h:mm a").toFormatter(Locale.US);
   public record ClassTime(String name, String start, String end) {}
   public static ScheduleConfig defaults() {
-    return new ScheduleConfig(false, "10:00 PM", "11:00 PM", false, List.of(
-        new ClassTime("Bangla Class", "04:30 PM", "05:30 PM"),
-        new ClassTime("English Class", "07:00 PM", "08:00 PM"),
-        new ClassTime("Math Class", "10:00 PM", "11:00 PM")));
+    return new ScheduleConfig(false, "10:00 PM", "11:00 PM", false, List.of());
   }
   public static LocalTime parse(String t) {
     try { return LocalTime.parse(t, FORMAT); }

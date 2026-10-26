@@ -19,7 +19,7 @@ RUN mvn -q dependency:go-offline
 COPY backend/src ./src
 # Embed built frontend into Spring Boot's classpath static folder
 COPY --from=frontend-builder /app/frontend/dist/ ./src/main/resources/static/
-RUN mvn -q -DskipTests package
+RUN mvn -q -B package
 
 # Stage 3: Minimal Secure Production Runtime
 FROM eclipse-temurin:21-jre

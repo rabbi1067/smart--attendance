@@ -22,10 +22,11 @@ public class AdminAuthService {
   public AdminAuthService(ObjectMapper mapper) { this.mapper = mapper; }
 
   @PostConstruct public void init() {
-    String mainEmail = (email != null && !email.isBlank()) ? email.trim().toLowerCase(Locale.ROOT) : "fazlerabbicse65@gmail.com";
-    String mainPass = (password != null && !password.isBlank()) ? password.trim() : "admin";
+    if (email == null || email.isBlank() || password == null || password.isBlank())
+      throw new IllegalStateException("ADMIN_EMAIL and ADMIN_PASSWORD must be set in Render environment");
+    String mainEmail = email.trim().toLowerCase(Locale.ROOT);
+    String mainPass = password;
     accounts.put(mainEmail, mainPass);
-    accounts.put("admin@example.com", mainPass);
 
     try {
       if (usersJson != null && !usersJson.isBlank()) {
@@ -45,17 +46,17 @@ public class AdminAuthService {
   public boolean login(String suppliedEmail, String suppliedPassword, String ip) {
     if (suppliedEmail == null || suppliedPassword == null) return false;
     String user = suppliedEmail.trim().toLowerCase(Locale.ROOT);
-    String pass = suppliedPassword.trim();
+    String pass = suppliedPassword;
 
     String key = ip + "|" + user;
     long now = System.currentTimeMillis();
     Attempt a = attempts.compute(key, (k, old) -> old == null || now >= old.resetAt() ? new Attempt(1, now + 15 * 60_000L) : new Attempt(old.count() + 1, old.resetAt()));
-    if (a.count() > 40) throw new TooManyAttemptsException();
+    if (a.count() > 10) throw new TooManyAttemptsException();
 
     String expected = accounts.get(user);
     if (expected == null) return false;
 
-    boolean match = expected.equals(pass) || expected.equals(suppliedPassword);
+    boolean match = java.security.MessageDigest.isEqual(expected.getBytes(java.nio.charset.StandardCharsets.UTF_8), pass.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     if (match) attempts.remove(key);
     return match;
   }

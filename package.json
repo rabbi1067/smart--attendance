@@ -1,11 +1,10 @@
 {
   "name": "smart-attendance",
-  "version": "3.0.0",
-  "description": "Smart Attendance System",
+  "version": "6.0.0",
+  "description": "MongoDB-backed Smart Attendance; deploy production using the root Dockerfile",
   "scripts": {
-    "dev": "node dev-server.mjs",
-    "start": "node dev-server.mjs",
-    "test": "node tests/apps-script-test.cjs",
-    "build": "cd frontend && node scripts/build.mjs"
+    "build": "cd frontend && node scripts/build.mjs",
+    "test": "node tests/apps-script-test.cjs && node tests/frontend-contract-test.cjs",
+    "test:java": "cd backend && mvn test"
   }
 }

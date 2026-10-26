@@ -255,6 +255,13 @@ function doPost(e) {
   let d;
   try { d=JSON.parse(e.postData.contents); } catch(err) {return json_({ok:false,error:'invalid_json'});}
   if (!authorized_(d.key)) return json_({ok:false,error:'unauthorized'});
+  // Connection check via POST (keeps gateway secret out of URLs). Read-only, no lock required.
+  if (d.action === 'adminSheets') {
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      return json_({ok:true,sheets:ss.getSheets().map(sh => ({name:sh.getName(),count:Math.max(0,sh.getLastRow()-1)}))});
+    } catch(err) { return json_({ok:false,error:'server',message:String(err.message||err)}); }
+  }
   const lock=LockService.getScriptLock();
   try {lock.waitLock(25000);} catch(err) {return json_({ok:false,error:'busy'});}
   try {

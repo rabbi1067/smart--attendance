@@ -3,7 +3,8 @@ server:
 spring:
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb+srv://my_project:CWvi0ILdtQD4terQ@project.tmthj14.mongodb.net/smart_attendance?retryWrites=true&w=majority}
+      uri: ${MONGODB_URI}
+      auto-index-creation: true
   jackson:
     deserialization:
       fail-on-unknown-properties: true
@@ -12,11 +13,14 @@ management:
     web:
       exposure:
         include: health
+  health:
+    mongo:
+      enabled: true
 app:
-  admin-email: ${ADMIN_EMAIL:fazlerabbicse65@gmail.com}
-  admin-password: ${ADMIN_PASSWORD:admin}
+  admin-email: ${ADMIN_EMAIL}
+  admin-password: ${ADMIN_PASSWORD}
   admin-users-json: ${ADMIN_USERS_JSON:[]}
-  site-owner: ${SITE_OWNER_EMAIL:${ADMIN_EMAIL:fazlerabbicse65@gmail.com}}
-  jwt-secret: ${JWT_SECRET:4430395c543f9617455e47fd4f8cffec7669097664a1b7fc120b2e7f38315efbbbc93528aa62520666f918d06a13db61}
+  site-owner: ${SITE_OWNER_EMAIL:${ADMIN_EMAIL}}
+  jwt-secret: ${JWT_SECRET}
   frontend-origins: ${FRONTEND_ORIGINS:}
-  mail-encryption-key: ${MAIL_ENCRYPTION_KEY:c21hcnQtYXR0ZW5kYW5jZS1zZWN1cmUtMTIzNDU2Nzg=}
+  mail-encryption-key: ${MAIL_ENCRYPTION_KEY:}

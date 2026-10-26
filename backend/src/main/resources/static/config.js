@@ -28,11 +28,7 @@ const SCHEDULE_CONFIG = {
   USE_CLASSES: false,
 
   // একাধিক ক্লাসের তালিকা (USE_CLASSES: true হলে কাজ করবে):
-  CLASSES: [
-    { name: "Bangla Class",  start: "04:30 PM", end: "05:30 PM" },
-    { name: "English Class", start: "07:00 PM", end: "08:00 PM" },
-    { name: "Math Class",    start: "10:00 PM", end: "11:00 PM" }
-  ]
+  CLASSES: []
 };
 
 // পূর্বের কোডের সাথে সামঞ্জস্য রাখার জন্য (Backward Compatibility)

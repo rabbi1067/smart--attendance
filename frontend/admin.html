@@ -277,11 +277,16 @@
  </form>
 </section>
 <section id="dashboard" class="container hidden">
- <div class="intro"><div><h1 data-t="dashTitle">Administrator Dashboard</h1><p class="muted" data-t="dashSubtitle">Manage your Google Sheets connection, attendance schedule, email confirmations and records.</p></div><span id="ownerStatus" class="status off">Checking workspace…</span></div>
+ <div class="intro"><div><h1 data-t="dashTitle">Administrator Dashboard</h1><p class="muted" data-t="dashSubtitle">Manage live MongoDB records, attendance schedule, email delivery and the optional Google Sheets mirror.</p></div><span id="ownerStatus" class="status off">Checking workspace…</span></div>
+ <div class="health-grid" role="region" aria-label="System status">
+  <div class="health-tile"><div class="health-icon">🗄️</div><div><div class="health-value" id="dbHealth"><span class="db-dot"></span>Checking…</div><div class="health-label">MongoDB Atlas</div><div id="dbHealthDetail" class="health-description">Checking live database connectivity</div></div></div>
+  <div class="health-tile"><div class="health-icon">📋</div><div><div id="recordMetric" class="health-value">—</div><div class="health-label">Persisted attendance records</div><div class="health-description">Only confirmed MongoDB documents count</div></div></div>
+  <div class="health-tile"><div class="health-icon">✉️</div><div><div id="deliveryMetric" class="health-value">—</div><div class="health-label">Student confirmation emails</div><div class="health-description"><span id="lastHealth">Not checked</span> · <button id="refreshHealth" type="button" class="btn btn-white small" style="padding:4px 9px">↻ Refresh</button></div></div></div>
+ </div>
  <div class="tabs"><button class="tab active" data-tab="settings" data-t="tabSettings">⚙️ General Settings</button><button class="tab" data-tab="records" data-t="tabRecords">📊 Attendance Records</button></div>
  <section id="settingsPanel">
   <form id="configForm" class="grid">
-   <div class="card"><h2 data-t="sheetsCardTitle">Google Sheets Integration</h2><p class="hint">Stored privately in MongoDB for this administrator. Nothing here is embedded in the student website.</p>
+   <div class="card"><h2 data-t="sheetsCardTitle">Google Sheets Integration</h2><p class="hint">Stored privately in MongoDB in the shared live admin configuration. Gateway secrets are not embedded in the public student website.</p>
     <label for="scriptUrl" data-t="scriptUrlLabel">Apps Script Web App URL</label><input id="scriptUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
      <div id="scriptUrlFeedback" class="url-feedback hidden"></div>
     <label for="sheetUrl" data-t="sheetUrlLabel">Google Sheet URL</label><input id="sheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/.../edit" autocomplete="off">
@@ -331,7 +336,9 @@
       <span class="mail-eyebrow">Choose delivery method</span>
       <div class="provider-choices" role="radiogroup" aria-label="Email delivery method">
         <label class="provider-option"><input type="radio" name="mailProvider" value="APPS_SCRIPT" checked><span><strong data-t="providerScript">Google Apps Script (100% Free Google)</strong><small data-t="providerScriptHint">Works with Render Free. Sends from your Google account via Apps Script. No password needed.</small></span></label>
-        <label class="provider-option"><input type="radio" name="mailProvider" value="EMAILJS"><span><strong data-t="providerEmailJs">EmailJS API (100% Free Frontend &amp; Backend API)</strong><small data-t="providerEmailJsHint">100% Free · 200 emails/month forever. Works from browser and server. Zero port blocking.</small></span></label>
+        <label class="provider-option"><input type="radio" name="mailProvider" value="EMAILJS"><span><strong data-t="providerEmailJs">EmailJS API (HTTPS Email API)</strong><small data-t="providerEmailJsHint">HTTPS email API, sent from the backend. Provider quotas and permissions apply.</small></span></label>
+        <label class="provider-option"><input type="radio" name="mailProvider" value="RESEND"><span><strong>Resend HTTPS API</strong><small>Best for verified domains on Render Free. Configure a verified sender and API key.</small></span></label>
+        <label class="provider-option"><input type="radio" name="mailProvider" value="BREVO"><span><strong>Brevo HTTPS API</strong><small>Send through a verified sender over HTTPS, without SMTP ports.</small></span></label>
         <label class="provider-option"><input type="radio" name="mailProvider" value="SMTP"><span><strong data-t="providerSmtp">Gmail SMTP</strong><small data-t="providerSmtpHint">Gmail + App Password · Requires VPS or paid Render service; SMTP ports are blocked on Render Free.</small></span></label>
       </div>
       <div class="mail-grid" style="margin-top:10px">
@@ -339,17 +346,22 @@
           <label for="senderName" data-t="senderNameLabel">Sender display name</label><input id="senderName" minlength="2" maxlength="55" placeholder="Smart Attendance" value="Smart Attendance">
           <div id="emailJsFields" class="hidden">
             <div class="tip" style="margin-bottom:12px;background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.2);padding:10px 14px;border-radius:10px;font-size:0.83rem;">
-              <strong data-t="emailJsHelpTitle">💡 100% Free Frontend &amp; Backend Email:</strong><br>
+              <strong data-t="emailJsHelpTitle">💡 HTTPS Email Provider Setup:</strong><br>
               <span data-t="emailJsHelpDesc">Create a free account at <strong>emailjs.com</strong> (no credit card needed). Add your Gmail service, create a template, and paste the 3 keys below.</span>
             </div>
             <label for="emailJsPublicKey" data-t="emailJsPublicKeyLabel">EmailJS Public Key (User ID)</label><input id="emailJsPublicKey" type="text" maxlength="100" autocomplete="off" placeholder="e.g. user_abcdef123456">
             <label for="emailJsServiceId" data-t="emailJsServiceIdLabel">EmailJS Service ID</label><input id="emailJsServiceId" type="text" maxlength="100" autocomplete="off" placeholder="e.g. service_gmail">
             <label for="emailJsTemplateId" data-t="emailJsTemplateIdLabel">EmailJS Template ID</label><input id="emailJsTemplateId" type="text" maxlength="100" autocomplete="off" placeholder="e.g. template_attendance">
           </div>
+          <div id="apiMailFields" class="hidden">
+            <label for="apiSenderEmail">Verified sender email address</label><input id="apiSenderEmail" type="email" maxlength="100" placeholder="attendance@yourdomain.com" autocomplete="off">
+            <label for="providerApiKey">Email provider API key (stored encrypted)</label><input id="providerApiKey" type="password" maxlength="250" autocomplete="new-password" placeholder="Leave blank to keep saved key">
+            <p id="providerKeyStatus" class="hint">The API key is never returned to the browser after saving.</p>
+          </div>
           <div id="smtpFields" class="hidden">
             <div class="smtp-render-warn" style="margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#b91c1c;font-size:.8rem;line-height:1.5;">
               <strong data-t="smtpRenderWarnTitle">⚠️ Render Free Server Alert</strong><br>
-              <span data-t="smtpRenderWarnDesc">Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select <strong>Google Apps Script</strong> or <strong>EmailJS API</strong> (both send via HTTPS and work 100% reliably).</span>
+              <span data-t="smtpRenderWarnDesc">Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select <strong>Google Apps Script</strong> or <strong>EmailJS API</strong> (both use HTTPS when configured correctly).</span>
             </div>
             <label for="senderEmail" data-t="senderEmailLabel">Sender Gmail address</label><input id="senderEmail" type="email" maxlength="150" autocomplete="off" placeholder="myaddress@gmail.com">
             <label for="appPassword" data-t="appPasswordLabel">Google App Password</label><input id="appPassword" type="password" minlength="16" maxlength="25" autocomplete="new-password" placeholder="16 characters · blank keeps saved password">
@@ -363,12 +375,12 @@
           <label style="margin-top:6px" data-t="studentEmailPreview">Student email preview</label>
           <div class="preview" aria-label="Example attendance confirmation email">
             <div class="preview-head"><small>SMART ATTENDANCE</small><strong>✓ Attendance confirmed</strong></div>
-            <div class="preview-body"><strong id="mailPreviewGreeting" data-t="previewGreeting">Hello, Rabbi</strong><p data-t="previewSummary">Your attendance has been successfully recorded. Here is your confirmation summary.</p>
-              <div class="preview-data"><div><b>DATE</b> <span id="mailPreviewDate">Attendance date</span></div><div><b>CLASS</b> Bangla Class</div><div><b>STUDENT ID</b> 2023•••••0686</div></div>
+            <div class="preview-body"><strong id="mailPreviewGreeting" data-t="previewGreeting">Hello, Student</strong><p data-t="previewSummary">Your attendance has been successfully recorded. Here is your confirmation summary.</p>
+              <div class="preview-data"><div><b>DATE</b> <span id="mailPreviewDate">Attendance date</span></div><div><b>CLASS</b> Bangla Class</div><div><b>STUDENT ID</b> •••••••••0000</div></div>
               <p style="font-size:.7rem;margin:15px 0 0">Automatic notification · Please do not reply</p>
             </div>
           </div>
-          <p class="hint" data-t="emailSecurityHint">Student ID is masked in email. Notification is attempted only after Google Sheets confirms attendance. Email delivery failure never deletes a saved attendance record.</p>
+          <p class="hint" data-t="emailSecurityHint">Student ID is masked in email. Notification is attempted only after MongoDB confirms attendance. Email delivery is attempted only after successful MongoDB persistence. Failure never deletes a saved attendance record.</p>
         </div>
       </div>
     </div>
@@ -378,7 +390,7 @@
  </section>
  <section id="recordsPanel" class="hidden">
    <div class="card">
-    <div class="row justify"><div><h2 data-t="recordsTitle">Google Sheet Records</h2><p class="hint">All date and class tabs from your connected spreadsheet.</p></div><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+    <div class="row justify"><div><h2 data-t="recordsTitle">MongoDB Attendance Records</h2><p class="hint">Authoritative database records grouped by date and class. Add, edit and delete apply directly to MongoDB; Google Sheets is a separate optional mirror.</p></div><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
   <a id="openGoogleSheet" href="#" class="btn btn-white small hidden" target="_blank" rel="noopener noreferrer"><span data-t="openSheetLink">Open in Google Sheets ↗</span></a>
   <div class="dropdown-wrap">
     <button id="downloadCsvBtn" type="button" class="btn btn-white small" title="Download CSV">
@@ -401,7 +413,7 @@
   </div>
   <button id="reloadSheets" class="btn btn-light small" data-t="reloadSheetsBtn">↻ Refresh</button>
 </div></div>
-    <div class="table-tools"><div style="flex:1;max-width:410px"><label for="sheetSelect" style="margin-top:0" data-t="selectSheetLabel">Select sheet / class tab</label><select id="sheetSelect"><option value="">Choose a tab</option></select></div><div class="search-box-wrap">
+    <div class="table-tools"><div style="flex:1;max-width:410px"><label for="sheetSelect" style="margin-top:0" data-t="selectSheetLabel">Select date / class group</label><select id="sheetSelect"><option value="">Choose a tab</option></select></div><div class="search-box-wrap">
         <label for="searchRows" style="margin-top:0" data-t="searchRecordsLabel">Search records</label>
         <div class="search-input-wrapper">
           <span class="search-icon" aria-hidden="true">🔍</span>
@@ -437,7 +449,7 @@
  </form>
 </div>
 <div id="confirmModal" class="modal-shade hidden" role="alertdialog" aria-modal="true">
- <div class="modal"><h2>Delete this attendance record?</h2><p class="muted">This action permanently removes the selected row from Google Sheets.</p>
+ <div class="modal"><h2>Delete this attendance record?</h2><p class="muted">This action permanently deletes the selected document from MongoDB. Any previously mirrored Google Sheet row remains unchanged.</p>
  <div class="row" style="justify-content:flex-end"><button id="cancelDelete" class="btn btn-white">Cancel</button><button id="confirmDelete" class="btn btn-danger">Delete permanently</button></div></div>
 </div>
 <div id="exportFilterModal" class="modal-shade hidden" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">

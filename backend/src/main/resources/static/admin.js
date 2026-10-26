@@ -10,7 +10,10 @@ function notice(message) {
   if (!t) return;
   const isErr = /fail|error|wrong|invalid|required|maximum/i.test(String(message));
   const icon = isErr ? '⚠️' : '✓';
-  t.innerHTML = `<span style="font-size:1.05rem;line-height:1">${icon}</span><span>${String(message)}</span>`;
+  t.replaceChildren();
+  const symbol=document.createElement('span');symbol.textContent=icon;symbol.style.fontSize='1.05rem';
+  const msg=document.createElement('span');msg.textContent=String(message);
+  t.append(symbol,msg);
   t.classList.remove('hidden');
   clearTimeout(toastTimer); toastTimer = setTimeout(()=> $('toast').classList.add('hidden'),4500);
 }
@@ -43,7 +46,8 @@ function logout(showMessage=true) {
   token = '';
   userEmail = '';
   try {
-    sessionStorage.clear();
+    sessionStorage.removeItem('admin_token');
+    sessionStorage.removeItem('admin_email');
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_email');
     localStorage.removeItem('token');
@@ -60,7 +64,7 @@ $('logout').addEventListener('click',()=>logout());
 $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault(); $('loginError').classList.add('hidden');
   const emailInput = $('loginEmail').value.trim();
-  const passwordInput = $('loginPassword').value.trim();
+  const passwordInput = $('loginPassword').value;
   if (!emailInput || !passwordInput) {
     $('loginError').textContent = currentLang === 'bn' ? 'ইমেইল এবং পাসওয়ার্ড আবশ্যক।' : 'Email and password are required.';
     $('loginError').classList.remove('hidden');
@@ -118,6 +122,7 @@ function mailUi() {
   const checkedRadio = document.querySelector('input[name="mailProvider"]:checked');
   const provider = checkedRadio ? checkedRadio.value : 'APPS_SCRIPT';
   $('smtpFields').classList.toggle('hidden',provider!=='SMTP');
+  $('apiMailFields').classList.toggle('hidden',!['RESEND','BREVO'].includes(provider));
   if ($('emailJsFields')) $('emailJsFields').classList.toggle('hidden',provider!=='EMAILJS');
   $('scriptMailHint').classList.toggle('hidden',provider!=='APPS_SCRIPT');
   $('testNotification').disabled=!on;
@@ -128,41 +133,7 @@ $('testNotification').addEventListener('click', async()=>{
   const button=$('testNotification');button.disabled=true;
   button.textContent=currentLang==='bn'?'টেস্ট পাঠানো হচ্ছে…':'Sending test…';
   try{
-    const checkedRadio = document.querySelector('input[name="mailProvider"]:checked');
-    const activeProvider = checkedRadio ? checkedRadio.value : 'APPS_SCRIPT';
-    if (activeProvider === 'EMAILJS' && $('emailJsPublicKey') && $('emailJsPublicKey').value.trim()) {
-      const pubKey = $('emailJsPublicKey').value.trim();
-      const srvId = $('emailJsServiceId').value.trim();
-      const tmplId = $('emailJsTemplateId').value.trim();
-      if (!pubKey || !srvId || !tmplId) {
-        throw new Error(currentLang === 'bn' ? 'EmailJS Public Key, Service ID এবং Template ID পূরণ করুন।' : 'Please enter EmailJS Public Key, Service ID, and Template ID.');
-      }
-      const testRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service_id: srvId,
-          template_id: tmplId,
-          user_id: pubKey,
-          template_params: {
-            to_email: userEmail || $('senderEmail').value.trim(),
-            to_name: 'Admin Test',
-            student_id: 'TEST•••••0001',
-            class_name: 'Test Class',
-            date: new Date().toISOString().slice(0, 10),
-            time: '10:00 AM',
-            sender_name: $('senderName').value.trim() || 'Smart Attendance'
-          }
-        })
-      });
-      if (!testRes.ok) {
-        const txt = await testRes.text();
-        throw new Error('EmailJS Error: ' + txt);
-      }
-      notice(currentLang === 'bn' ? '✓ EmailJS দিয়ে ব্রাউজার থেকে টেস্ট ইমেইল সফলভাবে পাঠানো হয়েছে!' : '✓ Test email sent directly from browser via EmailJS successfully!');
-      return;
-    }
-
+    // Tests use the saved server-side provider configuration only; no browser-side mail dispatch.
     const data=await request('/admin/notifications/test',{method:'POST'});
     if(data.emailStatus==='sent'){
       notice(data.message || (currentLang==='bn'?'অ্যাডমিন ইমেইলে টেস্ট ইমেইল সফলভাবে পাঠানো হয়েছে।':'Test email sent to your administrator email address.'));
@@ -253,13 +224,11 @@ if (testConnBtn) {
     testConnBtn.textContent = currentLang === 'bn' ? 'পরীক্ষা হচ্ছে…' : 'Testing…';
     connBox.className = 'conn-test-box hidden';
     try {
-      const res = await request('/admin/sheets');
+      const res = await request('/admin/script/health');
       const sheetCount = (res.sheets || []).length;
       const sheetNames = (res.sheets || []).map(s => s.name).join(', ') || (currentLang === 'bn' ? 'কোনো ট্যাব নেই' : 'None');
       connBox.className = 'conn-test-box ok';
-      connBox.innerHTML = currentLang === 'bn'
-        ? `<div><strong>✅ সংযোগ সফল হয়েছে! (Connection Successful)</strong><br>গুগল অ্যাপস স্ক্রিপ্ট অনুমোদিত এবং স্প্রেডশিট সংযুক্ত আছে। মোট <strong>${sheetCount}</strong> টি ট্যাব পাওয়া গেছে (${sheetNames})।</div>`
-        : `<div><strong>✅ Connection Successful!</strong><br>Apps Script is authorized and Google Sheet is connected. Found <strong>${sheetCount}</strong> tab(s) (${sheetNames}).</div>`;
+      connBox.textContent = `✓ Apps Script connected: ${sheetCount} sheet(s). ${sheetNames}`;
     } catch(err) {
       connBox.className = 'conn-test-box err';
       const isUnauth = /unauthorized/i.test(err.message);
@@ -282,8 +251,8 @@ if (testConnBtn) {
             `5. Click <strong>⚡ Test Connection</strong> again!</div>`;
       } else {
         connBox.innerHTML = currentLang === 'bn'
-          ? `<div><strong>❌ কানেকশন ব্যর্থ হয়েছে:</strong><br>${err.message}<br><small>নিশ্চিত করুন Apps Script-এ Deploy as "Web app", Execute as: "Me" এবং Who has access: "Anyone" দেওয়া আছে।</small></div>`
-          : `<div><strong>❌ Connection Failed:</strong><br>${err.message}<br><small>Make sure Apps Script is deployed as Web App with Execute as: Me and Who has access: Anyone.</small></div>`;
+          ? `<div><strong>❌ কানেকশন ব্যর্থ হয়েছে:</strong><br>Check Apps Script deployment, URLs and stored secret.</div>`
+          : `<div><strong>❌ Connection Failed:</strong><br>Check the Apps Script URL, deployment, and saved secret.</div>`;
       }
     } finally {
       testConnBtn.disabled = false;
@@ -407,8 +376,8 @@ async function loadConfig() {
   updateScheduleBadge();
   $('scriptSecret').value='';$('scriptSecret').type='password';
   $('secretStatus').textContent=cfg.SECRET_CONFIGURED?'✓ A gateway secret is saved. Leave blank to keep it.':'No secret configured yet. Generate one and add it to Apps Script.';
-  $('ownerStatus').textContent=cfg.liveSiteOwner?'● LIVE SITE OWNER':'● Personal workspace (not live site owner)';
-  $('ownerStatus').classList.toggle('off',!cfg.liveSiteOwner);
+  $('ownerStatus').textContent='● SHARED LIVE CONFIGURATION';
+  $('ownerStatus').classList.remove('off');
   $('openGoogleSheet').classList.toggle('hidden',!cfg.SHEET_URL);
   if(cfg.SHEET_URL) $('openGoogleSheet').href=cfg.SHEET_URL;
   const sch=cfg.SCHEDULE_CONFIG||{};
@@ -423,6 +392,9 @@ async function loadConfig() {
   const targetRadio = document.querySelector(`input[name="mailProvider"][value="${provider}"]`);
   if (targetRadio) targetRadio.checked = true;
   $('senderEmail').value=m.SENDER_EMAIL||'';
+  $('apiSenderEmail').value=m.SENDER_EMAIL||'';
+  $('providerApiKey').value='';
+  $('providerKeyStatus').textContent=(m.RESEND_KEY_CONFIGURED?'Resend API key saved. ':'')+(m.BREVO_KEY_CONFIGURED?'Brevo API key saved. ':'')+'Leave blank to keep the stored key.';
   $('senderName').value=m.SENDER_NAME||'Smart Attendance';
   $('appPassword').value='';$('clearAppPassword').checked=false;
   if ($('emailJsPublicKey')) $('emailJsPublicKey').value=m.EMAILJS_PUBLIC_KEY||'';
@@ -451,12 +423,12 @@ $('configForm').addEventListener('submit',async e=>{
       EMAIL_CONFIG:{
         ENABLED:$('mailEnabled').checked,
         PROVIDER:activeProvider,
-        SENDER_EMAIL:$('senderEmail').value.trim(),
+        SENDER_EMAIL: ['RESEND','BREVO'].includes(activeProvider) ? $('apiSenderEmail').value.trim() : $('senderEmail').value.trim(),
         SENDER_NAME:$('senderName').value.trim(),
         APP_PASSWORD:$('appPassword').value.replace(/\s+/g,''),
         CLEAR_APP_PASSWORD:$('clearAppPassword').checked,
-        RESEND_API_KEY:'',
-        BREVO_API_KEY:'',
+        RESEND_API_KEY:activeProvider==='RESEND' ? $('providerApiKey').value.trim() : '',
+        BREVO_API_KEY:activeProvider==='BREVO' ? $('providerApiKey').value.trim() : '',
         EMAILJS_SERVICE_ID:$('emailJsServiceId') ? $('emailJsServiceId').value.trim() : '',
         EMAILJS_TEMPLATE_ID:$('emailJsTemplateId') ? $('emailJsTemplateId').value.trim() : '',
         EMAILJS_PUBLIC_KEY:$('emailJsPublicKey') ? $('emailJsPublicKey').value.trim() : ''
@@ -464,13 +436,38 @@ $('configForm').addEventListener('submit',async e=>{
     };
     await request('/admin/config',{method:'PUT',body:data});
     await loadConfig();
+    await refreshHealth();
     notice(currentLang==='bn'?'কনফিগারেশন সফলভাবে সেভ হয়েছে।':'Configuration saved in MongoDB successfully.');
   }catch(err){notice(err.message)}finally{btn.disabled=false;btn.textContent=currentLang==='bn'?'💾 কনফিগারেশন সংরক্ষণ করুন':'💾 Save configuration';}
 });
+async function refreshHealth(){
+  const status=$('dbHealth'), detail=$('dbHealthDetail');
+  if(!status)return;
+  status.textContent='Checking…';
+  try {
+    const response=await fetch(API+'/public/db-status',{cache:'no-store'});
+    const data=await response.json();
+    if(!response.ok || !data.connected)throw Error('Database not connected');
+    const dot=document.createElement('span');dot.className='db-dot ok';
+    status.replaceChildren(dot,document.createTextNode('Connected'));
+    $('recordMetric').textContent=Number(data.mongoCount||0).toLocaleString();
+    detail.textContent='Database read verified';
+  } catch(e) {
+    const dot=document.createElement('span');dot.className='db-dot fail';
+    status.replaceChildren(dot,document.createTextNode('Unavailable'));
+    detail.textContent='Operations require MongoDB connectivity';
+    $('recordMetric').textContent='—';
+  }
+  const provider=document.querySelector('input[name="mailProvider"]:checked')?.value||'APPS_SCRIPT';
+  $('deliveryMetric').textContent=$('mailEnabled').checked?'Enabled · '+provider:'Disabled';
+  $('lastHealth').textContent='Status checked '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+$('refreshHealth').addEventListener('click',refreshHealth);
 async function initialize(){
   try {
     await loadConfig();
     showApp(true);
+    await refreshHealth();
   } catch(e) {
     logout(false);
   }
@@ -483,19 +480,13 @@ async function loadSheets(){
     for(const s of sheets) sel.add(new Option(`${s.name} (${s.count})`,s.name));
     if(sheets.some(s=>s.name===selected)) sel.value=selected;
     else if(sheets.length) sel.value=sheets[0].name;
-    if(sel.value) await loadRows();else{sheetData=null;drawTable();$('rowsStatus').textContent='No sheet tabs yet.';}
+    if(sel.value) await loadRows();
+    await refreshHealth();
+    if(!sel.value){sheetData=null;drawTable();$('rowsStatus').textContent='No sheet tabs yet.';}
   }catch(e){
     $('rowsStatus').textContent=e.message;notice(e.message);
-    const body = $('recordBody');
-    if (body && /unauthorized/i.test(e.message)) {
-      body.innerHTML = '<tr><td colspan="7" class="empty" style="color:var(--bad);padding:36px 20px">' +
-        '<div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">⚠️ Google Apps Script Authorization Failed (GATEWAY_SECRET মেলেনি)</div>' +
-        '<div style="font-size:.88rem;color:var(--text);line-height:1.6;max-width:540px;margin:0 auto">' +
-        (currentLang === 'bn' 
-          ? 'Apps Script রিকোয়েস্টটি বাতিল করেছে কারণ Apps Script-এর <code>GATEWAY_SECRET</code>-এর সাথে এই অ্যাডমিন সিক্রেট মেলেনি। দয়া করে <strong>⚙️ সাধারণ সেটিংস</strong> ট্যাবে গিয়ে Secret কপি করে Apps Script-এর Script Properties-এ পেস্ট করে Deploy করুন।'
-          : 'Apps Script rejected the request because the <code>GATEWAY_SECRET</code> does not match. Please switch to the <strong>⚙️ General Settings</strong> tab, copy the secret, paste it into Apps Script Script Properties and deploy.') +
-        '</div></td></tr>';
-    }
+    const body=$('recordBody');
+    if(body){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=9;cell.className='empty';cell.textContent='Database records could not be loaded. Please check MongoDB Atlas connectivity and retry.';row.append(cell);body.replaceChildren(row);}
   }
 }
 $('reloadSheets').addEventListener('click',loadSheets);
@@ -764,6 +755,11 @@ function drawTable(){
 }
 function editRow(row){openEditor(row);}
 $('addRecord').addEventListener('click',()=>openEditor(null));
+function todayDhakaISO() {
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const obj=Object.fromEntries(parts.map(v=>[v.type,v.value]));
+  return `${obj.year}-${obj.month}-${obj.day}`;
+}
 function openEditor(row){
   if(!sheetData)return;
   currentEdit=row;
@@ -772,10 +768,12 @@ function openEditor(row){
   const container=$('modalFields');container.replaceChildren();
   sheetData.headers.forEach((header,i)=>{
     const wrap=document.createElement('div'),label=mk('label',header),input=document.createElement('input');
-    input.value=row?String(row.values[i]||''):header.toLowerCase()==='attendance'?'1':header.toLowerCase()==='date'?String(sheetData.sheet).slice(0,10):'';
+    input.value=row?String(row.values[i]||''):header.toLowerCase()==='attendance'?'1':header.toLowerCase()==='date'?(/^(?:19|20)\d{2}-\d{2}-\d{2}/.test(String(sheetData.sheet))?String(sheetData.sheet).slice(0,10):todayDhakaISO()):'';
     input.dataset.index=String(i);input.placeholder='Enter '+header;
     if(header.toLowerCase()==='sl'){input.disabled=true;input.value=row?row.values[i]:'Auto';}
     if(header.toLowerCase()==='id'){input.maxLength=13;input.inputMode='numeric';input.required=true;}
+    if(header.toLowerCase()==='date'){input.type='date';input.required=true;}
+    if(header.toLowerCase()==='email'){input.type='email';input.maxLength=100;}
     if(header.toLowerCase()==='name')input.required=true;
     wrap.append(label,input);container.append(wrap);
   });
@@ -792,8 +790,8 @@ $('recordForm').addEventListener('submit',async e=>{
   if(nameIndex>=0&&values[nameIndex].length<2)return notice('Student name is required.');
   const btn=$('saveRecord');btn.disabled=true;btn.textContent='Saving…';
   try{
-    await request('/admin/sheets/rows/'+(currentEdit?'edit':'add'),{method:'POST',body:{sheet:sheetData.sheet,rowIndex:currentEdit?.rowIndex||null,values}});
-    closeEditor();await loadRows();notice('Record saved to Google Sheets.');
+    await request('/admin/sheets/rows/'+(currentEdit?'edit':'add'),{method:'POST',body:{sheet:sheetData.sheet,recordId:currentEdit?.recordId||null,values}});
+    closeEditor();await loadSheets();notice('✓ Record saved to MongoDB.');
   }catch(err){notice(err.message)}finally{btn.disabled=false;btn.textContent='Save record';}
 });
 function deleteRow(row){currentDelete=row;$('confirmModal').classList.remove('hidden');}
@@ -802,9 +800,9 @@ $('confirmDelete').addEventListener('click',async()=>{
   if(!currentDelete||!sheetData)return;
   const btn=$('confirmDelete');btn.disabled=true;btn.textContent='Deleting…';
   try{
-    await request('/admin/sheets/rows/delete',{method:'POST',body:{sheet:sheetData.sheet,rowIndex:currentDelete.rowIndex}});
+    await request('/admin/sheets/rows/delete',{method:'POST',body:{sheet:sheetData.sheet,recordId:currentDelete.recordId}});
     $('confirmModal').classList.add('hidden');currentDelete=null;
-    await loadRows();notice('Record deleted from Google Sheets.');
+    await loadSheets();notice('✓ Record deleted from MongoDB.');
   }catch(e){notice(e.message)}finally{btn.disabled=false;btn.textContent='Delete permanently';}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('confirmModal').classList.add('hidden');closeEditor();}});
@@ -842,7 +840,7 @@ const T_ADMIN = {
     loginBtn: "Sign in securely →",
     loginHint: "No account? Contact the site owner. Public registration is disabled.",
     dashTitle: "Administrator Dashboard",
-    dashSubtitle: "Manage your Google Sheets connection, attendance schedule, email confirmations and records.",
+    dashSubtitle: "Manage MongoDB records, schedules, notifications and optional Google Sheets sync.",
     tabSettings: "⚙️ General Settings",
     tabRecords: "📊 Attendance Records",
     sheetsCardTitle: "Google Sheets Integration",
@@ -866,11 +864,11 @@ const T_ADMIN = {
     providerScript: "Google Apps Script (100% Free Google)",
     providerScriptHint: "100% Free · Sends from your Google account via Apps Script. No password or credit card needed. Works on Render Free.",
     providerEmailJs: "EmailJS API (100% Free Frontend & Backend API)",
-    providerEmailJsHint: "100% Free · 200 free emails/month forever. Works from browser and server. Zero port blocking.",
+    providerEmailJsHint: "100% Free · 200 free emails/month forever. Sent from the backend. Zero port blocking.",
     providerSmtp: "Gmail SMTP",
     providerSmtpHint: "Gmail + App Password · Requires VPS or paid Render; port 587 is blocked on Render Free.",
     smtpRenderWarnTitle: "⚠️ Render Free Server Alert",
-    smtpRenderWarnDesc: "Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select Google Apps Script or EmailJS API (both send via HTTPS and work 100% reliably).",
+    smtpRenderWarnDesc: "Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select Google Apps Script or EmailJS API (both send via HTTPS and work when provider credentials and permissions are valid).",
     scriptMailGuideTitle: "📌 Google Apps Script Activation Steps:",
     scriptMailHintText: "100% Free via Google Apps Script (HTTPS). Steps to activate: 1) In Google Sheets open Extensions > Apps Script and paste the updated Code.gs. 2) Select function 'testMailAuthorization', click 'Run' and click 'Allow' to grant Gmail permission. 3) Deploy as Web app (Execute as: Me, Access: Anyone) and save URL & Secret here.",
     emailJsHelpTitle: "💡 100% Free Frontend & Backend Email:",
@@ -885,8 +883,8 @@ const T_ADMIN = {
     testEmailHint: "Save settings first, then test.",
     studentEmailPreview: "Student email preview",
     saveConfigBtn: "💾 Save configuration",
-    recordsTitle: "Google Sheet Records",
-    selectSheetLabel: "Select sheet / class tab",
+    recordsTitle: "MongoDB Attendance Records",
+    selectSheetLabel: "Select date / class group",
     searchRecordsLabel: "Search records",
     clearSearchTitle: "Clear search",
     searchPh: "Name, ID, email, date…",
@@ -894,7 +892,7 @@ const T_ADMIN = {
     reloadSheetsBtn: "↻ Refresh",
     previewGreeting: "Hello, Rabbi",
     previewSummary: "Your attendance has been successfully recorded. Here is your confirmation summary.",
-    emailSecurityHint: "Student ID is masked in email. Notification is attempted only after Google Sheets confirms attendance. Email delivery failure never deletes a saved attendance record.",
+    emailSecurityHint: "Student ID is masked in email. Notifications are attempted only after successful MongoDB writes. Email delivery failure does not remove attendance.",
     pageSizeLabel: "Per page:",
     downloadCsvBtn: "Download CSV ▾",
     csvCurrentTab: "Selected Tab CSV",
@@ -905,7 +903,7 @@ const T_ADMIN = {
     csvClassLabel: "Select or Enter Class",
     csvDownloadNow: "Download CSV",
     recordsTitle: "Attendance Records",
-    recordsSubtitle: "Saved in database and connected Google Sheets.",
+    recordsSubtitle: "Stored in MongoDB. Sheets is an optional student-submission mirror.",
     dark: "🌙",
     light: "☀️"
   },
@@ -923,7 +921,7 @@ const T_ADMIN = {
     loginBtn: "নিরাপদে সাইন ইন করুন →",
     loginHint: "অ্যাকাউন্ট নেই? সাইটের সত্ত্বাধিকারীর সাথে যোগাযোগ করুন। উন্মুক্ত রেজিস্ট্রেশন বন্ধ।",
     dashTitle: "প্রশাসক ড্যাশবোর্ড",
-    dashSubtitle: "গুগল শিট কানেকশন, ক্লাসের সময়সূচী, ইমেইল নোটিফিকেশন ও রেকর্ড পরিচালনা করুন।",
+    dashSubtitle: "MongoDB রেকর্ড, ক্লাসের সময়সূচি, ইমেইল ও Google Sheets সংযোগ পরিচালনা করুন।",
     tabSettings: "⚙️ সাধারণ সেটিংস",
     tabRecords: "📊 হাজিরা রেকর্ড",
     sheetsCardTitle: "গুগল শিট ইন্টিগ্রেশন",
@@ -947,11 +945,11 @@ const T_ADMIN = {
     providerScript: "গুগল অ্যাপস স্ক্রিপ্ট (১০০% ফ্রি গুগল মেথড)",
     providerScriptHint: "১০০% ফ্রি · আপনার গুগল অ্যাকাউন্ট দিয়ে Apps Script এর মাধ্যমে পাঠানো হয়। কোনো পাসওয়ার্ড বা ক্রেডিট কার্ড লাগে না।",
     providerEmailJs: "EmailJS API (১০০% ফ্রি ফ্রন্টএন্ড ও ব্যাকএন্ড API)",
-    providerEmailJsHint: "১০০% ফ্রি · প্রতি মাসে ২০০টি ফ্রি ইমেইল। ব্রাউজার ও সার্ভার থেকে সরাসরি জিমেইল দিয়ে পাঠানো হয়। কোনো পোর্ট ব্লক নেই।",
+    providerEmailJsHint: "১০০% ফ্রি · প্রতি মাসে ২০০টি ফ্রি ইমেইল। সার্ভার থেকে HTTPS API ব্যবহার করে পাঠানো হয়। কোনো পোর্ট ব্লক নেই।",
     providerSmtp: "জিমেইল এসএমটিপি (Gmail SMTP)",
     providerSmtpHint: "Gmail + App Password · VPS বা পেইড রেন্ডার প্রয়োজন; Render Free-তে SMTP পোর্ট ৫৮৭ বন্ধ থাকে।",
     smtpRenderWarnTitle: "⚠️ রেন্ডার ফ্রি সার্ভার সতর্কতা",
-    smtpRenderWarnDesc: "Render Free টিয়ারে আউটবাউন্ড SMTP পোর্ট ৫৮৭ ব্লক থাকে। Render Free-তে Gmail SMTP কাজ করবে না। অনুগ্রহ করে Google Apps Script বা EmailJS API ডেলিভারি মেথড নির্বাচন করুন (উভয়ই HTTPS দিয়ে ১০০% সফলভাবে কাজ করে)।",
+    smtpRenderWarnDesc: "Render Free টিয়ারে আউটবাউন্ড SMTP পোর্ট ৫৮৭ ব্লক থাকে। Render Free-তে Gmail SMTP কাজ করবে না। অনুগ্রহ করে Google Apps Script বা EmailJS API ডেলিভারি মেথড নির্বাচন করুন (উভয়ই HTTPS দিয়ে সঠিক কনফিগারেশন থাকলে কাজ করে)।",
     scriptMailGuideTitle: "📌 Google Apps Script চালু করার নিয়ম:",
     scriptMailHintText: "গুগল অ্যাপস স্ক্রিপ্ট (HTTPS) দিয়ে ১০০% ফ্রিতে ইমেইল পাঠানো হয়। যেভাবে চালু করবেন: ১. গুগল শিটে Extensions > Apps Script-এ গিয়ে নতুন Code.gs পেস্ট করুন। ২. ফাংশন ড্রপডাউন থেকে 'testMailAuthorization' সিলেক্ট করে 'Run' (চালান) বাটনে ক্লিক করুন এবং 'Allow' দিয়ে জিমেইল পারমিশন দিয়ে দিন। ৩. এরপর Deploy > Manage deployments বা New deployment থেকে Web app (Execute as: Me, Who has access: Anyone) করে URL ও Secret এখানে সেভ করুন।",
     emailJsHelpTitle: "💡 ১০০% ফ্রি ফ্রন্টএন্ড ও ব্যাকএন্ড ইমেইল এপিআই:",
@@ -966,8 +964,8 @@ const T_ADMIN = {
     testEmailHint: "আগে সেটিংস সেভ করুন, তারপর টেস্ট করুন।",
     studentEmailPreview: "ইমেইল নোটিফিকেশন প্রিভিউ",
     saveConfigBtn: "💾 কনফিগারেশন সংরক্ষণ করুন",
-    recordsTitle: "গুগল শিট রেকর্ডস",
-    selectSheetLabel: "শিট / ক্লাসের ট্যাব নির্বাচন করুন",
+    recordsTitle: "MongoDB হাজিরা রেকর্ড",
+    selectSheetLabel: "তারিখ / ক্লাস নির্বাচন করুন",
     searchRecordsLabel: "রেকর্ড খুঁজুন",
     clearSearchTitle: "সার্চ মুছুন",
     searchPh: "নাম, আইডি, ইমেইল, তারিখ দিয়ে খুঁজুন…",
@@ -975,7 +973,7 @@ const T_ADMIN = {
     reloadSheetsBtn: "↻ রিফ্রেশ",
     previewGreeting: "হ্যালো, রাব্বি",
     previewSummary: "আপনার উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে। এখানে আপনার নিশ্চিতকরণ সারাংশ।",
-    emailSecurityHint: "ইমেইলে স্টুডেন্ট আইডি গোপন রাখা হয়। গুগল শিটে উপস্থিতি নিশ্চিত হওয়ার পরই নোটিফিকেশন পাঠানো হয়।",
+    emailSecurityHint: "MongoDB-তে উপস্থিতি সেভ হওয়ার পর ইমেইল পাঠানোর চেষ্টা হয়। ইমেইল পাঠাতে ব্যর্থ হলেও হাজিরা রেকর্ড ঠিক থাকবে।",
     pageSizeLabel: "প্রতি পাতায়:",
     downloadCsvBtn: "CSV ডাউনলোড ▾",
     csvCurrentTab: "নির্বাচিত ট্যাবের CSV",
@@ -986,7 +984,7 @@ const T_ADMIN = {
     csvClassLabel: "ক্লাসের নাম লিখুন বা নির্বাচন করুন",
     csvDownloadNow: "CSV ডাউনলোড করুন",
     recordsTitle: "হাজিরা রেকর্ডসমূহ",
-    recordsSubtitle: "ডাটাবেজ এবং সংযুক্ত গুগল শিটে সংরক্ষিত রেকর্ড।",
+    recordsSubtitle: "MongoDB-তে সংরক্ষিত রেকর্ড; Google Sheets আলাদা ঐচ্ছিক কপি।",
     dark: "🌙",
     light: "☀️"
   }

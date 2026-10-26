@@ -59,28 +59,13 @@ public class NotificationService {
       }
     }
 
-    // 2. 100% Free Google Apps Script (Sends directly from Gmail account)
+    // 2. Google Apps Script: the first POST already mirrored the record and
+    //    optionally sent the email. Never retry on timeout or failed response;
+    //    a retry can deliver duplicate receipts and exceed the client timeout.
     if ("APPS_SCRIPT".equals(provider)) {
-      if (savedResult != null && savedResult.has("emailStatus")) {
-        String st = savedResult.path("emailStatus").asText("failed");
-        if ("sent".equalsIgnoreCase(st)) return "sent";
-      }
-      if (s.hasGoogleSheets()) {
-        try {
-          JsonNode fallback = script.post(s, Map.of(
-              "action", "sendReceipt",
-              "name", studentName,
-              "id", id,
-              "email", recipient,
-              "cls", className != null && !className.isBlank() ? className : "General Attendance",
-              "senderName", safeSender(s)
-          ));
-          if (fallback != null && "sent".equalsIgnoreCase(fallback.path("emailStatus").asText())) {
-            return "sent";
-          }
-        } catch (Exception e) {
-          log.warn("Apps Script receipt send failed: {}", e.getMessage());
-        }
+      if (savedResult != null && savedResult.path("ok").asBoolean(false) &&
+          "sent".equalsIgnoreCase(savedResult.path("emailStatus").asText())) {
+        return "sent";
       }
       return "failed";
     }
@@ -258,13 +243,11 @@ public class NotificationService {
   }
 
   public void sendResend(AdminSettings s, String recipient, String name, String studentId, String date, String className, boolean test) throws Exception {
-    String apiKey = s.resendApiKey != null ? s.resendApiKey.trim() : "";
+    String apiKey = decodeApiKey(s.resendApiKey);
     if (apiKey.isEmpty()) throw new IllegalStateException("Resend API key is required");
     String sender = (s.senderEmail != null && !s.senderEmail.isBlank()) ? s.senderEmail.trim() : "";
-    String from = safeSender(s) + " <onboarding@resend.dev>";
-    if (sender.contains("@") && !sender.endsWith("@gmail.com") && !sender.endsWith("@yahoo.com")) {
-      from = safeSender(s) + " <" + sender + ">";
-    }
+    if (sender.isBlank()) throw new IllegalStateException("Verified sender email is required for Resend");
+    String from = safeSender(s) + " <" + sender + ">";
     String dateText = escape(date), display = escape(name), cls = escape(className == null || className.isBlank() ? "General Attendance" : className);
     String masked = studentId == null || studentId.length() < 8 ? "—" : escape(studentId.substring(0, 4) + "•••••" + studentId.substring(studentId.length() - 4));
     String subject = test ? "Smart Attendance • Email Test" : "Attendance Confirmed • Smart Attendance";
@@ -286,14 +269,15 @@ public class NotificationService {
 
     HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
     if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
-      throw new IllegalStateException("Resend API error (HTTP " + resp.statusCode() + "): " + resp.body());
+      throw new IllegalStateException("Resend API rejected the request (HTTP " + resp.statusCode() + "). Verify API key, sender domain, and recipient permissions.");
     }
   }
 
   public void sendBrevo(AdminSettings s, String recipient, String name, String studentId, String date, String className, boolean test) throws Exception {
-    String apiKey = s.brevoApiKey != null ? s.brevoApiKey.trim() : "";
+    String apiKey = decodeApiKey(s.brevoApiKey);
     if (apiKey.isEmpty()) throw new IllegalStateException("Brevo API key is required");
-    String senderEmail = (s.senderEmail != null && !s.senderEmail.isBlank()) ? s.senderEmail.trim() : "fazlerabbii2000@gmail.com";
+    String senderEmail = (s.senderEmail != null && !s.senderEmail.isBlank()) ? s.senderEmail.trim() : "";
+    if (senderEmail.isBlank()) throw new IllegalStateException("Verified sender email required for Brevo");
     String dateText = escape(date), display = escape(name), cls = escape(className == null || className.isBlank() ? "General Attendance" : className);
     String masked = studentId == null || studentId.length() < 8 ? "—" : escape(studentId.substring(0, 4) + "•••••" + studentId.substring(studentId.length() - 4));
     String subject = test ? "Smart Attendance • Email Test" : "Attendance Confirmed • Smart Attendance";
@@ -316,8 +300,13 @@ public class NotificationService {
 
     HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
     if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
-      throw new IllegalStateException("Brevo API error (HTTP " + resp.statusCode() + "): " + resp.body());
+      throw new IllegalStateException("Brevo API rejected the request (HTTP " + resp.statusCode() + "). Verify API key and sender verification.");
     }
+  }
+
+  private String decodeApiKey(String saved) {
+    if (saved == null || saved.isBlank()) return "";
+    return saved.startsWith("enc:") ? crypto.decrypt(saved.substring(4)) : saved.trim();
   }
 
   public String safeSender(AdminSettings s){return s.senderName == null||s.senderName.isBlank()?"Smart Attendance":s.senderName;}

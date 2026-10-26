@@ -48,11 +48,10 @@ public class SecurityConfig {
     CorsConfiguration cfg=new CorsConfiguration();
     if(origins!=null && !origins.isBlank()){
       Arrays.stream(origins.split(",")).map(String::trim).filter(s->!s.isBlank()).forEach(cfg::addAllowedOrigin);
-    } else {
-      cfg.addAllowedOriginPattern("*");
     }
     cfg.setAllowedMethods(List.of("GET","POST","PUT","OPTIONS"));
     cfg.setAllowedHeaders(List.of("Content-Type","Authorization"));
+    cfg.setAllowCredentials(false);
     cfg.setMaxAge(3600L);
     UrlBasedCorsConfigurationSource src=new UrlBasedCorsConfigurationSource();src.registerCorsConfiguration("/**",cfg);return src;
   }

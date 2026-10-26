@@ -13,4 +13,6 @@ public interface AttendanceRepository extends MongoRepository<AttendanceEntry, S
   List<AttendanceEntry> findByDateOrderByCreatedAtDesc(String date);
   boolean existsByDateAndClassNameAndStudentId(String date, String className, String studentId);
   boolean existsByDateAndStudentId(String date, String studentId);
+  List<AttendanceEntry> findByDateAndClassNameAndStudentId(String date, String className, String studentId);
+  long countByTabName(String tabName);
 }

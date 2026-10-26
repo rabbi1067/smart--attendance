@@ -1556,21 +1556,9 @@ const dhakaNow = () => {
 const todayStr = () => { const d=dhakaNow(); return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); };
 
 const getCacheKey = (c) => "att_rows_" + todayStr() + (c ? "_" + String(c).replace(/\s+/g,"_") : "");
-function loadLocalRows(c){
-  try{
-    const cached = localStorage.getItem(getCacheKey(c));
-    if(cached){
-      const parsed = JSON.parse(cached);
-      if(Array.isArray(parsed)) return parsed;
-    }
-  }catch(e){}
-  return [];
-}
-function saveRows(data, c){
-  rows = data;
-  try{ localStorage.setItem(getCacheKey(c || (timerState && timerState.cls)), JSON.stringify(rows)); }catch(e){}
-  render();
-}
+// Persistent attendance is served only by MongoDB. Never show stale browser-cached records.
+function loadLocalRows(c){ return []; }
+function saveRows(data,c){ rows=data;render(); }
 const timeStr = () => {
   const d = new Date();
   let h = d.getHours();
@@ -2119,15 +2107,15 @@ function validateName(showOk = true) {
   return true;
 }
 
+// Public API never exposes complete Student IDs. Only locally confirmed submissions
+// are checked here; MongoDB's unique index is the authoritative duplicate guard.
+const sessionConfirmedIds = new Set();
+function submissionKey(id) {
+  const day = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
+  return `${day}:${timerState.cls || ''}:${String(id).trim()}`;
+}
 function isDuplicateId(id) {
-  if (!id || id.length !== 13) return false;
-  const targetMasked = mask(id);
-  const targetRaw = String(id).trim();
-  return rows.some(r => {
-    if (r.id && String(r.id).trim() === targetRaw) return true;
-    if (r.idm && r.idm === targetMasked) return true;
-    return false;
-  });
+  return !!id && id.length === 13 && sessionConfirmedIds.has(submissionKey(id));
 }
 
 function updateSubmitBtnState(isDuplicate = false) {
@@ -2282,6 +2270,7 @@ $("go").addEventListener("click", async () => {
         time: timeStr()
       };
       const alreadyExists = isDuplicateId(id);
+      sessionConfirmedIds.add(submissionKey(id));
       if (!alreadyExists) {
         rows.push(newEntry);
         saveRows(rows, curCls);
@@ -2290,32 +2279,15 @@ $("go").addEventListener("click", async () => {
 
       clearForm();
       toast(t.ok, "ok");
+      if (j.mirrorStatus === 'failed') {
+        toast(lang === 'bn' ? 'MongoDB-তে সেভ হয়েছে; Google Sheets sync হয়নি। Admin Dashboard-এ কানেকশন পরীক্ষা করুন।' : 'Saved to MongoDB, but Google Sheets sync failed. Check the Apps Script connection in Admin Dashboard.', 'warn');
+      }
 
-      if (email && CONFIG.emailEnabled && CONFIG.emailProvider === 'EMAILJS' && CONFIG.emailJsPublicKey && CONFIG.emailJsServiceId && CONFIG.emailJsTemplateId) {
-        fetch('https://api.emailjs.com/api/v1.0/email/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            service_id: CONFIG.emailJsServiceId,
-            template_id: CONFIG.emailJsTemplateId,
-            user_id: CONFIG.emailJsPublicKey,
-            template_params: {
-              to_email: email,
-              to_name: name,
-              student_id: mask(id),
-              class_name: curCls || 'General Attendance',
-              date: new Date().toISOString().slice(0, 10),
-              time: timeStr(),
-              sender_name: 'Smart Attendance'
-            }
-          })
-        }).then(r => {
-          if (r.ok) toast(lang === "bn" ? "কনফার্মেশন ইমেইল পাঠানো হয়েছে।" : "Confirmation email sent.", "ok");
-        }).catch(err => console.warn('Frontend EmailJS dispatch notice:', err));
-      } else if (email && j.emailStatus === "sent") {
-        toast(lang === "bn" ? "কনফার্মেশন ইমেইল পাঠানো হয়েছে।" : "Confirmation email sent.", "ok");
-      } else if (email && j.emailStatus === "failed") {
-        toast(lang === "bn" ? "হাজিরা সেভ হয়েছে, কিন্তু ইমেইল পাঠানো যায়নি।" : "Attendance saved, but confirmation email could not be sent.", "warn");
+      // The backend owns confirmation delivery; its verified result is authoritative.
+      if (email && j.emailStatus === 'sent') {
+        toast(lang === 'bn' ? 'কনফার্মেশন ইমেইল পাঠানো হয়েছে।' : 'Confirmation email sent.', 'ok');
+      } else if (email && j.emailStatus === 'failed') {
+        toast(lang === 'bn' ? 'হাজিরা MongoDB-তে সেভ হয়েছে, কিন্তু ইমেইল পাঠানো যায়নি।' : 'Attendance saved to MongoDB, but email delivery failed.', 'warn');
       }
 
       // Restore submit button immediately!
@@ -2338,8 +2310,8 @@ $("go").addEventListener("click", async () => {
     else if (e.code === 'bad_email') toast(t.badEmail, 'err');
     else if (/unauthorized/i.test(e.message)) {
       toast(lang === "bn" 
-        ? "⚠️ Apps Script Secret মেলেনি। অ্যাডমিন প্যানেল থেকে GATEWAY_SECRET চেক করুন।" 
-        : "⚠️ Unauthorized: Check GATEWAY_SECRET in Apps Script Project Settings.", "err");
+        ? "⚠️ সার্ভার অনুমোদন যাচাই করতে পারেনি। অ্যাডমিনের সাথে যোগাযোগ করুন।" 
+        : "⚠️ Your administrator session or gateway configuration could not be verified.", "err");
     } else {
       toast(e.message || t.net, 'err');
     }

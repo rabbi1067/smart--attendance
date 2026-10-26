@@ -9,10 +9,10 @@ const calls={};
 function fakeSheet(name){
  const rows=[['SL','Date','Name','ID','Email','Attendance','Local Time']];
  return {getName:()=>name,getLastRow:()=>rows.length,
-  getRange:(r,c,n=1,m=1)=>({getValue:()=>rows[r-1][c-1],getDisplayValues:()=>rows.slice(r-1,r-1+n).map(x=>x.slice(c-1,c-1+m))}),
+  getRange:(r,c,n=1,m=1)=>({getValue:()=>rows[r-1][c-1],getDisplayValues:()=>rows.slice(r-1,r-1+n).map(x=>x.slice(c-1,c-1+m)),getValues:()=>rows.slice(r-1,r-1+n).map(x=>x.slice(c-1,c-1+m)),setNumberFormat:()=>{}}),
   appendRow:(values)=>rows.push(values),_rows:rows};
 }
-const spreadsheet={getSheetByName:n=>sheets.get(n)||null,insertSheet:n=>{const sh=fakeSheet(n);sheets.set(n,sh);return sh;}};
+const spreadsheet={getSheetByName:n=>sheets.get(n)||null,getSheets:()=>[...sheets.values()],insertSheet:n=>{const sh=fakeSheet(n);sheets.set(n,sh);return sh;}};
 const sandbox={
  console,Date,JSON,Math,Number,String,Object,Array,RegExp,Error,parseInt,
  ContentService:{MimeType:{JSON:'json'},createTextOutput:text=>({setMimeType:()=>({body:text})})},
@@ -31,9 +31,17 @@ let result=post({...student,mailEnabled:false});
 assert.equal(result.ok,true);assert.equal(result.emailStatus,'disabled');assert.equal(mails.length,0);
 result=post({...student,id:'2023200000687',mailEnabled:true});
 assert.equal(result.ok,true);assert.equal(result.emailStatus,'sent');assert.equal(mails.length,1);
-assert.match(mails[0].htmlBody,/Attendance confirmed/);assert.doesNotMatch(mails[0].htmlBody,/2023200000687/);
+assert.match(mails[0].htmlBody,/Attendance confirmed/i);assert.doesNotMatch(mails[0].htmlBody,/2023200000687/);
 result=post({...student,id:'2023200000687',mailEnabled:true});
 assert.equal(result.ok,false);assert.equal(mails.length,1);
 result=post({action:'adminTestMail',email:'admin@example.com',senderName:'Smart Attendance'});
 assert.equal(result.emailStatus,'sent');assert.equal(mails.length,2);
-console.log('Apps Script tests passed: OFF no email, ON receipt, duplicate no email, admin test.');
+// Read-only health checks must work over POST without exposing the gateway key in a URL.
+result=post({action:'adminSheets'});
+assert.equal(result.ok,true);assert.ok(Array.isArray(result.sheets));
+assert.ok(result.sheets.some(s=>s.name===name));
+// Authentication failures are explicit; no spreadsheet operations or mail are performed.
+result=post({action:'adminSheets',key:'incorrect-secret'});
+assert.equal(result.ok,false);assert.equal(result.error,'unauthorized');
+assert.equal(mails.length,2);
+console.log('Apps Script tests passed: 6 scenarios (OFF, ON, duplicate, admin email, POST health, unauthorized).');

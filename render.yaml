@@ -21,3 +21,5 @@ services:
         generateValue: true
       - key: MAIL_ENCRYPTION_KEY
         sync: false
+      - key: FRONTEND_ORIGINS
+        sync: false

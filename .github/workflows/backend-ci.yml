@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test Apps Script email and duplicate guards
-        run: node tests/apps-script-test.cjs
+        run: npm test
       - name: Run automated Spring Boot tests
         working-directory: backend
         run: mvn -B test

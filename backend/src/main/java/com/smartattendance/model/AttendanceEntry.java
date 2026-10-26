@@ -3,9 +3,11 @@ package com.smartattendance.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import java.time.Instant;
 
 @Document(collection = "attendance_records")
+@CompoundIndex(name = "unique_attendance_date_class_student", def = "{'date':1,'className':1,'studentId':1}", unique = true)
 public class AttendanceEntry {
   @Id
   public String id;
