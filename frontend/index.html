@@ -11,7 +11,9 @@
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- ⚡ Non-blocking font loading: page renders immediately, text swaps when ready -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
 :root {
   --pri: #4f46e5;
@@ -1403,6 +1405,16 @@ tbody tr:hover { background: var(--pri-light); }
 <script>
 /* Public UI relative or configured API base */
 const API_BASE = String(window.ATTENDANCE_API_BASE || '').replace(/\/$/, '');
+// ⚡ Warm up the API connection (DNS + TLS) while the page renders
+if (API_BASE) {
+  try {
+    const pre = document.createElement('link');
+    pre.rel = 'preconnect';
+    pre.href = API_BASE;
+    pre.crossOrigin = '';
+    document.head.appendChild(pre);
+  } catch (e) {}
+}
 const CONFIG = { SHEET_URL: '', configured: false };
 let remoteSchedule = null, scheduleReady = false;
 const getScheduleConfig = () => remoteSchedule || SCHEDULE_CONFIG;
@@ -2364,7 +2376,10 @@ $('copyrightYear').textContent = new Date().getFullYear();
 applyLang();
 render();
 refreshConfiguration();
-setInterval(refreshConfiguration, 60000);
+// ⏱️ Live schedule/timer sync: config also refreshes the instant the tab becomes visible,
+// so countdowns set by the administrator appear within seconds, never stale.
+setInterval(refreshConfiguration, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshConfiguration(); });
 </script>
 </body>
 </html>

@@ -264,6 +264,8 @@ function doPost(e) {
   }
   const lock=LockService.getScriptLock();
   try {lock.waitLock(25000);} catch(err) {return json_({ok:false,error:'busy'});}
+  let pendingMail=null;
+  const sheetNameOut={sheet:''};
   try {
     const ss=SpreadsheetApp.getActiveSpreadsheet();
     if (d.action === 'adminTestMail') {
@@ -307,14 +309,17 @@ function doPost(e) {
     sh.appendRow(data);
     sh.getRange(sh.getLastRow(), c.id).setNumberFormat('@');
     cache.put(rateKey,'1',RATE_SECONDS);
-    let mailStatus = 'disabled';
-    let mailError = '';
+    sheetNameOut.sheet=sheetName;
     if (d.mailEnabled===true && email) {
-      const res = sendReceipt_(email,name,id,date,cls,d.senderName,false);
-      mailStatus = res.status;
-      mailError = res.error;
+      pendingMail={email:email,name:name,id:id,date:date,cls:cls,senderName:d.senderName};
     }
-    return json_({ok:true,sheet:sheetName,emailStatus:mailStatus,emailError:mailError});
   } catch(err) {return json_({ok:false,error:'server',message:String(err.message||err)});}
   finally {lock.releaseLock();}
+  // The email goes out AFTER the lock is released: concurrent students never
+  // queue behind a Gmail/MailApp send that takes seconds.
+  if (pendingMail) {
+    const res=sendReceipt_(pendingMail.email,pendingMail.name,pendingMail.id,pendingMail.date,pendingMail.cls,pendingMail.senderName,false);
+    return json_({ok:true,sheet:sheetNameOut.sheet,emailStatus:res.status,emailError:res.error});
+  }
+  return json_({ok:true,sheet:sheetNameOut.sheet,emailStatus:'disabled',emailError:''});
 }

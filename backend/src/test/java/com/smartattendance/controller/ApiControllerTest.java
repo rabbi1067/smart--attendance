@@ -26,6 +26,8 @@ class ApiControllerTest {
     when(settings.publicSettings()).thenReturn(s);
     when(notifications.usingScript(s)).thenReturn(true);
     when(notifications.safeSender(s)).thenReturn("Smart Attendance");
+    // Run the background mirror/email delivery synchronously so tests are deterministic.
+    api.deliveryExecutor=Runnable::run;
   }
   @Test void mongoSaveSucceedsDespiteMirrorFailureAndReportsIt() throws Exception {
     setup();
@@ -34,7 +36,9 @@ class ApiControllerTest {
         .thenReturn("failed");
     JsonNode result=(JsonNode)api.submit(new ApiController.Attendance("Student Name","2023200000686","student@example.test"));
     assertTrue(result.path("ok").asBoolean());
-    assertEquals("failed",result.path("mirrorStatus").asText());
+    // Mirroring now continues in the background; the student immediately learns the save succeeded.
+    assertEquals("pending",result.path("mirrorStatus").asText());
+    assertEquals("queued",result.path("emailStatus").asText());
     verify(storage,times(1)).save(anyString(),anyString(),anyString(),anyString(),anyString(),anyString());
     verify(script,times(1)).post(any(),anyMap());
   }
@@ -45,7 +49,7 @@ class ApiControllerTest {
         .thenReturn("failed");
     JsonNode result=(JsonNode)api.submit(new ApiController.Attendance("Student Name","2023200000686","student@example.test"));
     assertTrue(result.path("ok").asBoolean());
-    assertEquals("failed",result.path("mirrorStatus").asText());
+    assertEquals("pending",result.path("mirrorStatus").asText());
     verify(script,times(1)).post(any(),anyMap());
     verify(storage).save(anyString(),anyString(),anyString(),anyString(),anyString(),anyString());
   }

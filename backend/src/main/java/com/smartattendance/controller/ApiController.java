@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,28 +45,34 @@ public class ApiController {
     this.mapper = mapper;
   }
 
+  private static ResponseEntity<Object> fresh(Object body) {
+    // Configuration and records change the moment an administrator saves them;
+    // every public read must bypass intermediate caches so timers update instantly.
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(body);
+  }
+
   @GetMapping("/public/config")
-  public Object publicConfig() {
-    return settings.publicConfig();
+  public ResponseEntity<Object> publicConfig() {
+    return fresh(settings.publicConfig());
   }
 
   @GetMapping("/public/rows")
-  public Object rows(@RequestParam(defaultValue = "") String cls) {
+  public ResponseEntity<Object> rows(@RequestParam(defaultValue = "") String cls) {
     if (cls.length() > 50) throw new IllegalArgumentException("Invalid class");
     AdminSettings s = settings.publicSettings();
     String today = LocalDate.now(DHAKA).toString();
 
     // Public records are served from the same MongoDB source as the administrator dashboard.
     // Sheets is an optional outbound mirror; a stale external sheet never replaces Mongo records.
-    return Map.of(
+    return fresh(Map.of(
         "ok", true,
         "sheet", cls.isBlank() ? today : (today + " - " + cls),
         "rows", attendanceStorage.getPublicRows(today, cls)
-    );
+    ));
   }
 
   @GetMapping("/public/db-status")
-  public Object dbStatus() {
+  public ResponseEntity<Object> dbStatus() {
     Map<String, Object> res = new LinkedHashMap<>();
     try {
       long c = attendanceStorage.mongoCount();
@@ -76,7 +84,7 @@ public class ApiController {
       res.put("connected", false);
       res.put("error", "MongoDB is unavailable; verify Atlas credentials and Network Access.");
     }
-    return res;
+    return fresh(res);
   }
 
   public record Attendance(
@@ -84,6 +92,14 @@ public class ApiController {
       @NotBlank @Pattern(regexp = "[0-9]{13}") String id,
       @Size(max = 100) @Email String email
   ) {}
+
+  /** Bounded background pool: the Sheets mirror and email receipt must never delay a student's response. */
+  // Package-private so same-package tests can substitute a synchronous executor.
+  Executor deliveryExecutor = Executors.newFixedThreadPool(3, task -> {
+    Thread thread = new Thread(task, "attendance-delivery");
+    thread.setDaemon(true);
+    return thread;
+  });
 
   @PostMapping("/public/attendance")
   public Object submit(@Valid @RequestBody Attendance data) {
@@ -95,24 +111,42 @@ public class ApiController {
     String timeStr = LocalTime.now(DHAKA).format(TIME_FMT);
     String recipient = data.email() == null ? "" : data.email().trim();
 
-    // 1. Primary save: MongoDB commit or failure with duplicate protection
+    // 1. Primary save: MongoDB commit or failure with duplicate protection.
+    //    This is the only step that gates the student's response, so attendance
+    //    succeeds in a fraction of a second even when outbound services are slow.
     attendanceStorage.save(today, cls, data.name().trim(), data.id(), recipient, timeStr);
 
-    // 2. If Google Sheets is configured, mirror to Google Apps Script
+    // 2. Google Sheets mirroring and the email receipt continue asynchronously.
+    //    A slow or failing Apps Script endpoint can no longer stall the request.
+    boolean mirrorConfigured = s.hasGoogleSheets();
+    if (mirrorConfigured || s.emailEnabled) {
+      String studentName = data.name().trim(), studentId = data.id(), className = cls;
+      boolean mailEnabled = notifications.usingScript(s), emailEnabled = s.emailEnabled;
+      deliveryExecutor.execute(() -> deliver(s, studentName, studentId, recipient, className, mailEnabled, emailEnabled));
+    }
+
+    ObjectNode result = mapper.createObjectNode();
+    result.put("ok", true);
+    result.put("emailStatus", recipient.isBlank() ? "no_address" : (s.emailEnabled ? "queued" : "disabled"));
+    result.put("mirrorStatus", mirrorConfigured ? "pending" : "not_configured");
+    return result;
+  }
+
+  private void deliver(AdminSettings snapshot, String name, String id, String recipient,
+                       String cls, boolean mailEnabled, boolean emailEnabled) {
     JsonNode recorded = null;
-    String mirrorStatus = s.hasGoogleSheets() ? "failed" : "not_configured";
-    if (s.hasGoogleSheets()) {
+    if (snapshot.hasGoogleSheets()) {
       try {
-        recorded = script.post(s, Map.of(
-            "name", data.name().trim(),
-            "id", data.id(),
+        recorded = script.post(snapshot, Map.of(
+            "name", name,
+            "id", id,
             "email", recipient,
             "cls", cls,
-            "mailEnabled", notifications.usingScript(s),
-            "senderName", notifications.safeSender(s)
+            "mailEnabled", mailEnabled,
+            "senderName", notifications.safeSender(snapshot)
         ));
         if (recorded != null && recorded.path("ok").asBoolean(false)) {
-          mirrorStatus = "synced";
+          log.debug("Google Sheets mirror synced for class {}", cls);
         } else {
           // An upstream JSON error is not a successful Google Sheets write.
           log.warn("Apps Script mirror rejected an attendance write; MongoDB remains authoritative");
@@ -122,22 +156,13 @@ public class ApiController {
         log.warn("Google Sheets mirror unavailable after MongoDB commit: {}", e.getClass().getSimpleName());
       }
     }
-
-    // 3. Never retry a potentially completed mirror POST synchronously:
-    //    doing so can create duplicate emails and exceed the public request timeout.
-    String status = "disabled";
-    try {
-      status = notifications.receiptStatus(s, recipient, data.name().trim(), data.id(), cls, recorded);
-    } catch (Exception e) {
-      log.warn("Email receipt process failed after MongoDB commit: {}", e.getClass().getSimpleName());
-      status = "failed";
+    if (emailEnabled && !recipient.isBlank()) {
+      try {
+        notifications.receiptStatus(snapshot, recipient, name, id, cls, recorded);
+      } catch (Exception e) {
+        log.warn("Email receipt process failed after MongoDB commit: {}", e.getClass().getSimpleName());
+      }
     }
-
-    ObjectNode result = mapper.createObjectNode();
-    result.put("ok", true);
-    result.put("emailStatus", status);
-    result.put("mirrorStatus", mirrorStatus);
-    return result;
   }
 
   public record Login(@NotBlank String email, @NotBlank String password) {}
