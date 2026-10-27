@@ -36,14 +36,23 @@ function cols_(sh) {
 function createSheet_(ss, name) {
   let sh = ss.getSheetByName(name);
   if (sh) return sh;
-  sh = ss.insertSheet(name, 0);
-  sh.getRange('A:G').setNumberFormat('@');
+  sh = ss.insertSheet(name, 0);              // newest date/class tab appears first
+  sh.getRange('A:G').setNumberFormat('@');   // IDs and times stay text, never reformatted
+  // Pretty header: indigo banner, bold white text, single row frozen.
   sh.getRange(1,1,1,7).setValues([HEADERS]).setBackground('#4f46e5').setFontColor('#ffffff')
-    .setFontWeight('bold').setHorizontalAlignment('center');
-  sh.setFrozenRows(1); sh.setRowHeight(1,36);
+    .setFontWeight('bold').setFontSize(11).setHorizontalAlignment('center').setVerticalAlignment('middle');
+  sh.setFrozenRows(1); sh.setRowHeight(1, 36);
   [60,110,200,150,240,110,120].forEach((w,i)=>sh.setColumnWidth(i+1,w));
-  sh.getRange('I1').setValue('Total:');
-  sh.getRange('J1').setFormula('=COUNT(F2:F)');
+  // Readability: indigo striping, middle alignment, centered columns, green ticks.
+  sh.getRange(1,1,sh.getMaxRows(),7).applyRowBanding(SpreadsheetApp.BandingTheme.INDIGO, true, false);
+  sh.getRange('A2:G').setVerticalAlignment('middle');
+  sh.getRange('F2:F').setHorizontalAlignment('center').setFontColor('#16a34a').setFontWeight('bold');
+  ['A2:A','B2:B','D2:D','G2:G'].forEach(r=>sh.getRange(r).setHorizontalAlignment('center'));
+  // Automatic total counter (row 1 header never counted: starts at row 2 with 1).
+  sh.getRange('I1').setValue('Total:').setFontWeight('bold').setHorizontalAlignment('right');
+  sh.getRange('J1').setFormula('=COUNT(F2:F)').setFontWeight('bold')
+    .setFontColor('#16a34a').setHorizontalAlignment('center');
+  sh.setColumnWidth(9, 65); sh.setColumnWidth(10, 60);
   sh.setTabColor('#4f46e5');
   return sh;
 }
