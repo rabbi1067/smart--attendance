@@ -51,21 +51,20 @@ MongoDB-এর [official authentication troubleshooting](https://www.mongodb.com
 
 **Render Free-তে Gmail SMTP বন্ধ (25/465/587)।** Gmail App Password দিয়েও কাজ করবে না। নিচের যেকোনো HTTPS পদ্ধতি ব্যবহার করো:
 
-**Google Apps Script:** Google Sheet → Extensions → Apps Script → ZIP-এর `Code.gs` paste → Project Settings → Script Properties → `GATEWAY_SECRET` নামে 32–256 character নতুন secret সেট করো → Web App deployment বানিয়ে `/exec` URL নাও → Apps Script-এর `testMailAuthorization()` run করে permission allow করো। Admin Settings-এ Script URL, Sheet URL, একই secret Save করো। **Student Confirmation Emails ON**, Provider **Google Apps Script**, Save → **Send test email**।
+
+**EmailJS (সাজেস্টেড, ডিফল্ট):** emailjs.com-এ ফ্রি অ্যাকাউন্ট খোলো (ক্রেডিট কার্ড লাগে না) → জিমেইল service connect করো → email template বানাও → Admin Settings-এ Provider **EmailJS API** নির্বাচন করে Public Key, Service ID ও Template ID দাও → **Student Confirmation Emails ON** → Save → **Send test email**।
 
 **Resend / Brevo:** সংশ্লিষ্ট service-এ verified sender address/domain ও API key তৈরি → Admin Settings-এ provider নির্বাচন, verified sender + API key দিয়ে Save → **Send test email**। API key MongoDB-তে encrypted থাকে।
 
 **Email বন্ধ করতে:** Admin → Student Confirmation Emails **OFF** → Save। এরপর student attendance database-এ যাবে; কারও কাছে confirmation email automatically যাবে না।
 
-**Google Sheet সীমাবদ্ধতা:** Student attendance MongoDB-তে প্রথমে save হয়; Apps Script থাকলে Sheet-এ copy যায়। Admin Edit/Delete MongoDB record পরিবর্তন করে, পুরোনো Google Sheet copy নয়। আগের Sheets-only history চাইলে আলাদা migrate করতে হবে।
-
 ## ৪. GitHub Pages (Optional)
 
-অতিরিক্ত GitHub Pages site চাইলে GitHub repository → Settings → Secrets and variables → Actions → **Variables** → `API_BASE_URL` = `https://YOUR-RENDER-SERVICE.onrender.com`। Settings → Pages → Source **GitHub Actions**; workflow deploy করো। Render `FRONTEND_ORIGINS`-এ `https://YOUR_USERNAME.github.io` যোগ করো (repository path নয়)। Public backend URL secret নয়; admin password, JWT, Mongo URI, Apps Script gateway secret **কোনোভাবেই** GitHub-এ দেবে না।
+অতিরিক্ত GitHub Pages site চাইলে GitHub repository → Settings → Secrets and variables → Actions → **Variables** → `API_BASE_URL` = `https://YOUR-RENDER-SERVICE.onrender.com`। Settings → Pages → Source **GitHub Actions**; workflow deploy করো। Render `FRONTEND_ORIGINS`-এ `https://YOUR_USERNAME.github.io` যোগ করো (repository path নয়)। Public backend URL secret নয়; admin password, JWT, Mongo URI **কোনোভাবেই** GitHub-এ দেবে না।
 
 ## ৫. Tests / Critical Security
 
-- `npm test`: Apps Script notification ON/OFF, duplicate, test email, authenticated POST health ও frontend DOM/API contract tests।
+- `npm test`: frontend DOM/API contract tests (Admin/Public id consistency, syntax, email guards)।
 - `npm run build`: production frontend.
 - `npm run test:java`: Spring Boot JUnit tests (Java 21 এবং Maven দরকার)।
 - Browser/manual testing: admin login → save schedule → student submission → Atlas verify → admin edit/delete → notification OFF/ON test → admin test email।
@@ -76,8 +75,7 @@ MongoDB-এর [official authentication troubleshooting](https://www.mongodb.com
 
 ## ৬. v6-এ নতুন করে যা করতে হবে
 
-- Render-এর `MAIL_ENCRYPTION_KEY` একটি **valid base64-encoded 32-byte random key** হতে হবে। নতুন Apps Script gateway secret-ও database-এ encrypted থাকবে। Existing plaintext secret থাকলে Admin → Settings → Save দিলে সেটি encrypted-এ migrate হবে। **আগের encryption key rotate করার আগে তার নিচে সংরক্ষিত password/API key আবার নতুন করে set করতে হবে**; শুধু key পাল্টে পুরোনো ciphertext decrypt হবে না।
-- `Code.gs` আপডেট করে Google Apps Script-এ **new deployment version** প্রকাশ করো। v6 connection test POST ব্যবহার করে; পুরোনো Apps Script deployment হলে test কাজ করবে না।
+- Render-এর `MAIL_ENCRYPTION_KEY` একটি **valid base64-encoded 32-byte random key** হতে হবে। **আগের encryption key rotate করার আগে তার নিচে সংরক্ষিত password/API key আবার নতুন করে set করতে হবে**; শুধু key পাল্টে পুরোনো ciphertext decrypt হবে না।
 - “All Records” → Add দিয়ে নতুন record দিতে পারবে। Date default হবে Asia/Dhaka অনুযায়ী আজকের তারিখ; Date পরিবর্তন করে record অন্য দিনেও add করা যাবে। Date-specific tab-এ date mismatch দিলে validation error দেখাবে।
 - Add/Edit/Delete এরপর tab labels/counts এবং table আবার MongoDB থেকে load হবে। পুরোনো version-এর row-index-only Edit/Delete requests v6-এ ইচ্ছাকৃতভাবে reject হবে; refresh করে নতুন Admin UI ব্যবহার করবে।
 - Render Docker build-এ এখন `mvn package` দিয়ে JUnit tests চালানোর চেষ্টা হয়; test fail করলে deploy বন্ধ হবে।
@@ -85,8 +83,8 @@ MongoDB-এর [official authentication troubleshooting](https://www.mongodb.com
 
 ## ৭. v6-এর নতুন নির্ভরযোগ্যতা পরীক্ষা
 
-- নতুন attendance **MongoDB-তে সফলভাবে save** হলেও Google Sheets mirror fail করলে user-কে আলাদা warning দেখাবে। `mirrorStatus=failed` হলে database save ব্যর্থ বোঝায় না।
-- Google Apps Script timeout হলে একই POST আবার পাঠানো হবে না; duplicate email এড়ানোর জন্য একবারই attempt করবে। Failed email থাকলে Admin → Settings → Test Email দিয়ে provider/authorization পরীক্ষা করবে। স্বয়ংক্রিয় retry queue এই সংস্করণে নেই।
+- নতুন attendance **MongoDB-তে সফলভাবে save** হওয়ার পর email receipt ব্যাকগ্রাউন্ডে পাঠানো হয়; email fail করলেও database save ব্যর্থ বোঝায় না।
+- Email provider/authorization পরীক্ষা করতে Admin → Settings → **Send test email** ব্যবহার করবে। স্বয়ংক্রিয় retry queue এই সংস্করণে নেই।
 - Mongo record delete/add-এর পর পুরোনো SL পুনরাবৃত্ত হলেও frontend-এর record display stable creation-time order-এ থাকবে।
 - Render-এর নতুন deployment-এর আগে পুরোনো credentials rotate ও encrypted keys আবার save করবে।
 - Live MongoDB write/read, persistence after restart, live email inbox receipt, end-to-end browser flow এগুলো CI mock tests দিয়ে প্রমাণ হয় না; deploy-এর পরে acceptance checks করতে হবে।

@@ -159,8 +159,14 @@ public class AttendanceStorageService {
     String t = str(type).toLowerCase(Locale.ROOT), f = str(filter);
     List<AttendanceEntry> entries = all().stream().filter(e -> switch(t) {
       case "date" -> f.equalsIgnoreCase(str(e.date));
-      case "class" -> f.equalsIgnoreCase(str(e.className));
+      case "class" -> f.equalsIgnoreCase(displayClass(e));
       case "sheet" -> f.isBlank() || "All Records".equalsIgnoreCase(f) || f.equalsIgnoreCase(str(e.tabName));
+      case "combined" -> {
+        // Composite "date|class" filter — class names never contain '|' itself.
+        // Blank classNames display as "General" in the CSV, so filter with the same label.
+        int sep = f.indexOf('|');
+        yield sep > 0 && f.equalsIgnoreCase(str(e.date) + "|" + displayClass(e));
+      }
       default -> true;
     }).sorted(latest()).collect(Collectors.toList());
     StringBuilder csv = new StringBuilder("\uFEFFSL,Date,Class,Name,Student ID,Email,Attendance,Time\r\n");
@@ -173,6 +179,10 @@ public class AttendanceStorageService {
           .append(csvCell(e.time)).append("\r\n");
     }
     return csv.toString();
+  }
+  private static String displayClass(AttendanceEntry e) {
+    String c = str(e.className);
+    return c.isBlank() ? "General" : c;
   }
   private static String csvCell(String value) {
     String s = str(value);

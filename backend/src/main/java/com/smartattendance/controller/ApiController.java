@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 public class ApiController {
   private static final Logger log = LoggerFactory.getLogger(ApiController.class);
   private final SettingsService settings;
-  private final AppsScriptClient script;
   private final AdminAuthService auth;
   private final TokenService tokens;
   private final NotificationService notifications;
@@ -33,11 +32,10 @@ public class ApiController {
   private static final ZoneId DHAKA = ZoneId.of("Asia/Dhaka");
   private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("hh:mm:ss a", Locale.ENGLISH);
 
-  public ApiController(SettingsService settings, AppsScriptClient script, AdminAuthService auth,
+  public ApiController(SettingsService settings, AdminAuthService auth,
                        TokenService tokens, NotificationService notifications,
                        AttendanceStorageService attendanceStorage, ObjectMapper mapper) {
     this.settings = settings;
-    this.script = script;
     this.auth = auth;
     this.tokens = tokens;
     this.notifications = notifications;
@@ -62,8 +60,7 @@ public class ApiController {
     AdminSettings s = settings.publicSettings();
     String today = LocalDate.now(DHAKA).toString();
 
-    // Public records are served from the same MongoDB source as the administrator dashboard.
-    // Sheets is an optional outbound mirror; a stale external sheet never replaces Mongo records.
+    // Public records are served directly from MongoDB — the single source of truth.
     return fresh(Map.of(
         "ok", true,
         "sheet", cls.isBlank() ? today : (today + " - " + cls),
@@ -93,7 +90,7 @@ public class ApiController {
       @Size(max = 100) @Email String email
   ) {}
 
-  /** Bounded background pool: the Sheets mirror and email receipt must never delay a student's response. */
+  /** Bounded background pool: the email receipt must never delay a student's response. */
   // Package-private so same-package tests can substitute a synchronous executor.
   Executor deliveryExecutor = Executors.newFixedThreadPool(3, task -> {
     Thread thread = new Thread(task, "attendance-delivery");
@@ -116,52 +113,23 @@ public class ApiController {
     //    succeeds in a fraction of a second even when outbound services are slow.
     attendanceStorage.save(today, cls, data.name().trim(), data.id(), recipient, timeStr);
 
-    // 2. Google Sheets mirroring and the email receipt continue asynchronously.
-    //    A slow or failing Apps Script endpoint can no longer stall the request.
-    boolean mirrorConfigured = s.hasGoogleSheets();
-    if (mirrorConfigured || s.emailEnabled) {
+    // 2. The email receipt continues asynchronously in the background pool.
+    if (s.emailEnabled && !recipient.isBlank()) {
       String studentName = data.name().trim(), studentId = data.id(), className = cls;
-      boolean mailEnabled = notifications.usingScript(s), emailEnabled = s.emailEnabled;
-      deliveryExecutor.execute(() -> deliver(s, studentName, studentId, recipient, className, mailEnabled, emailEnabled));
+      deliveryExecutor.execute(() -> deliver(s, studentName, studentId, recipient, className));
     }
 
     ObjectNode result = mapper.createObjectNode();
     result.put("ok", true);
     result.put("emailStatus", recipient.isBlank() ? "no_address" : (s.emailEnabled ? "queued" : "disabled"));
-    result.put("mirrorStatus", mirrorConfigured ? "pending" : "not_configured");
     return result;
   }
 
-  private void deliver(AdminSettings snapshot, String name, String id, String recipient,
-                       String cls, boolean mailEnabled, boolean emailEnabled) {
-    JsonNode recorded = null;
-    if (snapshot.hasGoogleSheets()) {
-      try {
-        recorded = script.post(snapshot, Map.of(
-            "name", name,
-            "id", id,
-            "email", recipient,
-            "cls", cls,
-            "mailEnabled", mailEnabled,
-            "senderName", notifications.safeSender(snapshot)
-        ));
-        if (recorded != null && recorded.path("ok").asBoolean(false)) {
-          log.debug("Google Sheets mirror synced for class {}", cls);
-        } else {
-          // An upstream JSON error is not a successful Google Sheets write.
-          log.warn("Apps Script mirror rejected an attendance write; MongoDB remains authoritative");
-        }
-      } catch (Exception e) {
-        // The MongoDB commit already succeeded; never discard the attendance record.
-        log.warn("Google Sheets mirror unavailable after MongoDB commit: {}", e.getClass().getSimpleName());
-      }
-    }
-    if (emailEnabled && !recipient.isBlank()) {
-      try {
-        notifications.receiptStatus(snapshot, recipient, name, id, cls, recorded);
-      } catch (Exception e) {
-        log.warn("Email receipt process failed after MongoDB commit: {}", e.getClass().getSimpleName());
-      }
+  private void deliver(AdminSettings snapshot, String name, String id, String recipient, String cls) {
+    try {
+      notifications.receiptStatus(snapshot, recipient, name, id, cls, null);
+    } catch (Exception e) {
+      log.warn("Email receipt process failed after MongoDB commit: {}", e.getClass().getSimpleName());
     }
   }
 
@@ -189,19 +157,6 @@ public class ApiController {
   @PostMapping("/admin/notifications/test")
   public Object sendTest(Authentication principal) {
     return notifications.test(settings.forUser(principal.getName()), principal.getName());
-  }
-
-  // The administrator dashboard always reads MongoDB; Google Sheets is an optional external mirror.
-  @GetMapping("/admin/script/health")
-  public Object scriptHealth(Authentication principal) {
-    AdminSettings config=settings.forUser(principal.getName());
-    if (!config.hasGoogleSheets()) throw new IllegalStateException("Save the Apps Script URL and gateway secret before testing the connection.");
-    // POST keeps gateway secrets out of query strings, proxy access logs and browser history.
-    JsonNode response=script.post(config, Map.of("action","adminSheets"));
-    if (response==null || !response.path("ok").asBoolean(false)) {
-      throw new IllegalStateException("Google Apps Script rejected the connection. Check Web App deployment and GATEWAY_SECRET.");
-    }
-    return Map.of("ok",true,"sheets",response.path("sheets"));
   }
 
   @GetMapping("/admin/sheets")
@@ -249,7 +204,11 @@ public class ApiController {
 
     String actualFilter = filter;
     String actualType = type;
-    if (sheet != null && !sheet.isBlank()) {
+    if (date != null && !date.isBlank() && cls != null && !cls.isBlank()) {
+      // Date + class is a composite key; class names never contain '|'.
+      actualType = "combined";
+      actualFilter = date.trim() + "|" + cls.trim();
+    } else if (sheet != null && !sheet.isBlank()) {
       actualType = "sheet";
       actualFilter = sheet;
     } else if (date != null && !date.isBlank()) {

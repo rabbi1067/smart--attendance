@@ -4,14 +4,14 @@ on:
     branches: [main, master]
     paths:
       - 'backend/**'
-      - 'Code.gs'
       - 'tests/**'
+      - 'package.json'
       - '.github/workflows/backend-ci.yml'
   pull_request:
     paths:
       - 'backend/**'
-      - 'Code.gs'
       - 'tests/**'
+      - 'package.json'
       - '.github/workflows/backend-ci.yml'
 permissions:
   contents: read
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Test Apps Script email and duplicate guards
+      - name: Frontend contract checks
         run: npm test
       - name: Run automated Spring Boot tests
         working-directory: backend

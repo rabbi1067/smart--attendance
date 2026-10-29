@@ -2,6 +2,8 @@
 
 **Audit date:** 2026-10-26 (Asia/Dhaka). **Starting point:** provided v5 ZIP.
 
+> **Update (2026-10-29):** The Google Sheets Integration (Google Apps Script mirror, `Code.gs`, gateway secret and `mirrorStatus`) has since been **completely removed**. MongoDB is the single source of truth; emails now go through EmailJS (default), Resend, Brevo or Gmail SMTP. The Apps Script items below describe the historical audit only.
+
 ## Confirmed fixes in this release
 
 1. Google Apps Script mirror failures previously could lead to repeated in-request mail attempts and a long response (POST + fallback), causing duplicate confirmation messages and browser timeouts. Apps Script confirmation is now single-attempt and reports `failed` when not confirmed.

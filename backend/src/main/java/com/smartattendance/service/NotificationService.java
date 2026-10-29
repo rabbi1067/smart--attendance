@@ -24,20 +24,14 @@ import java.util.*;
 public class NotificationService {
   private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
   private final EncryptionService crypto;
-  private final AppsScriptClient script;
   private final ObjectMapper mapper;
   private final HttpClient httpClient;
   private static final ZoneId TIMEZONE = ZoneId.of("Asia/Dhaka");
 
-  public NotificationService(EncryptionService crypto, AppsScriptClient script) {
+  public NotificationService(EncryptionService crypto) {
     this.crypto = crypto;
-    this.script = script;
     this.mapper = new ObjectMapper();
     this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
-  }
-
-  public boolean usingScript(AdminSettings s) {
-    return s.emailEnabled && "APPS_SCRIPT".equalsIgnoreCase(s.emailProvider);
   }
 
   public String receiptStatus(AdminSettings s, String recipient, String studentName, String id,
@@ -45,10 +39,10 @@ public class NotificationService {
     if (recipient == null || recipient.isBlank()) return "no_address";
     if (!s.emailEnabled) return "disabled";
 
-    String provider = s.emailProvider != null ? s.emailProvider.toUpperCase(Locale.ROOT) : "APPS_SCRIPT";
+    String provider = s.emailProvider != null ? s.emailProvider.toUpperCase(Locale.ROOT) : "EMAILJS";
     String date = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH).format(ZonedDateTime.now(TIMEZONE));
 
-    // 1. 100% Free EmailJS API (HTTPS, no server port block, browser/server supported)
+    // 1. 100% Free EmailJS API (HTTPS, no server port block, server supported)
     if ("EMAILJS".equals(provider)) {
       try {
         sendEmailJs(s, recipient, studentName, id, date, className, false);
@@ -59,18 +53,7 @@ public class NotificationService {
       }
     }
 
-    // 2. Google Apps Script: the first POST already mirrored the record and
-    //    optionally sent the email. Never retry on timeout or failed response;
-    //    a retry can deliver duplicate receipts and exceed the client timeout.
-    if ("APPS_SCRIPT".equals(provider)) {
-      if (savedResult != null && savedResult.path("ok").asBoolean(false) &&
-          "sent".equalsIgnoreCase(savedResult.path("emailStatus").asText())) {
-        return "sent";
-      }
-      return "failed";
-    }
-
-    // 3. Resend API
+    // 2. Resend API
     if ("RESEND".equals(provider)) {
       try {
         sendResend(s, recipient, studentName, id, date, className, false);
@@ -81,7 +64,7 @@ public class NotificationService {
       }
     }
 
-    // 4. Brevo API
+    // 3. Brevo API
     if ("BREVO".equals(provider)) {
       try {
         sendBrevo(s, recipient, studentName, id, date, className, false);
@@ -92,7 +75,7 @@ public class NotificationService {
       }
     }
 
-    // 5. SMTP mode with automatic fallbacks
+    // 4. SMTP mode with automatic EmailJS fallback
     try {
       sendSmtp(s, recipient, studentName, id, date, className, false);
       return "sent";
@@ -100,24 +83,6 @@ public class NotificationService {
       log.warn("SMTP send failed ({}): {}. Attempting fallbacks...", e.getClass().getSimpleName(), e.getMessage());
       if (s.emailJsPublicKey != null && !s.emailJsPublicKey.isBlank()) {
         try { sendEmailJs(s, recipient, studentName, id, date, className, false); return "sent"; } catch(Exception ignored) {}
-      }
-      if (s.hasGoogleSheets()) {
-        try {
-          JsonNode fallback = script.post(s, Map.of(
-              "action", "sendReceipt",
-              "name", studentName,
-              "id", id,
-              "email", recipient,
-              "cls", className != null && !className.isBlank() ? className : "General Attendance",
-              "senderName", safeSender(s)
-          ));
-          if (fallback != null && "sent".equalsIgnoreCase(fallback.path("emailStatus").asText())) {
-            log.info("Email delivered successfully via Apps Script fallback!");
-            return "sent";
-          }
-        } catch (Exception ex) {
-          log.warn("Apps Script fallback also failed: {}", ex.getMessage());
-        }
       }
       return "failed";
     }
@@ -128,7 +93,7 @@ public class NotificationService {
       throw new IllegalArgumentException("Enable email notifications and save settings before sending a test");
     }
 
-    String provider = s.emailProvider != null ? s.emailProvider.toUpperCase(Locale.ROOT) : "APPS_SCRIPT";
+    String provider = s.emailProvider != null ? s.emailProvider.toUpperCase(Locale.ROOT) : "EMAILJS";
 
     // EmailJS Test
     if ("EMAILJS".equals(provider)) {
@@ -137,35 +102,6 @@ public class NotificationService {
         return Map.of("ok", true, "emailStatus", "sent", "message", "Test email sent successfully via EmailJS API to " + adminEmail);
       } catch (Exception e) {
         return Map.of("ok", false, "emailStatus", "failed", "message", "EmailJS API error: " + e.getMessage());
-      }
-    }
-
-    // Google Apps Script Test
-    if ("APPS_SCRIPT".equals(provider)) {
-      if (!s.hasGoogleSheets()) {
-        return Map.of("ok", false, "emailStatus", "failed", "message",
-            "Google Apps Script Web App URL and Secret must be configured in Settings first.");
-      }
-      try {
-        JsonNode result = script.post(s, Map.of(
-            "action", "adminTestMail",
-            "email", adminEmail,
-            "senderName", safeSender(s)
-        ));
-        String status = result != null ? result.path("emailStatus").asText("failed") : "failed";
-        String err = result != null ? result.path("error").asText("") : "";
-        if ("sent".equalsIgnoreCase(status)) {
-          return Map.of("ok", true, "emailStatus", "sent", "message",
-              "Test email successfully sent via Google Apps Script to " + adminEmail);
-        } else {
-          String msg = "Google Apps Script delivery failed.";
-          if (!err.isBlank()) msg += " (" + err + ")";
-          msg += " Make sure you pasted the updated Code.gs into Apps Script and ran testMailAuthorization() once to grant permissions.";
-          return Map.of("ok", false, "emailStatus", "failed", "message", msg);
-        }
-      } catch (Exception e) {
-        return Map.of("ok", false, "emailStatus", "failed", "message",
-            "Apps Script connection failed: " + e.getMessage());
       }
     }
 
@@ -200,7 +136,7 @@ public class NotificationService {
       String detail = "SMTP failed: " + err;
       String lower = err.toLowerCase(Locale.ROOT);
       if (lower.contains("timeout") || lower.contains("connect") || lower.contains("refused") || lower.contains("587")) {
-        detail = "Render Free blocks SMTP port 587. Please select 'Google Apps Script' or 'EmailJS API' (100% free HTTPS, works on Render Free).";
+        detail = "Render Free blocks SMTP port 587. Please select 'EmailJS API' (100% free HTTPS, works on Render Free) or another HTTPS provider.";
       } else if (lower.contains("authentication") || lower.contains("535") || lower.contains("badcredentials") || lower.contains("username and password not accepted")) {
         detail = "Gmail authentication failed. Verify your 16-character Google App Password (not your normal Gmail password).";
       }

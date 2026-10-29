@@ -293,7 +293,7 @@
  </form>
 </section>
 <section id="dashboard" class="container hidden">
- <div class="intro"><div><h1 data-t="dashTitle">Administrator Dashboard</h1><p class="muted" data-t="dashSubtitle">Manage live MongoDB records, attendance schedule, email delivery and the optional Google Sheets mirror.</p></div><span id="ownerStatus" class="status off">Checking workspace…</span></div>
+ <div class="intro"><div><h1 data-t="dashTitle">Administrator Dashboard</h1><p class="muted" data-t="dashSubtitle">Manage live MongoDB records, the attendance schedule and student email delivery.</p></div><span id="ownerStatus" class="status off">Checking workspace…</span></div>
  <div class="health-grid" role="region" aria-label="System status">
   <div class="health-tile"><div class="health-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 4 16 4 16 0V5M4 12v7c0 4 16 4 16 0v-7"/></svg></div><div><div class="health-value" id="dbHealth"><span class="db-dot"></span>Checking…</div><div class="health-label">MongoDB Atlas</div><div id="dbHealthDetail" class="health-description">Checking live database connectivity</div></div></div>
   <div class="health-tile"><div class="health-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="m9 13 2 2 4-4"/></svg></div><div><div id="recordMetric" class="health-value">—</div><div class="health-label">Persisted attendance records</div><div class="health-description">Only confirmed MongoDB documents count</div></div></div>
@@ -302,42 +302,6 @@
  <div class="tabs"><button class="tab active" data-tab="settings" data-t="tabSettings">⚙️ General Settings</button><button class="tab" data-tab="records" data-t="tabRecords">📊 Attendance Records</button></div>
  <section id="settingsPanel">
   <form id="configForm" class="grid">
-   <div class="card"><h2 data-t="sheetsCardTitle">Google Sheets Integration</h2><p class="hint">Stored privately in MongoDB in the shared live admin configuration. Gateway secrets are not embedded in the public student website.</p>
-    <label for="scriptUrl" data-t="scriptUrlLabel">Apps Script Web App URL</label><input id="scriptUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
-     <div id="scriptUrlFeedback" class="url-feedback hidden"></div>
-    <label for="sheetUrl" data-t="sheetUrlLabel">Google Sheet URL</label><input id="sheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/.../edit" autocomplete="off">
-     <div id="sheetUrlFeedback" class="url-feedback hidden"></div>
-    <label for="scriptSecret" data-t="scriptSecretLabel">Apps Script gateway secret</label>
-    <div class="secret-control-row">
-      <input id="scriptSecret" type="password" minlength="32" maxlength="256" placeholder="32+ characters; blank keeps saved secret" autocomplete="new-password">
-      <div class="secret-btn-group">
-        <button id="toggleSecretVisibility" type="button" class="btn btn-white small" title="Show/Hide secret" aria-label="Show secret">👁</button>
-        <button id="copySecretBtn" type="button" class="btn btn-white small" title="Copy secret" aria-label="Copy secret">📋 <span data-t="copyBtn">Copy</span></button>
-        <button id="generateSecret" type="button" class="btn btn-light small" data-t="generateBtn">🎲 Generate</button>
-      </div>
-    </div>
-    <p id="secretStatus" class="hint"></p>
-    <div class="row" style="margin-top:12px;align-items:center;gap:10px">
-      <button id="testScriptConn" type="button" class="btn btn-white small">⚡ <span data-t="testConnBtn">Test Connection</span></button>
-      <span class="hint" data-t="testConnHint">Verify Apps Script & Secret connectivity</span>
-    </div>
-    <div id="connTestResult" class="conn-test-box hidden"></div>
-    <div class="tip script-guide-box">
-      <div style="font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px">
-        <span>📌</span><strong data-t="guideTitle">Secret টি কোথায় ও কীভাবে যুক্ত করবেন?</strong>
-      </div>
-      <ol style="margin:0;padding-left:18px;line-height:1.6;font-size:.82rem" data-t="guideSteps">
-        <li>উপরের <strong>🎲 Generate</strong> চাপুন এবং <strong>📋 Copy</strong> বাটনে চাপ দিন।</li>
-        <li>আপনার Google Sheet ওপেন করে <strong>Extensions ➔ Apps Script</strong>-এ যান।</li>
-        <li>বাম পাশের গিয়ার আইকন <strong>⚙️ Project Settings</strong>-এ ক্লিক করুন।</li>
-        <li>নিচে স্ক্রোল করে <strong>Script Properties</strong> সেকশনে <strong>Add script property</strong> দিন:</li>
-        <li style="list-style:none;margin:4px 0 4px 6px"><code>Property: GATEWAY_SECRET</code><br><code>Value: [আপনার কপি করা Secret]</code></li>
-        <li><strong>Save script properties</strong> দিন।</li>
-        <li>উপরে <strong>Deploy ➔ Manage deployments ➔ Edit (পেন্সিল) ➔ New version</strong> সিলেক্ট করে <strong>Deploy</strong> চাপুন।</li>
-        <li>এরপর ফিরে এসে উপরের <strong>⚡ Test Connection</strong> বাটনে চাপ দিন!</li>
-      </ol>
-    </div>
-   </div>
    <div class="card"><h2 data-t="scheduleCardTitle">Attendance Schedule</h2><p class="hint">Asia/Dhaka timezone · server validates the open window on every submission.</p>
     <label class="switchrow"><input type="checkbox" id="scheduleEnabled"><span><strong data-t="enableTimer">Enable attendance timer</strong><br><span class="hint">Off means 24-hour attendance</span></span></label>
     <label class="switchrow"><input type="checkbox" id="useClasses"><span><strong data-t="multiClass">Multiple class schedules</strong><br><span class="hint">Maintain independent date/class attendance tabs</span></span></label>
@@ -351,8 +315,7 @@
     <div id="mailEnabledFields">
       <span class="mail-eyebrow">Choose delivery method</span>
       <div class="provider-choices" role="radiogroup" aria-label="Email delivery method">
-        <label class="provider-option"><input type="radio" name="mailProvider" value="APPS_SCRIPT" checked><span><strong data-t="providerScript">Google Apps Script (100% Free Google)</strong><small data-t="providerScriptHint">Works with Render Free. Sends from your Google account via Apps Script. No password needed.</small></span></label>
-        <label class="provider-option"><input type="radio" name="mailProvider" value="EMAILJS"><span><strong data-t="providerEmailJs">EmailJS API (HTTPS Email API)</strong><small data-t="providerEmailJsHint">HTTPS email API, sent from the backend. Provider quotas and permissions apply.</small></span></label>
+        <label class="provider-option"><input type="radio" name="mailProvider" value="EMAILJS" checked><span><strong data-t="providerEmailJs">EmailJS API (HTTPS Email API)</strong><small data-t="providerEmailJsHint">HTTPS email API, sent from the backend. Provider quotas and permissions apply.</small></span></label>
         <label class="provider-option"><input type="radio" name="mailProvider" value="RESEND"><span><strong>Resend HTTPS API</strong><small>Best for verified domains on Render Free. Configure a verified sender and API key.</small></span></label>
         <label class="provider-option"><input type="radio" name="mailProvider" value="BREVO"><span><strong>Brevo HTTPS API</strong><small>Send through a verified sender over HTTPS, without SMTP ports.</small></span></label>
         <label class="provider-option"><input type="radio" name="mailProvider" value="SMTP"><span><strong data-t="providerSmtp">Gmail SMTP</strong><small data-t="providerSmtpHint">Gmail + App Password · Requires VPS or paid Render service; SMTP ports are blocked on Render Free.</small></span></label>
@@ -377,14 +340,13 @@
           <div id="smtpFields" class="hidden">
             <div class="smtp-render-warn" style="margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#b91c1c;font-size:.8rem;line-height:1.5;">
               <strong data-t="smtpRenderWarnTitle">⚠️ Render Free Server Alert</strong><br>
-              <span data-t="smtpRenderWarnDesc">Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select <strong>Google Apps Script</strong> or <strong>EmailJS API</strong> (both use HTTPS when configured correctly).</span>
+              <span data-t="smtpRenderWarnDesc">Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select <strong>EmailJS API</strong> or another HTTPS provider (Resend / Brevo).</span>
             </div>
             <label for="senderEmail" data-t="senderEmailLabel">Sender Gmail address</label><input id="senderEmail" type="email" maxlength="150" autocomplete="off" placeholder="myaddress@gmail.com">
             <label for="appPassword" data-t="appPasswordLabel">Google App Password</label><input id="appPassword" type="password" minlength="16" maxlength="25" autocomplete="new-password" placeholder="16 characters · blank keeps saved password">
             <div class="mail-status"><span id="passwordStatus" class="status off">No App Password saved</span><label style="margin:0;font-size:.76rem;font-weight:500"><input id="clearAppPassword" type="checkbox"> Clear saved password</label></div>
             <p class="hint">Create an App Password from Google Account → Security → App passwords. Never use your normal Gmail password.</p>
           </div>
-          <div id="scriptMailHint" class="tip" style="margin-top:16px"><strong data-t="scriptMailGuideTitle">📌 Google Apps Script চালু করার নিয়ম:</strong><br><span data-t="scriptMailHintText">Email is sent securely by Google Apps Script over HTTPS. Recommended for Render Free. Make sure to authorize MailApp permissions when updating <strong>Code.gs</strong>. The sender will be the Google account owning the Apps Script deployment.</span></div>
           <div class="row" style="margin-top:19px"><button id="testNotification" type="button" class="btn btn-light small" data-t="testEmailBtn">✉ Send test email</button><span class="hint" data-t="testEmailHint">Save settings first, then test.</span></div>
         </div>
         <div>
@@ -406,8 +368,7 @@
  </section>
  <section id="recordsPanel" class="hidden">
    <div class="card">
-    <div class="row justify"><div><h2 data-t="recordsTitle">MongoDB Attendance Records</h2><p class="hint">Authoritative database records grouped by date and class. Add, edit and delete apply directly to MongoDB; Google Sheets is a separate optional mirror.</p></div><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
-  <a id="openGoogleSheet" href="#" class="btn btn-white small hidden" target="_blank" rel="noopener noreferrer"><span data-t="openSheetLink">Open in Google Sheets ↗</span></a>
+    <div class="row justify"><div><h2 data-t="recordsTitle">MongoDB Attendance Records</h2><p class="hint">Authoritative database records grouped by date and class. Add, edit and delete apply directly to MongoDB.</p></div><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
   <div class="dropdown-wrap">
     <button id="downloadCsvBtn" type="button" class="btn btn-white small" title="Download CSV">
       📥 <span data-t="downloadCsvBtn">Download CSV ▾</span>
@@ -424,6 +385,9 @@
       </button>
       <button type="button" class="dropdown-item" id="exportClassWise">
         <span>🏫</span> <span data-t="csvClassWise">Class-wise CSV…</span>
+      </button>
+      <button type="button" class="dropdown-item" id="exportDateClassWise">
+        <span>📈</span> <span data-t="csvDateClassWise">Date + Class-wise CSV…</span>
       </button>
     </div>
   </div>

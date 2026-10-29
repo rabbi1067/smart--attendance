@@ -16,18 +16,22 @@ class SettingsServiceTest {
     when(repo.findById(OWNER)).thenReturn(Optional.empty());
     when(repo.save(any(AdminSettings.class))).thenThrow(new DataAccessResourceFailureException("MongoDB unavailable"));
     SettingsService settings=new SettingsService(repo,null,OWNER);
-    var update=new SettingsService.ConfigUpdate("","","",ScheduleConfig.defaults(),null);
+    var update=new SettingsService.ConfigUpdate(ScheduleConfig.defaults(),null);
     assertThrows(DataAccessResourceFailureException.class,()->settings.save(OWNER,update));
   }
-  @Test void publicConfigNeverContainsEmailJsCredentials() {
+  @Test void publicConfigContainsNoEmailCredentialFields() {
+    // The public bundle is served without auth on /api/public/config; only schedule
+    // data may be exposed. EmailJS/API credentials must never appear there.
     SettingsRepository repo=mock(SettingsRepository.class);
     AdminSettings stored=new AdminSettings(OWNER);
     stored.emailJsPublicKey="private-reference";
     stored.emailJsServiceId="service-reference";
     when(repo.findById(OWNER)).thenReturn(Optional.of(stored));
     var publicConfig=new SettingsService(repo,null,OWNER).publicConfig();
-    assertTrue(publicConfig.emailJsPublicKey().isEmpty());
-    assertTrue(publicConfig.emailJsServiceId().isEmpty());
+    var components=Arrays.stream(publicConfig.getClass().getRecordComponents())
+        .map(c->c.getName().toUpperCase(Locale.ROOT)).toList();
+    assertEquals(List.of("CONFIGURED","SCHEDULE","TIMEZONE","EMAILENABLED"),components);
+    assertTrue(components.stream().noneMatch(n->n.contains("EMAILJS")||n.contains("KEY")||n.contains("PASSWORD")||n.contains("SECRET")));
   }
   @Test void savedEmailApiKeysAreNotReturnedByAdminConfig() {
     SettingsRepository repo=mock(SettingsRepository.class);
@@ -38,30 +42,22 @@ class SettingsServiceTest {
     assertTrue(config.EMAIL_CONFIG().RESEND_API_KEY().isBlank());
     assertTrue(config.EMAIL_CONFIG().RESEND_KEY_CONFIGURED());
   }
-  @Test void newGatewaySecretsAreEncryptedInMongoSettings() {
+  @Test void invalidProviderIsRejected() {
     SettingsRepository repo=mock(SettingsRepository.class);
     when(repo.findById(OWNER)).thenReturn(Optional.empty());
     when(repo.save(any(AdminSettings.class))).thenAnswer(call->call.getArgument(0));
-    String key=Base64.getEncoder().encodeToString(new byte[32]);
-    EncryptionService crypto=new EncryptionService(key);
-    var settings=new SettingsService(repo,crypto,OWNER);
-    var saved=settings.save(OWNER,new SettingsService.ConfigUpdate("https://script.google.com/macros/s/abc-123/exec","",
-        "X".repeat(40),ScheduleConfig.defaults(),null));
-    assertTrue(saved.scriptSecret.startsWith("enc:"));
-    assertFalse(saved.scriptSecret.contains("X".repeat(40)));
-    assertEquals("X".repeat(40),crypto.decrypt(saved.scriptSecret.substring(4)));
+    SettingsService settings=new SettingsService(repo,null,OWNER);
+    var email=new SettingsService.EmailUpdate(false,"APPS_SCRIPT","a@b.test","Smart Attendance","",false,"","","","","");
+    assertThrows(IllegalArgumentException.class,()->
+        settings.save(OWNER,new SettingsService.ConfigUpdate(ScheduleConfig.defaults(),email)));
   }
-  @Test void legacyGatewaySecretIsMigratedOnSettingsSave() {
+  @Test void unknownStoredProviderFallsBackToEmailJs() {
     SettingsRepository repo=mock(SettingsRepository.class);
-    var old=new AdminSettings(OWNER);old.scriptSecret="Y".repeat(40);
-    when(repo.findById(OWNER)).thenReturn(Optional.of(old));
-    when(repo.save(any(AdminSettings.class))).thenAnswer(call->call.getArgument(0));
-    String key=Base64.getEncoder().encodeToString(new byte[32]);
-    var crypto=new EncryptionService(key);
-    var saved=new SettingsService(repo,crypto,OWNER).save(OWNER,
-        new SettingsService.ConfigUpdate("https://script.google.com/macros/s/abc-123/exec","","",ScheduleConfig.defaults(),null));
-    assertTrue(saved.scriptSecret.startsWith("enc:"));
-    assertEquals("Y".repeat(40),crypto.decrypt(saved.scriptSecret.substring(4)));
+    AdminSettings stored=new AdminSettings(OWNER);
+    stored.emailProvider="APPS_SCRIPT";
+    when(repo.findById(OWNER)).thenReturn(Optional.of(stored));
+    var config=new SettingsService(repo,null,OWNER).adminConfig(OWNER);
+    assertEquals("EMAILJS",config.EMAIL_CONFIG().PROVIDER());
   }
   @Test void ownerSettingsAreCanonicalAcrossAdmins() {
     SettingsRepository repo=mock(SettingsRepository.class);

@@ -1435,12 +1435,7 @@ async function refreshConfiguration() {
   try {
     const cfg = await apiRequest('/public/config');
     CONFIG.configured = !!cfg.configured;
-    CONFIG.SHEET_URL = cfg.sheetUrl || '';
     CONFIG.emailEnabled = !!cfg.emailEnabled;
-    CONFIG.emailProvider = cfg.emailProvider || 'APPS_SCRIPT';
-    CONFIG.emailJsServiceId = cfg.emailJsServiceId || '';
-    CONFIG.emailJsTemplateId = cfg.emailJsTemplateId || '';
-    CONFIG.emailJsPublicKey = cfg.emailJsPublicKey || '';
     remoteSchedule = cfg.schedule || SCHEDULE_CONFIG;
     scheduleReady = true;
     const openBtn = $('openRecordsModal');
@@ -2291,9 +2286,6 @@ $("go").addEventListener("click", async () => {
 
       clearForm();
       toast(t.ok, "ok");
-      if (j.mirrorStatus === 'failed') {
-        toast(lang === 'bn' ? 'MongoDB-তে সেভ হয়েছে; Google Sheets sync হয়নি। Admin Dashboard-এ কানেকশন পরীক্ষা করুন।' : 'Saved to MongoDB, but Google Sheets sync failed. Check the Apps Script connection in Admin Dashboard.', 'warn');
-      }
 
       // The backend owns confirmation delivery; its verified result is authoritative.
       if (email && j.emailStatus === 'sent') {

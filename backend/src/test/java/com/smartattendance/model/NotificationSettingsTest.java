@@ -19,14 +19,17 @@ class NotificationSettingsTest {
   @Test void noEmailIsTriggeredWhenDisabled() {
     var settings=new AdminSettings("admin@example.com");
     settings.emailEnabled=false;
-    var notifier=new NotificationService(null,null);
-    assertFalse(notifier.usingScript(settings));
+    var notifier=new NotificationService(null);
     assertEquals("disabled",notifier.receiptStatus(settings,"student@example.com","Student","2023200000686","",null));
   }
   @Test void noEmailWhenStudentDidNotProvideAddress() {
     var settings=new AdminSettings("admin@example.com");
     settings.emailEnabled=true;
-    var notifier=new NotificationService(null,null);
+    var notifier=new NotificationService(null);
     assertEquals("no_address",notifier.receiptStatus(settings,"","Student","2023200000686","",null));
+  }
+  @Test void defaultProviderIsEmailJs() {
+    var settings=new AdminSettings("admin@example.com");
+    assertEquals("EMAILJS",settings.emailProvider);
   }
 }

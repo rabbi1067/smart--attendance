@@ -4,7 +4,7 @@
   "description": "MongoDB-backed Smart Attendance; deploy production using the root Dockerfile",
   "scripts": {
     "build": "cd frontend && node scripts/build.mjs",
-    "test": "node tests/apps-script-test.cjs && node tests/frontend-contract-test.cjs",
+    "test": "node tests/frontend-contract-test.cjs",
     "test:java": "cd backend && mvn test"
   }
 }

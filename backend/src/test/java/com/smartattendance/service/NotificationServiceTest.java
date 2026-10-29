@@ -7,31 +7,37 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NotificationServiceTest {
-  private final NotificationService service = new NotificationService(null, null);
+  private final NotificationService service = new NotificationService(null);
   private AdminSettings settings() {
     AdminSettings s = new AdminSettings("owner@example.test");
     s.emailEnabled = true;
-    s.emailProvider = "APPS_SCRIPT";
-    s.scriptUrl = "https://script.google.com/macros/s/test/exec";
-    s.scriptSecret = "enc:secret";
+    s.emailProvider = "EMAILJS";
     return s;
   }
-  @Test void successfulMirrorAndEmailReportsSent() throws Exception {
-    String status = service.receiptStatus(settings(), "student@example.test", "Student", "2023200000686", "CSE",
-        new ObjectMapper().readTree("{\"ok\":true,\"emailStatus\":\"sent\"}"));
-    assertEquals("sent", status);
+
+  @Test void missingAddressIsReportedWithoutSending() {
+    assertEquals("no_address", service.receiptStatus(settings(), "", "Student", "2023200000686", "CSE", null));
+    assertEquals("no_address", service.receiptStatus(settings(), null, "Student", "2023200000686", "CSE", null));
   }
-  @Test void upstreamErrorOrTimeoutDoesNotSendDuplicateEmail() throws Exception {
-    var s=settings();
+
+  @Test void disabledEmailIsNeverSent() {
+    AdminSettings s = settings();
+    s.emailEnabled = false;
+    assertEquals("disabled", service.receiptStatus(s, "student@example.test", "Student", "2023200000686", "CSE", null));
+  }
+
+  @Test void legacyAppsScriptProviderFallsBackToEmailJsOnly() {
+    // Records saved with the retired APPS_SCRIPT provider must no longer route there;
+    // they degrade to the default EmailJS path (and fail cleanly if it is unconfigured).
+    AdminSettings s = settings();
+    s.emailProvider = "APPS_SCRIPT";
+    s.emailJsPublicKey = "";
     assertEquals("failed", service.receiptStatus(s, "student@example.test", "Student", "2023200000686", "CSE", null));
-    assertEquals("failed", service.receiptStatus(s, "student@example.test", "Student", "2023200000686", "CSE",
-        new ObjectMapper().readTree("{\"ok\":false,\"emailStatus\":\"sent\"}")));
-    assertEquals("failed", service.receiptStatus(s, "student@example.test", "Student", "2023200000686", "CSE",
-        new ObjectMapper().readTree("{\"ok\":true,\"emailStatus\":\"failed\"}")));
   }
-  @Test void emailDisabledNeverDeliversEvenIfMirrorSaysSent() throws Exception {
-    var s=settings();s.emailEnabled=false;
-    assertEquals("disabled", service.receiptStatus(s,"student@example.test","Student","2023200000686","CSE",
-        new ObjectMapper().readTree("{\"ok\":true,\"emailStatus\":\"sent\"}")));
+
+  @Test void testUnknownProviderFailsCleanly() {
+    AdminSettings s = settings();
+    s.emailProvider = "CARRIER_PIGEON";
+    assertEquals("failed", service.receiptStatus(s, "student@example.test", "Student", "2023200000686", "CSE", null));
   }
 }

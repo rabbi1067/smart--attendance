@@ -120,11 +120,10 @@ function mailUi() {
   const on=$('mailEnabled').checked;
   $('mailEnabledFields').style.opacity=on?'1':'0.58';
   const checkedRadio = document.querySelector('input[name="mailProvider"]:checked');
-  const provider = checkedRadio ? checkedRadio.value : 'APPS_SCRIPT';
+  const provider = checkedRadio ? checkedRadio.value : 'EMAILJS';
   $('smtpFields').classList.toggle('hidden',provider!=='SMTP');
   $('apiMailFields').classList.toggle('hidden',!['RESEND','BREVO'].includes(provider));
   if ($('emailJsFields')) $('emailJsFields').classList.toggle('hidden',provider!=='EMAILJS');
-  $('scriptMailHint').classList.toggle('hidden',provider!=='APPS_SCRIPT');
   $('testNotification').disabled=!on;
 }
 $('mailEnabled').addEventListener('change',mailUi);
@@ -138,7 +137,7 @@ $('testNotification').addEventListener('click', async()=>{
     if(data.emailStatus==='sent'){
       notice(data.message || (currentLang==='bn'?'অ্যাডমিন ইমেইলে টেস্ট ইমেইল সফলভাবে পাঠানো হয়েছে।':'Test email sent to your administrator email address.'));
     } else {
-      notice(data.message || (currentLang==='bn'?'টেস্ট ইমেইল পাঠানো যায়নি। সেটিংস ও অনুমতি পরীক্ষা করুন।':'Test email failed. Check sender settings, Apps Script authorization or SMTP hosting restrictions.'));
+      notice(data.message || (currentLang==='bn'?'টেস্ট ইমেইল পাঠানো যায়নি। সেটিংস ও অনুমতি পরীক্ষা করুন।':'Test email failed. Check sender settings or SMTP hosting restrictions.'));
     }
   }catch(e){
     notice((currentLang==='bn'?'ইমেইল পাঠাতে ব্যর্থ: ':'Failed to send test email: ')+(e.message||'network'));
@@ -160,107 +159,6 @@ $('addClass').addEventListener('click',()=>{
   if(classState.length>=25) return notice('Maximum 25 classes allowed.');
   classState.push({name:'New Class',start:'09:00 AM',end:'10:00 AM'});drawClasses();
 });
-$('generateSecret').addEventListener('click',()=>{
-  const bytes=new Uint8Array(40);crypto.getRandomValues(bytes);
-  $('scriptSecret').value = Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
-  $('scriptSecret').type='text';
-  const toggleSec = $('toggleSecretVisibility');
-  if (toggleSec) { toggleSec.textContent = '🔒'; toggleSec.title = 'Hide secret'; }
-  notice(currentLang === 'bn' 
-    ? 'নতুন Secret জেনারেট হয়েছে! কপি বাটনে চাপ দিয়ে কপি করুন এবং সেভ করুন।' 
-    : 'New secret generated. Click Copy to copy it, then save.');
-});
-
-const toggleSecBtn = $('toggleSecretVisibility');
-if (toggleSecBtn) {
-  toggleSecBtn.addEventListener('click', () => {
-    const inp = $('scriptSecret');
-    if (inp.type === 'password') {
-      inp.type = 'text';
-      toggleSecBtn.textContent = '🔒';
-      toggleSecBtn.title = currentLang === 'bn' ? 'সিক্রেট লুকান' : 'Hide secret';
-    } else {
-      inp.type = 'password';
-      toggleSecBtn.textContent = '👁';
-      toggleSecBtn.title = currentLang === 'bn' ? 'সিক্রেট দেখুন' : 'Show secret';
-    }
-  });
-}
-
-const copySecBtn = $('copySecretBtn');
-if (copySecBtn) {
-  copySecBtn.addEventListener('click', async () => {
-    const inp = $('scriptSecret');
-    const val = inp.value.trim();
-    if (!val) {
-      notice(currentLang === 'bn'
-        ? 'কপি করার জন্য আগে 🎲 Generate বাটনে চাপ দিয়ে একটি Secret তৈরি করুন।'
-        : 'Please click 🎲 Generate to create a new secret first, then copy.');
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(val);
-      notice(currentLang === 'bn' ? '✓ Secret ক্লিপবোর্ডে কপি হয়েছে!' : '✓ Secret copied to clipboard!');
-    } catch(e) {
-      inp.select();
-      document.execCommand('copy');
-      notice(currentLang === 'bn' ? '✓ Secret কপি হয়েছে!' : '✓ Secret copied!');
-    }
-  });
-}
-
-const testConnBtn = $('testScriptConn');
-const connBox = $('connTestResult');
-if (testConnBtn) {
-  testConnBtn.addEventListener('click', async () => {
-    const unsavedSec = $('scriptSecret').value.trim();
-    if (unsavedSec) {
-      notice(currentLang === 'bn'
-        ? '⚠️ আপনি নতুন Secret লিখেছেন বা Generate করেছেন। টেস্ট করার আগে নিচে "💾 Save configuration" চাপুন।'
-        : '⚠️ You entered a new or generated secret. Please click "💾 Save configuration" below first, then test.');
-      return;
-    }
-    testConnBtn.disabled = true;
-    testConnBtn.textContent = currentLang === 'bn' ? 'পরীক্ষা হচ্ছে…' : 'Testing…';
-    connBox.className = 'conn-test-box hidden';
-    try {
-      const res = await request('/admin/script/health');
-      const sheetCount = (res.sheets || []).length;
-      const sheetNames = (res.sheets || []).map(s => s.name).join(', ') || (currentLang === 'bn' ? 'কোনো ট্যাব নেই' : 'None');
-      connBox.className = 'conn-test-box ok';
-      connBox.textContent = `✓ Apps Script connected: ${sheetCount} sheet(s). ${sheetNames}`;
-    } catch(err) {
-      connBox.className = 'conn-test-box err';
-      const isUnauth = /unauthorized/i.test(err.message);
-      if (isUnauth) {
-        connBox.innerHTML = currentLang === 'bn'
-          ? `<div><strong>❌ GATEWAY_SECRET মেলেনি! (Unauthorized)</strong><br>` +
-            `Apps Script রিকোয়েস্টটি বাতিল করেছে কারণ Apps Script-এর <code>GATEWAY_SECRET</code> এর সাথে এই অ্যাডমিন সিক্রেট মেলেনি。<br><br>` +
-            `<strong>করণীয়:</strong><br>` +
-            `১. উপরের <strong>🎲 Generate</strong> চাপুন (যদি নতুন চান) এবং <strong>📋 Copy</strong> করুন。<br>` +
-            `২. নিচে <strong>💾 Save configuration</strong> চাপুন。<br>` +
-            `৩. গুগল শিটে <strong>Extensions ➔ Apps Script ➔ ⚙️ Project Settings ➔ Script Properties</strong>-এ গিয়ে <code>GATEWAY_SECRET</code>-এ পেস্ট করে Save করুন。<br>` +
-            `৪. <strong>Deploy ➔ Manage deployments ➔ Edit ➔ New version</strong> দিয়ে Deploy করুন。<br>` +
-            `৫. এরপর আবার <strong>⚡ Test Connection</strong> দিন।</div>`
-          : `<div><strong>❌ Authorization Failed (Unauthorized)</strong><br>` +
-            `Apps Script rejected the secret. Please ensure <code>GATEWAY_SECRET</code> is configured in Apps Script:<br><br>` +
-            `1. Click <strong>🎲 Generate</strong> & <strong>📋 Copy</strong> secret.<br>` +
-            `2. Click <strong>💾 Save configuration</strong> below.<br>` +
-            `3. In Google Sheet, go to <strong>Extensions ➔ Apps Script ➔ ⚙️ Project Settings ➔ Script Properties</strong>, add <code>GATEWAY_SECRET</code> with this secret.<br>` +
-            `4. Click <strong>Deploy ➔ Manage deployments ➔ Edit ➔ New version</strong> ➔ Deploy.<br>` +
-            `5. Click <strong>⚡ Test Connection</strong> again!</div>`;
-      } else {
-        connBox.innerHTML = currentLang === 'bn'
-          ? `<div><strong>❌ কানেকশন ব্যর্থ হয়েছে:</strong><br>Check Apps Script deployment, URLs and stored secret.</div>`
-          : `<div><strong>❌ Connection Failed:</strong><br>Check the Apps Script URL, deployment, and saved secret.</div>`;
-      }
-    } finally {
-      testConnBtn.disabled = false;
-      testConnBtn.innerHTML = '⚡ <span data-t="testConnBtn">' + (currentLang === 'bn' ? 'কানেকশন টেস্ট করুন' : 'Test Connection') + '</span>';
-    }
-  });
-}
-
 function updateScheduleBadge() {
   const badge = $('scheduleStatusBadge');
   if (!badge) return;
@@ -291,95 +189,12 @@ function updateScheduleBadge() {
 $('scheduleEnabled').addEventListener('change', updateScheduleBadge);
 $('startTime').addEventListener('input', () => { $('scheduleEnabled').checked = true; updateScheduleBadge(); });
 $('endTime').addEventListener('input', () => { $('scheduleEnabled').checked = true; updateScheduleBadge(); });
-function validateScriptUrl() {
-  const input = $('scriptUrl'), box = $('scriptUrlFeedback');
-  if (!input || !box) return;
-  const val = input.value.trim();
-  box.className = 'url-feedback hidden';
-  input.style.borderColor = '';
-  if (!val) return;
-
-  if (val.includes('script.google.com') && (val.includes('/projects/') || val.includes('/edit') || val.includes('/home/'))) {
-    box.className = 'url-feedback warn';
-    box.innerHTML = currentLang === 'bn'
-      ? `<span>👉 <strong>এটি এডিটর লিংক!</strong> আসল লিংক পেতে স্ক্রিপ্ট পেজের <strong>Deploy ➔ New deployment ➔ Web app</strong> থেকে কপি করুন।</span>`
-      : `<span>👉 <strong>This is the editor project URL!</strong> To get the live Web App URL, go to <strong>Deploy ➔ New deployment ➔ Web app</strong>.</span>`;
-    input.style.borderColor = '#f59e0b';
-    return;
-  }
-
-  const isExec = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec\/?$/i.test(val);
-  if (isExec) {
-    box.className = 'url-feedback valid';
-    box.innerHTML = currentLang === 'bn'
-      ? `<span>✓ <strong>পারফেক্ট!</strong> এটি সঠিক Web App URL।</span>`
-      : `<span>✓ <strong>Perfect!</strong> This is a valid Web App URL.</span>`;
-    input.style.borderColor = 'var(--ok)';
-    return;
-  }
-
-  if (val.length > 5) {
-    box.className = 'url-feedback err';
-    box.innerHTML = currentLang === 'bn'
-      ? `<span>⚠️ দয়া করে <code>https://script.google.com/macros/s/.../exec</code> ফরম্যাটের লিংক দিন।</span>`
-      : `<span>⚠️ Please enter a valid <code>https://script.google.com/macros/s/.../exec</code> URL.</span>`;
-    input.style.borderColor = 'var(--bad)';
-  }
-}
-
-function validateSheetUrl() {
-  const input = $('sheetUrl'), box = $('sheetUrlFeedback');
-  if (!input || !box) return;
-  const val = input.value.trim();
-  box.className = 'url-feedback hidden';
-  input.style.borderColor = '';
-  if (!val) return;
-
-  const isSheet = /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[A-Za-z0-9_-]+/i.test(val);
-  if (isSheet) {
-    box.className = 'url-feedback valid';
-    box.innerHTML = currentLang === 'bn'
-      ? `<span>✓ <strong>পারফেক্ট!</strong> গুগল স্প্রেডশিট লিংক শনাক্ত হয়েছে।</span>`
-      : `<span>✓ <strong>Perfect!</strong> Google Spreadsheet link verified.</span>`;
-    input.style.borderColor = 'var(--ok)';
-    return;
-  }
-
-  if (val.length > 5) {
-    box.className = 'url-feedback err';
-    box.innerHTML = currentLang === 'bn'
-      ? `<span>⚠️ দয়া করে <code>https://docs.google.com/spreadsheets/d/...</code> ফরম্যাটের লিংক দিন।</span>`
-      : `<span>⚠️ Please enter a valid Google Spreadsheet URL.</span>`;
-    input.style.borderColor = 'var(--bad)';
-  }
-}
-
-const sUrlInput = $('scriptUrl');
-if (sUrlInput) {
-  sUrlInput.addEventListener('input', validateScriptUrl);
-  sUrlInput.addEventListener('change', validateScriptUrl);
-  sUrlInput.addEventListener('paste', () => setTimeout(validateScriptUrl, 50));
-}
-const shUrlInput = $('sheetUrl');
-if (shUrlInput) {
-  shUrlInput.addEventListener('input', validateSheetUrl);
-  shUrlInput.addEventListener('change', validateSheetUrl);
-  shUrlInput.addEventListener('paste', () => setTimeout(validateSheetUrl, 50));
-}
 
 async function loadConfig() {
   const cfg=await request('/admin/config');
-  $('scriptUrl').value=cfg.SCRIPT_URL||'';
-  $('sheetUrl').value=cfg.SHEET_URL||'';
-  validateScriptUrl();
-  validateSheetUrl();
   updateScheduleBadge();
-  $('scriptSecret').value='';$('scriptSecret').type='password';
-  $('secretStatus').textContent=cfg.SECRET_CONFIGURED?'✓ A gateway secret is saved. Leave blank to keep it.':'No secret configured yet. Generate one and add it to Apps Script.';
   $('ownerStatus').textContent='● SHARED LIVE CONFIGURATION';
   $('ownerStatus').classList.remove('off');
-  $('openGoogleSheet').classList.toggle('hidden',!cfg.SHEET_URL);
-  if(cfg.SHEET_URL) $('openGoogleSheet').href=cfg.SHEET_URL;
   const sch=cfg.SCHEDULE_CONFIG||{};
   $('scheduleEnabled').checked=!!sch.ENABLED;
   $('useClasses').checked=!!sch.USE_CLASSES;
@@ -388,7 +203,7 @@ async function loadConfig() {
   classState=(sch.CLASSES||[]).map(c=>({...c}));drawClasses();updateScheduleSections();updateScheduleBadge();
   const m=cfg.EMAIL_CONFIG||{};
   $('mailEnabled').checked=!!m.ENABLED;
-  const provider=['SMTP','EMAILJS','APPS_SCRIPT','RESEND','BREVO'].includes(m.PROVIDER)?m.PROVIDER:'APPS_SCRIPT';
+  const provider=['SMTP','EMAILJS','RESEND','BREVO'].includes(m.PROVIDER)?m.PROVIDER:'EMAILJS';
   const targetRadio = document.querySelector(`input[name="mailProvider"][value="${provider}"]`);
   if (targetRadio) targetRadio.checked = true;
   $('senderEmail').value=m.SENDER_EMAIL||'';
@@ -408,11 +223,8 @@ $('configForm').addEventListener('submit',async e=>{
   e.preventDefault();const btn=$('saveConfig');btn.disabled=true;btn.textContent=currentLang==='bn'?'সংরক্ষণ করা হচ্ছে…':'Saving…';
   try {
     const checkedRadio = document.querySelector('input[name="mailProvider"]:checked');
-    const activeProvider = checkedRadio ? checkedRadio.value : 'APPS_SCRIPT';
+    const activeProvider = checkedRadio ? checkedRadio.value : 'EMAILJS';
     const data={
-      SCRIPT_URL:$('scriptUrl').value.trim(),
-      SHEET_URL:$('sheetUrl').value.trim(),
-      SCRIPT_SECRET:$('scriptSecret').value.trim(),
       SCHEDULE_CONFIG:{
         ENABLED:$('scheduleEnabled').checked,
         USE_CLASSES:$('useClasses').checked,
@@ -458,7 +270,7 @@ async function refreshHealth(){
     detail.textContent='Operations require MongoDB connectivity';
     $('recordMetric').textContent='—';
   }
-  const provider=document.querySelector('input[name="mailProvider"]:checked')?.value||'APPS_SCRIPT';
+  const provider=document.querySelector('input[name="mailProvider"]:checked')?.value||'EMAILJS';
   $('deliveryMetric').textContent=$('mailEnabled').checked?'Enabled · '+provider:'Disabled';
   $('lastHealth').textContent='Status checked '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
@@ -840,19 +652,9 @@ const T_ADMIN = {
     loginBtn: "Sign in securely →",
     loginHint: "No account? Contact the site owner. Public registration is disabled.",
     dashTitle: "Administrator Dashboard",
-    dashSubtitle: "Manage MongoDB records, schedules, notifications and optional Google Sheets sync.",
+    dashSubtitle: "Manage MongoDB records, schedules and student email notifications.",
     tabSettings: "⚙️ General Settings",
     tabRecords: "📊 Attendance Records",
-    sheetsCardTitle: "Google Sheets Integration",
-    scriptUrlLabel: "Apps Script Web App URL",
-    sheetUrlLabel: "Google Sheet URL",
-    openSheetLink: "Open in Google Sheets ↗",
-    scriptSecretLabel: "Apps Script gateway secret",
-    generateBtn: "Generate",
-    copyBtn: "Copy",
-    testConnBtn: "Test Connection",
-    testConnHint: "Verify Apps Script & Secret connectivity",
-    guideTitle: "Where and how to add this secret?",
     scheduleCardTitle: "Attendance Schedule",
     enableTimer: "Enable attendance timer",
     multiClass: "Multiple class schedules",
@@ -861,16 +663,12 @@ const T_ADMIN = {
     addClassBtn: "+ Add class",
     emailCardTitle: "Student Confirmation Emails",
     enableEmail: "Enable automatic email notifications",
-    providerScript: "Google Apps Script (100% Free Google)",
-    providerScriptHint: "100% Free · Sends from your Google account via Apps Script. No password or credit card needed. Works on Render Free.",
     providerEmailJs: "EmailJS API (100% Free Frontend & Backend API)",
     providerEmailJsHint: "100% Free · 200 free emails/month forever. Sent from the backend. Zero port blocking.",
     providerSmtp: "Gmail SMTP",
     providerSmtpHint: "Gmail + App Password · Requires VPS or paid Render; port 587 is blocked on Render Free.",
     smtpRenderWarnTitle: "⚠️ Render Free Server Alert",
-    smtpRenderWarnDesc: "Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select Google Apps Script or EmailJS API (both send via HTTPS and work when provider credentials and permissions are valid).",
-    scriptMailGuideTitle: "📌 Google Apps Script Activation Steps:",
-    scriptMailHintText: "100% Free via Google Apps Script (HTTPS). Steps to activate: 1) In Google Sheets open Extensions > Apps Script and paste the updated Code.gs. 2) Select function 'testMailAuthorization', click 'Run' and click 'Allow' to grant Gmail permission. 3) Deploy as Web app (Execute as: Me, Access: Anyone) and save URL & Secret here.",
+    smtpRenderWarnDesc: "Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select EmailJS API or another HTTPS provider (Resend / Brevo).",
     emailJsHelpTitle: "💡 100% Free Frontend & Backend Email:",
     emailJsHelpDesc: "Create a free account at emailjs.com (no credit card needed). Add your Gmail service, create an email template, and paste the 3 keys below.",
     emailJsPublicKeyLabel: "EmailJS Public Key (User ID)",
@@ -899,11 +697,12 @@ const T_ADMIN = {
     csvAllRecords: "All Records CSV",
     csvDateWise: "Date-wise CSV…",
     csvClassWise: "Class-wise CSV…",
+    csvDateClassWise: "Date + Class-wise CSV…",
     csvDateLabel: "Select Date",
     csvClassLabel: "Select or Enter Class",
     csvDownloadNow: "Download CSV",
     recordsTitle: "Attendance Records",
-    recordsSubtitle: "Stored in MongoDB. Sheets is an optional student-submission mirror.",
+    recordsSubtitle: "Stored in MongoDB. Add, edit and delete apply directly to the database.",
     dark: "🌙",
     light: "☀️"
   },
@@ -921,19 +720,9 @@ const T_ADMIN = {
     loginBtn: "নিরাপদে সাইন ইন করুন →",
     loginHint: "অ্যাকাউন্ট নেই? সাইটের সত্ত্বাধিকারীর সাথে যোগাযোগ করুন। উন্মুক্ত রেজিস্ট্রেশন বন্ধ।",
     dashTitle: "প্রশাসক ড্যাশবোর্ড",
-    dashSubtitle: "MongoDB রেকর্ড, ক্লাসের সময়সূচি, ইমেইল ও Google Sheets সংযোগ পরিচালনা করুন।",
+    dashSubtitle: "MongoDB রেকর্ড, ক্লাসের সময়সূচি ও শিক্ষার্থীদের ইমেইল নোটিফিকেশন পরিচালনা করুন।",
     tabSettings: "⚙️ সাধারণ সেটিংস",
     tabRecords: "📊 হাজিরা রেকর্ড",
-    sheetsCardTitle: "গুগল শিট ইন্টিগ্রেশন",
-    scriptUrlLabel: "অ্যাপস স্ক্রিপ্ট ওয়েব অ্যাপ URL",
-    sheetUrlLabel: "গুগল স্প্রেডশিট URL",
-    openSheetLink: "গুগল শিট খুলুন ↗",
-    scriptSecretLabel: "অ্যাপস স্ক্রিপ্ট সিক্রেট কি",
-    generateBtn: "জেনারেট",
-    copyBtn: "কপি",
-    testConnBtn: "কানেকশন টেস্ট করুন",
-    testConnHint: "অ্যাপস স্ক্রিপ্ট ও সিক্রেটের সংযোগ পরীক্ষা করুন",
-    guideTitle: "Secret টি কোথায় ও কীভাবে যুক্ত করবেন?",
     scheduleCardTitle: "হাজিরার সময়সূচী",
     enableTimer: "হাজিরা নেওয়ার সময়সীমা সক্রিয় করুন",
     multiClass: "একাধিক ক্লাসের সময়সূচী ব্যবহার করুন",
@@ -942,16 +731,12 @@ const T_ADMIN = {
     addClassBtn: "+ ক্লাস যোগ করুন",
     emailCardTitle: "শিক্ষার্থীদের কনফার্মেশন ইমেইল",
     enableEmail: "স্বয়ংক্রিয় ইমেইল নোটিফিকেশন চালু করুন",
-    providerScript: "গুগল অ্যাপস স্ক্রিপ্ট (১০০% ফ্রি গুগল মেথড)",
-    providerScriptHint: "১০০% ফ্রি · আপনার গুগল অ্যাকাউন্ট দিয়ে Apps Script এর মাধ্যমে পাঠানো হয়। কোনো পাসওয়ার্ড বা ক্রেডিট কার্ড লাগে না।",
     providerEmailJs: "EmailJS API (১০০% ফ্রি ফ্রন্টএন্ড ও ব্যাকএন্ড API)",
     providerEmailJsHint: "১০০% ফ্রি · প্রতি মাসে ২০০টি ফ্রি ইমেইল। সার্ভার থেকে HTTPS API ব্যবহার করে পাঠানো হয়। কোনো পোর্ট ব্লক নেই।",
     providerSmtp: "জিমেইল এসএমটিপি (Gmail SMTP)",
     providerSmtpHint: "Gmail + App Password · VPS বা পেইড রেন্ডার প্রয়োজন; Render Free-তে SMTP পোর্ট ৫৮৭ বন্ধ থাকে।",
     smtpRenderWarnTitle: "⚠️ রেন্ডার ফ্রি সার্ভার সতর্কতা",
-    smtpRenderWarnDesc: "Render Free টিয়ারে আউটবাউন্ড SMTP পোর্ট ৫৮৭ ব্লক থাকে। Render Free-তে Gmail SMTP কাজ করবে না। অনুগ্রহ করে Google Apps Script বা EmailJS API ডেলিভারি মেথড নির্বাচন করুন (উভয়ই HTTPS দিয়ে সঠিক কনফিগারেশন থাকলে কাজ করে)।",
-    scriptMailGuideTitle: "📌 Google Apps Script চালু করার নিয়ম:",
-    scriptMailHintText: "গুগল অ্যাপস স্ক্রিপ্ট (HTTPS) দিয়ে ১০০% ফ্রিতে ইমেইল পাঠানো হয়। যেভাবে চালু করবেন: ১. গুগল শিটে Extensions > Apps Script-এ গিয়ে নতুন Code.gs পেস্ট করুন। ২. ফাংশন ড্রপডাউন থেকে 'testMailAuthorization' সিলেক্ট করে 'Run' (চালান) বাটনে ক্লিক করুন এবং 'Allow' দিয়ে জিমেইল পারমিশন দিয়ে দিন। ৩. এরপর Deploy > Manage deployments বা New deployment থেকে Web app (Execute as: Me, Who has access: Anyone) করে URL ও Secret এখানে সেভ করুন।",
+    smtpRenderWarnDesc: "Render Free টিয়ারে আউটবাউন্ড SMTP পোর্ট ৫৮৭ ব্লক থাকে। Render Free-তে Gmail SMTP কাজ করবে না। অনুগ্রহ করে EmailJS API বা Resend / Brevo-র মতো HTTPS প্রোভাইডার নির্বাচন করুন।",
     emailJsHelpTitle: "💡 ১০০% ফ্রি ফ্রন্টএন্ড ও ব্যাকএন্ড ইমেইল এপিআই:",
     emailJsHelpDesc: "emailjs.com এ সম্পূর্ণ বিনামূল্যে অ্যাকাউন্ট তৈরি করুন (কোনো ক্রেডিট কার্ড লাগে না)। জিমেইল কানেক্ট করুন, টেমপ্লেট বানান এবং নিচের ৩টি কি প্রদান করুন।",
     emailJsPublicKeyLabel: "EmailJS পাবলিক কি (User ID)",
@@ -980,11 +765,12 @@ const T_ADMIN = {
     csvAllRecords: "সকল রেকর্ডের CSV",
     csvDateWise: "তারিখ অনুযায়ী CSV…",
     csvClassWise: "ক্লাস অনুযায়ী CSV…",
+    csvDateClassWise: "তারিখ + ক্লাস অনুযায়ী CSV…",
     csvDateLabel: "তারিখ নির্বাচন করুন",
     csvClassLabel: "ক্লাসের নাম লিখুন বা নির্বাচন করুন",
     csvDownloadNow: "CSV ডাউনলোড করুন",
     recordsTitle: "হাজিরা রেকর্ডসমূহ",
-    recordsSubtitle: "MongoDB-তে সংরক্ষিত রেকর্ড; Google Sheets আলাদা ঐচ্ছিক কপি।",
+    recordsSubtitle: "MongoDB-তে সংরক্ষিত রেকর্ড; যোগ, সম্পাদনা ও ডিলিট সরাসরি ডেটাবেসে হয়।",
     dark: "🌙",
     light: "☀️"
   }
@@ -1010,8 +796,6 @@ function applyAdminLang() {
   if (clearBtn && dict.clearSearchTitle) clearBtn.title = dict.clearSearchTitle;
   setAdminTheme(document.documentElement.dataset.theme || 'light');
   document.title = dict.adminTitle;
-  validateScriptUrl();
-  validateSheetUrl();
   updateScheduleBadge();
 }
 
@@ -1130,18 +914,21 @@ function openExportModal(mode) {
   const dateGrp = $('exportDateGroup');
   const clsGrp = $('exportClassGroup');
   if (mode === 'date') {
-    if (title) title.textContent = currentLang === 'bn' ? 'তারিখ অনুযায়ী CSV ডাউনলোড' : 'Export CSV by Date';
+    if (title) title.textContent = currentLang === 'bn' ? 'তারিখ অনুযায়ী CSV ডাউনলোড' : 'Export CSV by Date';
     if (dateGrp) dateGrp.classList.remove('hidden');
     if (clsGrp) clsGrp.classList.add('hidden');
     if ($('exportDateInput')) $('exportDateInput').value = new Date().toISOString().slice(0, 10);
+  } else if (mode === 'dateclass') {
+    if (title) title.textContent = currentLang === 'bn' ? 'তারিখ + ক্লাস অনুযায়ী CSV ডাউনলোড' : 'Export CSV by Date + Class';
+    if (dateGrp) dateGrp.classList.remove('hidden');
+    if (clsGrp) clsGrp.classList.remove('hidden');
+    if ($('exportDateInput')) $('exportDateInput').value = new Date().toISOString().slice(0, 10);
+    if ($('exportClassInput')) { $('exportClassInput').value = ''; setTimeout(() => $('exportClassInput').focus(), 80); }
   } else {
-    if (title) title.textContent = currentLang === 'bn' ? 'ক্লাস অনুযায়ী CSV ডাউনলোড' : 'Export CSV by Class';
+    if (title) title.textContent = currentLang === 'bn' ? 'ক্লাস অনুযায়ী CSV ডাউনলোড' : 'Export CSV by Class';
     if (dateGrp) dateGrp.classList.add('hidden');
     if (clsGrp) clsGrp.classList.remove('hidden');
-    if ($('exportClassInput')) {
-      $('exportClassInput').value = '';
-      setTimeout(() => $('exportClassInput').focus(), 80);
-    }
+    if ($('exportClassInput')) { $('exportClassInput').value = ''; setTimeout(() => $('exportClassInput').focus(), 80); }
   }
   modal.classList.remove('hidden');
 }
@@ -1157,6 +944,9 @@ if ($('exportDateWise')) {
 if ($('exportClassWise')) {
   $('exportClassWise').addEventListener('click', () => openExportModal('class'));
 }
+if ($('exportDateClassWise')) {
+  $('exportDateClassWise').addEventListener('click', () => openExportModal('dateclass'));
+}
 if ($('closeExportModal')) $('closeExportModal').addEventListener('click', closeExportModal);
 if ($('cancelExportModal')) $('cancelExportModal').addEventListener('click', closeExportModal);
 if ($('confirmExportBtn')) {
@@ -1169,6 +959,20 @@ if ($('confirmExportBtn')) {
       }
       closeExportModal();
       downloadCsv({ type: 'date', date: dateVal });
+    } else if (currentExportMode === 'dateclass') {
+      const dateVal = $('exportDateInput') ? $('exportDateInput').value : '';
+      const clsVal = $('exportClassInput') ? $('exportClassInput').value.trim() : '';
+      if (!dateVal) {
+        notice(currentLang === 'bn' ? 'একটি তারিখ নির্বাচন করুন।' : 'Please select a date.');
+        return;
+      }
+      if (!clsVal) {
+        notice(currentLang === 'bn' ? 'ক্লাসের নাম লিখুন।' : 'Please enter a class name.');
+        return;
+      }
+      // Backend combines date + cls into one filter (class names never contain '|').
+      closeExportModal();
+      downloadCsv({ type: 'date', date: dateVal, cls: clsVal });
     } else {
       const clsVal = $('exportClassInput') ? $('exportClassInput').value.trim() : '';
       if (!clsVal) {

@@ -117,4 +117,16 @@ class AttendanceStorageServiceTest {
   private static AttendanceEntry entry(String record,String date,String id) {
     return new AttendanceEntry(record,date,"",date,1,"Student Name",id,"","1","09:00 AM");
   }
+  @Test void combinedDateAndClassFilterMatchesGeneralForBlankClassNames() {
+    AttendanceRepository repo=mock(AttendanceRepository.class);
+    AttendanceEntry general=entry("record-a","2026-10-26",STUDENT_ID);      // blank class displays as "General"
+    AttendanceEntry realClass=new AttendanceEntry("record-b","2026-10-26","CSE","2026-10-26 - CSE",1,"Other Name",
+        "2023200000687","","1","10:00 AM");
+    when(repo.findAll()).thenReturn(List.of(general,realClass));
+    var service=new AttendanceStorageService(repo);
+    assertTrue(service.exportCsv("combined","2026-10-26|General").contains("Student Name"));
+    assertFalse(service.exportCsv("combined","2026-10-26|General").contains("2023200000687"));
+    assertTrue(service.exportCsv("combined","2026-10-26|CSE").contains("Other Name"));
+    assertFalse(service.exportCsv("combined","2026-10-26|CSE").contains("Student Name"));
+  }
 }

@@ -28,32 +28,15 @@ public class SettingsService {
                             String APP_PASSWORD, boolean CLEAR_APP_PASSWORD,
                             String RESEND_API_KEY, String BREVO_API_KEY,
                             String EMAILJS_SERVICE_ID, String EMAILJS_TEMPLATE_ID, String EMAILJS_PUBLIC_KEY) {}
-  public record ConfigUpdate(String SCRIPT_URL, String SHEET_URL, String SCRIPT_SECRET,
-                             ScheduleConfig SCHEDULE_CONFIG, EmailUpdate EMAIL_CONFIG) {}
+  public record ConfigUpdate(ScheduleConfig SCHEDULE_CONFIG, EmailUpdate EMAIL_CONFIG) {}
   private static String clean(String value) { return value == null ? "" : value.trim(); }
   private static String provider(String value) { return clean(value).toUpperCase(Locale.ROOT); }
 
   public AdminSettings save(String email, ConfigUpdate input) {
     if (input == null || input.SCHEDULE_CONFIG() == null) throw new IllegalArgumentException("Schedule configuration is required");
     input.SCHEDULE_CONFIG().validate();
-    String script=clean(input.SCRIPT_URL()), sheet=clean(input.SHEET_URL());
-    if (!script.isEmpty() && !script.matches("https://script\\.google\\.com/macros/s/[A-Za-z0-9_-]+/exec/?"))
-      throw new IllegalArgumentException("Invalid HTTPS Google Apps Script /exec URL");
-    if (!sheet.isEmpty() && !sheet.matches("https://docs\\.google\\.com/spreadsheets/d/[A-Za-z0-9_-]+(?:/.*)?"))
-      throw new IllegalArgumentException("Invalid Google Sheets URL");
 
     AdminSettings old=forUser(email), updated=new AdminSettings(siteOwner);
-    updated.scriptUrl=script;updated.sheetUrl=sheet;
-    // New secrets are encrypted at rest, not stored as plaintext in MongoDB.
-    // Older saved configurations are migrated to encryption on their next save.
-    updated.scriptSecret=old.scriptSecret;
-    String newSecret=clean(input.SCRIPT_SECRET());
-    if (!newSecret.isEmpty()) {
-      if (newSecret.length()<32 || newSecret.length()>256) throw new IllegalArgumentException("Apps Script secret must be 32–256 characters");
-      updated.scriptSecret="enc:"+encryption.encrypt(newSecret);
-    } else if (updated.scriptSecret != null && !updated.scriptSecret.isBlank() && !updated.scriptSecret.startsWith("enc:")) {
-      updated.scriptSecret="enc:"+encryption.encrypt(updated.scriptSecret);
-    }
     updated.schedule=input.SCHEDULE_CONFIG();
     updated.emailEnabled=old.emailEnabled;
     updated.emailProvider=old.emailProvider;
@@ -68,7 +51,7 @@ public class SettingsService {
     if (input.EMAIL_CONFIG() != null) {
       EmailUpdate m=input.EMAIL_CONFIG();
       String delivery=provider(m.PROVIDER());
-      if (!Set.of("APPS_SCRIPT","EMAILJS","SMTP","RESEND","BREVO").contains(delivery))
+      if (!Set.of("EMAILJS","SMTP","RESEND","BREVO").contains(delivery))
         throw new IllegalArgumentException("Invalid email delivery provider");
       String sender=clean(m.SENDER_EMAIL()).toLowerCase(Locale.ROOT), senderName=clean(m.SENDER_NAME());
       if (!sender.isEmpty() && (sender.length()>100 || !sender.matches("(?i)^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")))
@@ -91,9 +74,6 @@ public class SettingsService {
     }
     if (updated.emailEnabled) {
       switch (updated.emailProvider) {
-        case "APPS_SCRIPT" -> {
-          if (!updated.hasGoogleSheets()) throw new IllegalArgumentException("Enable Apps Script email after configuring URL and gateway secret");
-        }
         case "SMTP" -> {
           if (!updated.senderEmail.endsWith("@gmail.com") && !updated.senderEmail.endsWith("@googlemail.com"))
             throw new IllegalArgumentException("Gmail SMTP requires a Gmail sender address");
@@ -115,26 +95,23 @@ public class SettingsService {
     return repo.save(updated);
   }
 
-  public record PublicConfig(boolean configured,String sheetUrl,ScheduleConfig schedule,String timezone,
-                             boolean emailEnabled,String emailProvider,
-                             String emailJsServiceId,String emailJsTemplateId,String emailJsPublicKey) {}
+  public record PublicConfig(boolean configured,ScheduleConfig schedule,String timezone,boolean emailEnabled) {}
   public PublicConfig publicConfig() {
     AdminSettings s=publicSettings();
-    return new PublicConfig(true,"",s.schedule == null ? ScheduleConfig.defaults() : s.schedule,
-        "Asia/Dhaka",s.emailEnabled,s.emailProvider == null?"APPS_SCRIPT":s.emailProvider,"","","");
+    return new PublicConfig(true,s.schedule == null ? ScheduleConfig.defaults() : s.schedule,"Asia/Dhaka",s.emailEnabled);
   }
   public record EmailConfig(boolean ENABLED,String PROVIDER,String SENDER_EMAIL,String SENDER_NAME,
                             boolean APP_PASSWORD_CONFIGURED,String RESEND_API_KEY,String BREVO_API_KEY,
                             String EMAILJS_SERVICE_ID,String EMAILJS_TEMPLATE_ID,String EMAILJS_PUBLIC_KEY,
                             boolean RESEND_KEY_CONFIGURED,boolean BREVO_KEY_CONFIGURED) {}
-  public record AdminConfig(String SCRIPT_URL,String SHEET_URL,boolean SECRET_CONFIGURED,
-                            ScheduleConfig SCHEDULE_CONFIG,EmailConfig EMAIL_CONFIG,
+  public record AdminConfig(ScheduleConfig SCHEDULE_CONFIG,EmailConfig EMAIL_CONFIG,
                             String owner,boolean liveSiteOwner) {}
   public AdminConfig adminConfig(String email) {
     AdminSettings s=forUser(email);
-    return new AdminConfig(clean(s.scriptUrl),clean(s.sheetUrl),!clean(s.scriptSecret).isEmpty(),
-        s.schedule == null?ScheduleConfig.defaults():s.schedule,
-        new EmailConfig(s.emailEnabled,s.emailProvider == null?"APPS_SCRIPT":s.emailProvider,
+    // The retired APPS_SCRIPT provider degrades to the new EMAILJS default.
+    String provider=s.emailProvider == null || "APPS_SCRIPT".equals(s.emailProvider)?"EMAILJS":s.emailProvider;
+    return new AdminConfig(s.schedule == null?ScheduleConfig.defaults():s.schedule,
+        new EmailConfig(s.emailEnabled,s.emailProvider == null || "APPS_SCRIPT".equals(s.emailProvider)?"EMAILJS":s.emailProvider,
             clean(s.senderEmail),clean(s.senderName).isBlank()?"Smart Attendance":s.senderName,
             !clean(s.encryptedAppPassword).isEmpty(),"","",clean(s.emailJsServiceId),clean(s.emailJsTemplateId),
             clean(s.emailJsPublicKey),!clean(s.resendApiKey).isEmpty(),!clean(s.brevoApiKey).isEmpty()),
