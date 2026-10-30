@@ -398,13 +398,15 @@ input.val-err {
 .tw {
   max-height: 420px;
   overflow-y: auto;
-  overflow-x: hidden !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: 12px;
   width: 100%;
 }
 table {
   width: 100%;
+  min-width: 440px;
   border-collapse: collapse;
   font-size: 0.88rem;
   table-layout: fixed;
@@ -416,38 +418,34 @@ th, td {
   box-sizing: border-box;
 }
 th:nth-child(1), td:nth-child(1), .cell-sl {
-  width: 36px;
-  min-width: 36px;
-  max-width: 36px;
+  width: 38px;
+  min-width: 38px;
+  max-width: 38px;
   text-align: center;
   padding: 12px 2px;
 }
 th:nth-child(2), td:nth-child(2), .cell-name {
-  width: auto;
+  width: 36%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 th:nth-child(3), td:nth-child(3), .cell-id {
-  width: 124px;
-  min-width: 124px;
-  max-width: 124px;
+  width: 26%;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   letter-spacing: 0.2px;
 }
 th:nth-child(4), td:nth-child(4), .cell-time {
-  width: 102px;
-  min-width: 102px;
-  max-width: 102px;
+  width: 22%;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   font-size: 0.82rem;
 }
 th:nth-child(5), td:nth-child(5), .cell-status {
-  width: 64px;
-  min-width: 64px;
-  max-width: 64px;
+  width: 54px;
+  min-width: 54px;
+  max-width: 54px;
   text-align: center;
   padding: 12px 2px;
 }
@@ -718,11 +716,13 @@ tbody tr:hover { background: var(--pri-light); }
   flex: 1;
   max-height: 52vh;
   overflow-y: auto;
-  overflow-x: hidden !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   width: 100%;
 }
 .modal-table-scroll table {
   width: 100%;
+  min-width: 440px;
   table-layout: fixed;
   border-collapse: collapse;
 }
