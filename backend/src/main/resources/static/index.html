@@ -2288,8 +2288,8 @@ $("go").addEventListener("click", async () => {
       toast(t.ok, "ok");
 
       // The backend owns confirmation delivery; its verified result is authoritative.
-      if (email && j.emailStatus === 'sent') {
-        toast(lang === 'bn' ? 'কনফার্মেশন ইমেইল পাঠানো হয়েছে।' : 'Confirmation email sent.', 'ok');
+      if (email && (j.emailStatus === 'sent' || j.emailStatus === 'queued')) {
+        toast(lang === 'bn' ? 'কনফার্মেশন ইমেইল পাঠানো হচ্ছে…' : 'Confirmation email is on the way…', 'ok');
       } else if (email && j.emailStatus === 'failed') {
         toast(lang === 'bn' ? 'হাজিরা MongoDB-তে সেভ হয়েছে, কিন্তু ইমেইল পাঠানো যায়নি।' : 'Attendance saved to MongoDB, but email delivery failed.', 'warn');
       }

@@ -52,7 +52,7 @@ MongoDB-এর [official authentication troubleshooting](https://www.mongodb.com
 **Render Free-তে Gmail SMTP বন্ধ (25/465/587)।** Gmail App Password দিয়েও কাজ করবে না। নিচের যেকোনো HTTPS পদ্ধতি ব্যবহার করো:
 
 
-**EmailJS (সহজ, ফ্রি):** emailjs.com-এ ফ্রি অ্যাকাউন্ট খুলুন (ক্রেডিট কার্ড লাগে না) → Gmail service connect করুন → email template বানান → Admin Settings-এ Provider **EmailJS API** সিলেক্ট করে **Public Key** ও **Service ID** দিন → **Student Confirmation Emails ON** → Save → **Send test email**। Template ID সার্ভারে একবার `EMAILJS_TEMPLATE_ID` environment variable হিসেবে সেট করা হয় — admin panel-এ দিতে হয় না।
+**EmailJS (সহজ, ফ্রি):** emailjs.com-এ ফ্রি অ্যাকাউন্ট খুলুন (ক্রেডিট কার্ড লাগে না) → Gmail service connect করুন → email template তৈরি করুন → Admin Settings-এ Provider **EmailJS API** সিলেক্ট করে **Service ID**, **Template ID** ও **Public Key** (প্রয়োজনে Private Key) দিন → **Student Confirmation Emails ON** → Save → **Send test email**।
 
 **Resend / Brevo:** সংশ্লিষ্ট service-এ verified sender address/domain ও API key তৈরি → Admin Settings-এ provider নির্বাচন, verified sender + API key দিয়ে Save → **Send test email**। API key MongoDB-তে encrypted থাকে।
 

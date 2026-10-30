@@ -337,11 +337,13 @@
           <label for="senderName" data-t="senderNameLabel">Sender display name</label><input id="senderName" minlength="2" maxlength="55" placeholder="Smart Attendance" value="Smart Attendance">
           <div id="emailJsFields" class="hidden">
             <div class="tip" style="margin-bottom:12px;background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.2);padding:10px 14px;border-radius:10px;font-size:0.83rem;">
-              <strong data-t="emailJsHelpTitle">💡 HTTPS Email Provider Setup:</strong><br>
-              <span data-t="emailJsHelpDesc">Create a free account at <strong>emailjs.com</strong> (no credit card needed). Add your Gmail service, create a template, then paste the 2 keys below. The Template ID is set once on the server via the <code>EMAILJS_TEMPLATE_ID</code> environment variable — no need to enter it here.</span>
+              <strong data-t="emailJsHelpTitle">💡 100% Free Frontend &amp; Backend Email:</strong><br>
+              <span data-t="emailJsHelpDesc">Create a free account at <strong>emailjs.com</strong> (no credit card needed). Add your Gmail service, create an email template, then paste the Service ID, Template ID, and Public Key below.</span>
             </div>
-            <label for="emailJsPublicKey" data-t="emailJsPublicKeyLabel">EmailJS Public Key (User ID)</label><input id="emailJsPublicKey" type="text" maxlength="100" autocomplete="off" placeholder="e.g. user_abcdef123456">
             <label for="emailJsServiceId" data-t="emailJsServiceIdLabel">EmailJS Service ID</label><input id="emailJsServiceId" type="text" maxlength="100" autocomplete="off" placeholder="e.g. service_gmail">
+            <label for="emailJsTemplateId" data-t="emailJsTemplateIdLabel">EmailJS Template ID</label><input id="emailJsTemplateId" type="text" maxlength="100" autocomplete="off" placeholder="e.g. template_abcdef1">
+            <label for="emailJsPublicKey" data-t="emailJsPublicKeyLabel">EmailJS Public Key (User ID)</label><input id="emailJsPublicKey" type="text" maxlength="100" autocomplete="off" placeholder="e.g. user_abcdef123456">
+            <label for="emailJsPrivateKey" data-t="emailJsPrivateKeyLabel">EmailJS Private Key / Access Token (Optional)</label><input id="emailJsPrivateKey" type="password" maxlength="150" autocomplete="new-password" placeholder="Leave blank if strict mode is disabled in EmailJS">
             <div class="mail-status"><label style="margin:0;font-size:.76rem;font-weight:500"><input id="clearEmailJsKeys" type="checkbox"> <span data-t="clearEmailJsKeysLabel">Clear saved keys</span></label></div>
           </div>
           <div id="apiMailFields" class="hidden">

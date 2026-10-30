@@ -149,36 +149,75 @@ public class NotificationService {
 
   public void sendEmailJs(AdminSettings s, String recipient, String name, String studentId, String date, String className, boolean test) throws Exception {
     String serviceId = s.emailJsServiceId != null ? s.emailJsServiceId.trim() : "";
-    // Template ID is server-side configuration (EMAILJS_TEMPLATE_ID env var), never asked in the admin UI.
-    String templateId = serverTemplateId != null ? serverTemplateId.trim() : "";
+    String templateId = (s.emailJsTemplateId != null && !s.emailJsTemplateId.isBlank())
+        ? s.emailJsTemplateId.trim()
+        : (serverTemplateId != null ? serverTemplateId.trim() : "");
     String publicKey = s.emailJsPublicKey != null ? s.emailJsPublicKey.trim() : "";
+    String privateKey = decodeApiKey(s.emailJsPrivateKey);
+
     if (serviceId.isEmpty() || templateId.isEmpty() || publicKey.isEmpty()) {
-      throw new IllegalStateException("EmailJS Service ID and Public Key are required in Settings, and EMAILJS_TEMPLATE_ID must be configured on the server (environment variable)");
+      if (serviceId.isEmpty()) throw new IllegalStateException("EmailJS Service ID is required in Settings");
+      if (templateId.isEmpty()) throw new IllegalStateException("EmailJS Template ID is required. Please create a template at emailjs.com and enter its Template ID in Settings.");
+      throw new IllegalStateException("EmailJS Public Key is required in Settings");
     }
+
     String masked = studentId == null || studentId.length() < 8 ? "—" : studentId.substring(0, 4) + "•••••" + studentId.substring(studentId.length() - 4);
     String timeNow = LocalTime.now(TIMEZONE).format(DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH));
-    Map<String, Object> body = Map.of(
-        "service_id", serviceId,
-        "template_id", templateId,
-        "user_id", publicKey,
-        "template_params", Map.of(
-            "to_email", recipient,
-            "to_name", name == null ? "" : name,
-            "student_id", masked,
-            "class_name", className == null || className.isBlank() ? "General Attendance" : className,
-            "date", date == null ? "" : date,
-            "time", timeNow,
-            "sender_name", safeSender(s)
-        )
-    );
+    String safeClass = className == null || className.isBlank() ? "General Attendance" : className;
+    String safeName = name == null ? "" : name;
+    String safeDate = date == null ? "" : date;
+    String sender = safeSender(s);
+
+    Map<String, Object> templateParams = new HashMap<>();
+    templateParams.put("to_email", recipient);
+    templateParams.put("email", recipient);
+    templateParams.put("user_email", recipient);
+    templateParams.put("recipient", recipient);
+    templateParams.put("reply_to", recipient);
+    templateParams.put("to_name", safeName);
+    templateParams.put("name", safeName);
+    templateParams.put("student_name", safeName);
+    templateParams.put("student_id", masked);
+    templateParams.put("id", masked);
+    templateParams.put("class_name", safeClass);
+    templateParams.put("class", safeClass);
+    templateParams.put("date", safeDate);
+    templateParams.put("time", timeNow);
+    templateParams.put("sender_name", sender);
+    templateParams.put("message", test
+        ? "This is a test email confirming your Smart Attendance EmailJS configuration."
+        : "Your attendance has been recorded successfully for " + safeClass + " on " + safeDate + " at " + timeNow + ".");
+
+    Map<String, Object> body = new HashMap<>();
+    body.put("service_id", serviceId);
+    body.put("template_id", templateId);
+    body.put("user_id", publicKey);
+    if (!privateKey.isBlank()) {
+      body.put("accessToken", privateKey);
+    }
+    body.put("template_params", templateParams);
+
     HttpRequest req = HttpRequest.newBuilder(URI.create("https://api.emailjs.com/api/v1.0/email/send"))
         .timeout(Duration.ofSeconds(15))
         .header("Content-Type", "application/json")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        .header("Origin", "https://smart-attendance-wwez.onrender.com")
         .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
         .build();
+
     HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
     if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
-      throw new IllegalStateException("EmailJS error (HTTP " + resp.statusCode() + "): " + resp.body());
+      String responseBody = resp.body() != null ? resp.body().trim() : "";
+      if (responseBody.contains("strict mode") || responseBody.contains("Private Key")) {
+        throw new IllegalStateException("EmailJS strict mode is enabled on your EmailJS account. Please enter your EmailJS Private Key (Access Token) in Admin Settings, or disable strict mode in your EmailJS Account > Security settings.");
+      }
+      if (responseBody.contains("template ID not found")) {
+        throw new IllegalStateException("EmailJS Template ID was not found (" + templateId + "). Please verify the Template ID in your EmailJS dashboard (https://dashboard.emailjs.com/admin/templates).");
+      }
+      if (responseBody.contains("service ID not found") || responseBody.contains("service not found")) {
+        throw new IllegalStateException("EmailJS Service ID was not found (" + serviceId + "). Please verify the Service ID in your EmailJS dashboard (https://dashboard.emailjs.com/admin/services).");
+      }
+      throw new IllegalStateException("EmailJS error (HTTP " + resp.statusCode() + "): " + responseBody);
     }
   }
 
