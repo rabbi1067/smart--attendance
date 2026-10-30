@@ -6,6 +6,7 @@ import com.smartattendance.model.AdminSettings;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,8 @@ public class NotificationService {
   private final ObjectMapper mapper;
   private final HttpClient httpClient;
   private static final ZoneId TIMEZONE = ZoneId.of("Asia/Dhaka");
+  // EmailJS Template ID is server-side configuration, set once as EMAILJS_TEMPLATE_ID on the host.
+  @Value("${app.emailjs-template-id:}") String serverTemplateId;
 
   public NotificationService(EncryptionService crypto) {
     this.crypto = crypto;
@@ -146,10 +149,11 @@ public class NotificationService {
 
   public void sendEmailJs(AdminSettings s, String recipient, String name, String studentId, String date, String className, boolean test) throws Exception {
     String serviceId = s.emailJsServiceId != null ? s.emailJsServiceId.trim() : "";
-    String templateId = s.emailJsTemplateId != null ? s.emailJsTemplateId.trim() : "";
+    // Template ID is server-side configuration (EMAILJS_TEMPLATE_ID env var), never asked in the admin UI.
+    String templateId = serverTemplateId != null ? serverTemplateId.trim() : "";
     String publicKey = s.emailJsPublicKey != null ? s.emailJsPublicKey.trim() : "";
     if (serviceId.isEmpty() || templateId.isEmpty() || publicKey.isEmpty()) {
-      throw new IllegalStateException("EmailJS Service ID, Template ID, and Public Key are all required");
+      throw new IllegalStateException("EmailJS Service ID and Public Key are required in Settings, and EMAILJS_TEMPLATE_ID must be configured on the server (environment variable)");
     }
     String masked = studentId == null || studentId.length() < 8 ? "—" : studentId.substring(0, 4) + "•••••" + studentId.substring(studentId.length() - 4);
     String timeNow = LocalTime.now(TIMEZONE).format(DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH));

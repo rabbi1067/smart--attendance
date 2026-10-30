@@ -27,7 +27,7 @@ public class SettingsService {
   public record EmailUpdate(boolean ENABLED, String PROVIDER, String SENDER_EMAIL, String SENDER_NAME,
                             String APP_PASSWORD, boolean CLEAR_APP_PASSWORD,
                             String RESEND_API_KEY, String BREVO_API_KEY,
-                            String EMAILJS_SERVICE_ID, String EMAILJS_TEMPLATE_ID, String EMAILJS_PUBLIC_KEY) {}
+                            String EMAILJS_SERVICE_ID, String EMAILJS_PUBLIC_KEY, boolean CLEAR_EMAILJS_KEYS) {}
   public record ConfigUpdate(ScheduleConfig SCHEDULE_CONFIG, EmailUpdate EMAIL_CONFIG) {}
   private static String clean(String value) { return value == null ? "" : value.trim(); }
   private static String provider(String value) { return clean(value).toUpperCase(Locale.ROOT); }
@@ -46,7 +46,6 @@ public class SettingsService {
     updated.resendApiKey=old.resendApiKey;
     updated.brevoApiKey=old.brevoApiKey;
     updated.emailJsServiceId=old.emailJsServiceId;
-    updated.emailJsTemplateId=old.emailJsTemplateId;
     updated.emailJsPublicKey=old.emailJsPublicKey;
     if (input.EMAIL_CONFIG() != null) {
       EmailUpdate m=input.EMAIL_CONFIG();
@@ -69,8 +68,9 @@ public class SettingsService {
       if (!clean(m.RESEND_API_KEY()).isEmpty()) updated.resendApiKey="enc:"+encryption.encrypt(clean(m.RESEND_API_KEY()));
       if (!clean(m.BREVO_API_KEY()).isEmpty()) updated.brevoApiKey="enc:"+encryption.encrypt(clean(m.BREVO_API_KEY()));
       if (!clean(m.EMAILJS_SERVICE_ID()).isEmpty()) updated.emailJsServiceId=clean(m.EMAILJS_SERVICE_ID());
-      if (!clean(m.EMAILJS_TEMPLATE_ID()).isEmpty()) updated.emailJsTemplateId=clean(m.EMAILJS_TEMPLATE_ID());
       if (!clean(m.EMAILJS_PUBLIC_KEY()).isEmpty()) updated.emailJsPublicKey=clean(m.EMAILJS_PUBLIC_KEY());
+      // Explicit removal only — blank fields never wipe saved keys (they stay until the user removes them).
+      if (m.CLEAR_EMAILJS_KEYS()) { updated.emailJsServiceId=""; updated.emailJsPublicKey=""; }
     }
     if (updated.emailEnabled) {
       switch (updated.emailProvider) {
@@ -81,8 +81,9 @@ public class SettingsService {
           encryption.decrypt(updated.encryptedAppPassword);
         }
         case "EMAILJS" -> {
-          if (clean(updated.emailJsServiceId).isEmpty() || clean(updated.emailJsTemplateId).isEmpty() || clean(updated.emailJsPublicKey).isEmpty())
-            throw new IllegalArgumentException("EmailJS Service ID, Template ID, and Public Key are required");
+          // Template ID lives in the EMAILJS_TEMPLATE_ID server environment variable.
+          if (clean(updated.emailJsServiceId).isEmpty() || clean(updated.emailJsPublicKey).isEmpty())
+            throw new IllegalArgumentException("EmailJS Service ID and Public Key are required");
         }
         case "RESEND", "BREVO" -> {
           String key="RESEND".equals(updated.emailProvider)?updated.resendApiKey:updated.brevoApiKey;
@@ -102,7 +103,7 @@ public class SettingsService {
   }
   public record EmailConfig(boolean ENABLED,String PROVIDER,String SENDER_EMAIL,String SENDER_NAME,
                             boolean APP_PASSWORD_CONFIGURED,String RESEND_API_KEY,String BREVO_API_KEY,
-                            String EMAILJS_SERVICE_ID,String EMAILJS_TEMPLATE_ID,String EMAILJS_PUBLIC_KEY,
+                            String EMAILJS_SERVICE_ID,String EMAILJS_PUBLIC_KEY,
                             boolean RESEND_KEY_CONFIGURED,boolean BREVO_KEY_CONFIGURED) {}
   public record AdminConfig(ScheduleConfig SCHEDULE_CONFIG,EmailConfig EMAIL_CONFIG,
                             String owner,boolean liveSiteOwner) {}
@@ -113,7 +114,7 @@ public class SettingsService {
     return new AdminConfig(s.schedule == null?ScheduleConfig.defaults():s.schedule,
         new EmailConfig(s.emailEnabled,s.emailProvider == null || "APPS_SCRIPT".equals(s.emailProvider)?"EMAILJS":s.emailProvider,
             clean(s.senderEmail),clean(s.senderName).isBlank()?"Smart Attendance":s.senderName,
-            !clean(s.encryptedAppPassword).isEmpty(),"","",clean(s.emailJsServiceId),clean(s.emailJsTemplateId),
+            !clean(s.encryptedAppPassword).isEmpty(),"","",clean(s.emailJsServiceId),
             clean(s.emailJsPublicKey),!clean(s.resendApiKey).isEmpty(),!clean(s.brevoApiKey).isEmpty()),
         siteOwner,true);
   }

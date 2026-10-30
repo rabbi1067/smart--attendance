@@ -80,7 +80,7 @@ If a MongoDB unique index cannot be created because existing documents violate `
 
 ### EmailJS (default, free HTTPS API)
 
-In Admin → Settings select **EmailJS API**, create a free account at emailjs.com, connect your Gmail service, create a template, then paste the **Public Key**, **Service ID** and **Template ID**. Enable notifications and save, then click **Send test email**. Provider quotas and verification requirements apply.
+In Admin → Settings select **EmailJS API**, create a free account at emailjs.com, connect your Gmail service, create a template, then paste the **Public Key** and **Service ID**. The Template ID is configured once on the server via the `EMAILJS_TEMPLATE_ID` environment variable — you never enter it in the admin panel. Enable notifications and save, then click **Send test email**. Provider quotas and verification requirements apply.
 
 ### Resend or Brevo HTTPS API
 

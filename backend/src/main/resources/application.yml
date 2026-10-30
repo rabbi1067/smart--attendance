@@ -24,3 +24,4 @@ app:
   jwt-secret: ${JWT_SECRET}
   frontend-origins: ${FRONTEND_ORIGINS:}
   mail-encryption-key: ${MAIL_ENCRYPTION_KEY:}
+  emailjs-template-id: ${EMAILJS_TEMPLATE_ID:}

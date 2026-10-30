@@ -47,7 +47,7 @@ class SettingsServiceTest {
     when(repo.findById(OWNER)).thenReturn(Optional.empty());
     when(repo.save(any(AdminSettings.class))).thenAnswer(call->call.getArgument(0));
     SettingsService settings=new SettingsService(repo,null,OWNER);
-    var email=new SettingsService.EmailUpdate(false,"APPS_SCRIPT","a@b.test","Smart Attendance","",false,"","","","","");
+    var email=new SettingsService.EmailUpdate(false,"APPS_SCRIPT","a@b.test","Smart Attendance","",false,"","","","",false);
     assertThrows(IllegalArgumentException.class,()->
         settings.save(OWNER,new SettingsService.ConfigUpdate(ScheduleConfig.defaults(),email)));
   }

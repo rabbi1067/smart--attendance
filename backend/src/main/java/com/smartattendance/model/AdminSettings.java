@@ -16,9 +16,8 @@ public class AdminSettings {
   public String encryptedAppPassword = "";
   public String resendApiKey = "";
   public String brevoApiKey = "";
-  // 100% Free EmailJS configuration
+  // 100% Free EmailJS configuration (Template ID comes from EMAILJS_TEMPLATE_ID env var)
   public String emailJsServiceId = "";
-  public String emailJsTemplateId = "";
   public String emailJsPublicKey = "";
 
   public AdminSettings() {}

@@ -212,9 +212,9 @@ async function loadConfig() {
   $('providerKeyStatus').textContent=(m.RESEND_KEY_CONFIGURED?'Resend API key saved. ':'')+(m.BREVO_KEY_CONFIGURED?'Brevo API key saved. ':'')+'Leave blank to keep the stored key.';
   $('senderName').value=m.SENDER_NAME||'Smart Attendance';
   $('appPassword').value='';$('clearAppPassword').checked=false;
+  const cek=$('clearEmailJsKeys'); if (cek) cek.checked=false;
   if ($('emailJsPublicKey')) $('emailJsPublicKey').value=m.EMAILJS_PUBLIC_KEY||'';
   if ($('emailJsServiceId')) $('emailJsServiceId').value=m.EMAILJS_SERVICE_ID||'';
-  if ($('emailJsTemplateId')) $('emailJsTemplateId').value=m.EMAILJS_TEMPLATE_ID||'';
   $('passwordStatus').textContent=m.APP_PASSWORD_CONFIGURED?'✓ App Password stored securely':'No App Password saved';
   $('passwordStatus').classList.toggle('off',!m.APP_PASSWORD_CONFIGURED);
   mailUi();
@@ -242,8 +242,8 @@ $('configForm').addEventListener('submit',async e=>{
         RESEND_API_KEY:activeProvider==='RESEND' ? $('providerApiKey').value.trim() : '',
         BREVO_API_KEY:activeProvider==='BREVO' ? $('providerApiKey').value.trim() : '',
         EMAILJS_SERVICE_ID:$('emailJsServiceId') ? $('emailJsServiceId').value.trim() : '',
-        EMAILJS_TEMPLATE_ID:$('emailJsTemplateId') ? $('emailJsTemplateId').value.trim() : '',
-        EMAILJS_PUBLIC_KEY:$('emailJsPublicKey') ? $('emailJsPublicKey').value.trim() : ''
+        EMAILJS_PUBLIC_KEY:$('emailJsPublicKey') ? $('emailJsPublicKey').value.trim() : '',
+        CLEAR_EMAILJS_KEYS:$('clearEmailJsKeys') ? $('clearEmailJsKeys').checked : false
       }
     };
     await request('/admin/config',{method:'PUT',body:data});
@@ -670,12 +670,12 @@ const T_ADMIN = {
     smtpRenderWarnTitle: "⚠️ Render Free Server Alert",
     smtpRenderWarnDesc: "Render Free tier blocks outbound SMTP ports (587, 465). Gmail SMTP will NOT connect on Render Free. Please select EmailJS API or another HTTPS provider (Resend / Brevo).",
     emailJsHelpTitle: "💡 100% Free Frontend & Backend Email:",
-    emailJsHelpDesc: "Create a free account at emailjs.com (no credit card needed). Add your Gmail service, create an email template, and paste the 3 keys below.",
+    emailJsHelpDesc: "Create a free account at emailjs.com (no credit card needed). Add your Gmail service, create an email template, then paste the 2 keys below. The Template ID is set once on the server (EMAILJS_TEMPLATE_ID env var).",
     emailJsPublicKeyLabel: "EmailJS Public Key (User ID)",
     emailJsServiceIdLabel: "EmailJS Service ID",
-    emailJsTemplateIdLabel: "EmailJS Template ID",
     senderNameLabel: "Sender display name",
     senderEmailLabel: "Sender Gmail address",
+    clearEmailJsKeysLabel: "Clear saved EmailJS keys (Service ID, Public Key)",
     appPasswordLabel: "Google App Password",
     testEmailBtn: "✉ Send test email",
     testEmailHint: "Save settings first, then test.",
@@ -738,11 +738,11 @@ const T_ADMIN = {
     smtpRenderWarnTitle: "⚠️ রেন্ডার ফ্রি সার্ভার সতর্কতা",
     smtpRenderWarnDesc: "Render Free টিয়ারে আউটবাউন্ড SMTP পোর্ট ৫৮৭ ব্লক থাকে। Render Free-তে Gmail SMTP কাজ করবে না। অনুগ্রহ করে EmailJS API বা Resend / Brevo-র মতো HTTPS প্রোভাইডার নির্বাচন করুন।",
     emailJsHelpTitle: "💡 ১০০% ফ্রি ফ্রন্টএন্ড ও ব্যাকএন্ড ইমেইল এপিআই:",
-    emailJsHelpDesc: "emailjs.com এ সম্পূর্ণ বিনামূল্যে অ্যাকাউন্ট তৈরি করুন (কোনো ক্রেডিট কার্ড লাগে না)। জিমেইল কানেক্ট করুন, টেমপ্লেট বানান এবং নিচের ৩টি কি প্রদান করুন।",
+    emailJsHelpDesc: "emailjs.com-এ সম্পূর্ণ বিনামূল্যে অ্যাকাউন্ট তৈরি করুন (কোনো ক্রেডিট কার্ড লাগে না)। জিমেইল service connect করুন, email template বানান, তারপর নিচের ২টি কি দিন। Template ID সার্ভারে একবার সেট করা হয় (EMAILJS_TEMPLATE_ID env var)।",
     emailJsPublicKeyLabel: "EmailJS পাবলিক কি (User ID)",
     emailJsServiceIdLabel: "EmailJS সার্ভিস আইডি (যেমন: service_xxxx)",
-    emailJsTemplateIdLabel: "EmailJS টেমপ্লেট আইডি (যেমন: template_xxxx)",
     senderNameLabel: "প্রেরকের নাম",
+    clearEmailJsKeysLabel: "সেভ করা কি (Service ID, Public Key) মুছে ফেলুন",
     senderEmailLabel: "প্রেরকের জিমেইল ঠিকানা",
     appPasswordLabel: "গুগল অ্যাপ পাসওয়ার্ড",
     testEmailBtn: "✉ টেস্ট ইমেইল পাঠান",
@@ -984,3 +984,7 @@ if ($('confirmExportBtn')) {
     }
   });
 }
+
+// --- Developer footer year ---
+const afYear = $('afYear');
+if (afYear) afYear.textContent = String(new Date().getFullYear());
