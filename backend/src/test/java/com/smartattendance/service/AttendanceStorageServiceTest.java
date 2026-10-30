@@ -129,4 +129,13 @@ class AttendanceStorageServiceTest {
     assertTrue(service.exportCsv("combined","2026-10-26|CSE").contains("Other Name"));
     assertFalse(service.exportCsv("combined","2026-10-26|CSE").contains("Student Name"));
   }
+  @Test void exportedDateStudentIdAndTimeRenderAsExcelTextNotHashMarks() {
+    AttendanceRepository repo=mock(AttendanceRepository.class);
+    when(repo.findAll()).thenReturn(List.of(entry("record-a","2026-10-26",STUDENT_ID)));
+    var service=new AttendanceStorageService(repo);
+    String csv=service.exportCsv("all","");
+    assertTrue(csv.contains("=\"2026-10-26\""), "Date must be an Excel text-formula so it never shows ###");
+    assertTrue(csv.contains("=\""+STUDENT_ID+"\""), "Student ID must be an Excel text-formula so it never shows 2.02E+12");
+    assertTrue(csv.contains("=\"09:00 AM\""), "Time must be an Excel text-formula so it never shows ###");
+  }
 }

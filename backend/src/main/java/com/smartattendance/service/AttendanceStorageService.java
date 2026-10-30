@@ -172,17 +172,24 @@ public class AttendanceStorageService {
     StringBuilder csv = new StringBuilder("\uFEFFSL,Date,Class,Name,Student ID,Email,Attendance,Time\r\n");
     for (int i=0;i<entries.size();i++) {
       AttendanceEntry e = entries.get(i);
-      csv.append(csvCell(String.valueOf(i+1))).append(',').append(csvCell(e.date)).append(',')
+      // Date, Student ID, and Time are wrapped as ="…" text-formulas so Excel shows the
+      // full value instead of ### (auto date/number conversion) or 2.02E+12 (long IDs).
+      csv.append(csvCell(String.valueOf(i+1))).append(',').append(csvTextCell(e.date)).append(',')
           .append(csvCell(str(e.className).isBlank()?"General":e.className)).append(',')
-          .append(csvCell(e.name)).append(',').append(csvCell(e.studentId)).append(',')
+          .append(csvCell(e.name)).append(',').append(csvTextCell(e.studentId)).append(',')
           .append(csvCell(e.email)).append(',').append(csvCell(e.attendance)).append(',')
-          .append(csvCell(e.time)).append("\r\n");
+          .append(csvTextCell(e.time)).append("\r\n");
     }
     return csv.toString();
   }
   private static String displayClass(AttendanceEntry e) {
     String c = str(e.className);
     return c.isBlank() ? "General" : c;
+  }
+  // Excel treats ="…" cells as text results — prevents date shifting and scientific notation.
+  private static String csvTextCell(String value) {
+    String s = str(value).replace("\"","").replace(","," ").replaceAll("[\\r\\n\\t]"," ");
+    return "=\"" + s + "\"";
   }
   private static String csvCell(String value) {
     String s = str(value);
