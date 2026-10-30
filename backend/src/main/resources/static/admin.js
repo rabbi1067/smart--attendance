@@ -572,6 +572,15 @@ function todayDhakaISO() {
   const obj=Object.fromEntries(parts.map(v=>[v.type,v.value]));
   return `${obj.year}-${obj.month}-${obj.day}`;
 }
+function nowLocalTimeStr() {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Dhaka',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }).format(new Date());
+}
 function openEditor(row){
   if(!sheetData)return;
   currentEdit=row;
@@ -580,13 +589,36 @@ function openEditor(row){
   const container=$('modalFields');container.replaceChildren();
   sheetData.headers.forEach((header,i)=>{
     const wrap=document.createElement('div'),label=mk('label',header),input=document.createElement('input');
-    input.value=row?String(row.values[i]||''):header.toLowerCase()==='attendance'?'1':header.toLowerCase()==='date'?(/^(?:19|20)\d{2}-\d{2}-\d{2}/.test(String(sheetData.sheet))?String(sheetData.sheet).slice(0,10):todayDhakaISO()):'';
+    const hLower=header.toLowerCase();
+    input.value=row?String(row.values[i]||''):hLower==='attendance'?'1':hLower==='date'?todayDhakaISO():(hLower==='local time'||hLower==='time')?nowLocalTimeStr():'';
     input.dataset.index=String(i);input.placeholder='Enter '+header;
-    if(header.toLowerCase()==='sl'){input.disabled=true;input.value=row?row.values[i]:'Auto';}
-    if(header.toLowerCase()==='id'){input.maxLength=13;input.inputMode='numeric';input.required=true;}
-    if(header.toLowerCase()==='date'){input.type='date';input.required=true;}
-    if(header.toLowerCase()==='email'){input.type='email';input.maxLength=100;}
-    if(header.toLowerCase()==='name')input.required=true;
+    if(hLower==='sl'){input.disabled=true;input.value=row?row.values[i]:'Auto';}
+    if(hLower==='id'){input.maxLength=13;input.inputMode='numeric';input.required=true;}
+    if(hLower==='date'){
+      input.type='date';input.required=true;
+      if(!row){
+        input.value=todayDhakaISO();
+        input.readOnly=true;
+        input.tabIndex=-1;
+        input.style.pointerEvents='none';
+        input.style.background='var(--bg)';
+        input.style.opacity='0.85';
+        input.style.cursor='not-allowed';
+      }
+    }
+    if(hLower==='local time'||hLower==='time'){
+      if(!row){
+        input.value=nowLocalTimeStr();
+        input.readOnly=true;
+        input.tabIndex=-1;
+        input.style.pointerEvents='none';
+        input.style.background='var(--bg)';
+        input.style.opacity='0.85';
+        input.style.cursor='not-allowed';
+      }
+    }
+    if(hLower==='email'){input.type='email';input.maxLength=100;}
+    if(hLower==='name')input.required=true;
     wrap.append(label,input);container.append(wrap);
   });
   $('editModal').classList.remove('hidden');
@@ -600,9 +632,19 @@ $('recordForm').addEventListener('submit',async e=>{
   const headers=sheetData.headers.map(h=>h.toLowerCase()),idIndex=headers.indexOf('id'),nameIndex=headers.indexOf('name');
   if(idIndex>=0&&!/^\d{13}$/.test(values[idIndex]))return notice('Student ID must be exactly 13 digits.');
   if(nameIndex>=0&&values[nameIndex].length<2)return notice('Student name is required.');
+  if(!currentEdit){
+    const dateIdx=headers.indexOf('date');
+    const timeIdx=headers.findIndex(h=>h==='local time'||h==='time');
+    if(dateIdx>=0)values[dateIdx]=todayDhakaISO();
+    if(timeIdx>=0)values[timeIdx]=nowLocalTimeStr();
+  }
   const btn=$('saveRecord');btn.disabled=true;btn.textContent='Saving…';
   try{
-    await request('/admin/sheets/rows/'+(currentEdit?'edit':'add'),{method:'POST',body:{sheet:sheetData.sheet,recordId:currentEdit?.recordId||null,values}});
+    let targetSheet=sheetData.sheet;
+    if(!currentEdit&&targetSheet!=='All Records'&&!targetSheet.startsWith(todayDhakaISO())){
+      targetSheet='All Records';
+    }
+    await request('/admin/sheets/rows/'+(currentEdit?'edit':'add'),{method:'POST',body:{sheet:targetSheet,recordId:currentEdit?.recordId||null,values}});
     closeEditor();await loadSheets();notice('✓ Record saved to MongoDB.');
   }catch(err){notice(err.message)}finally{btn.disabled=false;btn.textContent='Save record';}
 });
